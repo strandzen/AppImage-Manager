@@ -1,5 +1,10 @@
 # AppImage Manager
 
+<p align="center">
+  <img src="assets/manage_window.png" width="45%" />
+  <img src="assets/uninstall_window.png" width="45%" />
+</p>
+
 A lightweight, native AppImage manager for KDE Plasma.
 
 AppImage Manager integrates directly into your KDE desktop environment to handle AppImage files efficiently. It replaces the manual process of moving files, making them executable, and creating menu shortcuts with a clean, macOS-style installation window.
