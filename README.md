@@ -1,7 +1,7 @@
 # AppImage Manager
 
 <p align="center">
-  <img src="assets/GUI.png" width="45%" />
+  <img src="assets/AppImage.gif" width="45%" />
   <img src="assets/context_menu.png" width="45%" />
 </p>
 
