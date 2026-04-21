@@ -1,8 +1,8 @@
 # AppImage Manager
 
 <p align="center">
-  <img src="assets/manage_window.png" width="45%" />
-  <img src="assets/uninstall_window.png" width="45%" />
+  <img src="assets/GUI.png" width="45%" />
+  <img src="assets/context_menu.png" width="45%" />
 </p>
 
 A lightweight, native AppImage manager for KDE Plasma.
