@@ -26,10 +26,17 @@ ApplicationWindow {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
 
+    BusyIndicator {
+        anchors.centerIn: parent
+        running: !backend.isMetadataLoaded
+        visible: !backend.isMetadataLoaded
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 20
         spacing: 10
+        visible: backend.isMetadataLoaded
 
         // App Info Header
         ColumnLayout {

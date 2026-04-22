@@ -35,7 +35,21 @@ ApplicationWindow {
             "isChecked": true
         })
 
-        // Add the corpses (unchecked by default)
+        if (!backend.isFindingCorpses) {
+            populateCorpses()
+        }
+        updateTotalSize()
+    }
+
+    Connections {
+        target: backend
+        function onCorpsesChanged() {
+            populateCorpses()
+            updateTotalSize()
+        }
+    }
+
+    function populateCorpses() {
         var corpses = backend.corpses
         for (var i = 0; i < corpses.length; i++) {
             itemsModel.append({
@@ -45,7 +59,6 @@ ApplicationWindow {
                 "isChecked": false
             })
         }
-        updateTotalSize()
     }
 
     function updateTotalSize() {
@@ -62,6 +75,17 @@ ApplicationWindow {
         anchors.fill: parent
         anchors.margins: 15
         spacing: 10
+
+        BusyIndicator {
+            anchors.centerIn: parent
+            running: backend.isFindingCorpses || backend.isRemovingItems
+            visible: running
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: !backend.isFindingCorpses && !backend.isRemovingItems
 
         Label {
             text: qsTr("Select items to remove:")
@@ -157,5 +181,6 @@ ApplicationWindow {
                 }
             }
         }
+    }
     }
 }

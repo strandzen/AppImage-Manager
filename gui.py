@@ -46,21 +46,44 @@ class AppImageManagerBackend(QObject):
     installedChanged = Signal()
     desktopLinkChanged = Signal()
     uninstallFinished = Signal()
+    metadataLoadedChanged = Signal()
 
     def __init__(self, appimage_path, icon_provider):
         super().__init__()
         self._appimage_path = os.path.abspath(appimage_path)
-        self._info = core.get_appimage_info(self._appimage_path)
+        self._icon_provider = icon_provider
+        self._info = {}
         self._corpses = []
+        self._is_metadata_loaded = False
+        self._is_finding_corpses = False
+        self._is_removing_items = False
         
         # Determine if it's already in ~/Applications
         applications_dir = os.path.expanduser('~/Applications')
         self._is_installed = self._appimage_path.startswith(applications_dir)
         
+        # Fast check without metadata extraction
         self._has_desktop_link = core.is_desktop_link_enabled(self._appimage_path)
         
-        if self._info.get('icon_data'):
-            icon_provider.set_icon_data(self._info['icon_data'])
+        # Start async metadata loading
+        threading.Thread(target=self._load_metadata, daemon=True).start()
+
+    def _load_metadata(self):
+        try:
+            self._info = core.get_appimage_info(self._appimage_path)
+            if self._info.get('icon_data'):
+                self._icon_provider.set_icon_data(self._info['icon_data'])
+            self._is_metadata_loaded = True
+            self.metadataLoadedChanged.emit()
+            self.infoChanged.emit()
+        except Exception as e:
+            logging.error(f"Error loading metadata: {e}")
+            self._is_metadata_loaded = True
+            self.metadataLoadedChanged.emit()
+
+    @Property(bool, notify=metadataLoadedChanged)
+    def isMetadataLoaded(self):
+        return self._is_metadata_loaded
 
     @Property(str, notify=infoChanged)
     def appName(self):
@@ -84,9 +107,14 @@ class AppImageManagerBackend(QObject):
 
     @Property(str, notify=infoChanged)
     def appIconSource(self):
+        app_id = self._info.get('app_id', '')
+        if app_id and QIcon.hasThemeIcon(app_id):
+            return f"image://theme/{app_id}"
+            
         if self._info.get('icon_data'):
             return "image://appimage/icon"
-        return ""
+            
+        return "image://theme/application-x-executable"
 
     @Property(bool, notify=installedChanged)
     def isInstalled(self):
@@ -129,17 +157,41 @@ class AppImageManagerBackend(QObject):
 
     @Slot()
     def findCorpses(self):
-        self._corpses = core.find_app_corpses(self._appimage_path)
-        self.corpsesChanged.emit()
+        self._is_finding_corpses = True
+        self.infoChanged.emit() # generic notify
+        def task():
+            try:
+                self._corpses = core.find_app_corpses(self._appimage_path)
+            except Exception as e:
+                logging.error(f"Error finding corpses: {e}")
+            finally:
+                self._is_finding_corpses = False
+                self.corpsesChanged.emit()
+                self.infoChanged.emit()
+        threading.Thread(target=task, daemon=True).start()
+
+    @Property(bool, notify=infoChanged)
+    def isFindingCorpses(self):
+        return self._is_finding_corpses
 
     @Slot(list)
     def removeAppImageAndCorpses(self, paths_to_delete):
-        try:
-            # Paths to delete from QML comes as a list of strings
-            core.remove_items(self._appimage_path, paths_to_delete)
-            self.uninstallFinished.emit()
-        except Exception as e:
-            logging.error(f"Error removing items: {e}")
+        self._is_removing_items = True
+        self.infoChanged.emit()
+        def task():
+            try:
+                core.remove_items(self._appimage_path, paths_to_delete)
+                self.uninstallFinished.emit()
+            except Exception as e:
+                logging.error(f"Error removing items: {e}")
+            finally:
+                self._is_removing_items = False
+                self.infoChanged.emit()
+        threading.Thread(target=task, daemon=True).start()
+
+    @Property(bool, notify=infoChanged)
+    def isRemovingItems(self):
+        return self._is_removing_items
 
     def cleanup(self):
         pass

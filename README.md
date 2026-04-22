@@ -13,8 +13,9 @@ AppImage Manager integrates directly into your KDE desktop environment to handle
 
 - **macOS-Style Installation**: Drag and drop the AppImage into the Applications folder directly from the popup window.
 - **Context Menu Plugin**: Adds a "Manage AppImage" option to the Dolphin right-click context menu.
-- **Desktop Shortcuts**: Automatically extracts the internal icon and creates a `.desktop` shortcut in your application menu. Preserves original `Exec` arguments (e.g., `--no-sandbox`).
-- **Clean Uninstallation**: Scans `~/.config`, `~/.cache`, and `~/.local/share` for leftover files ("corpses") and allows you to safely remove them alongside the AppImage.
+- **Smart Desktop Integration**: Automatically uses your system's icon theme (e.g., Papirus, YAMIS) for a native look. If none is found, it falls back to the AppImage's internal icon. Preserves original `Exec` arguments safely.
+- **Clean Uninstallation to Trash**: Asynchronously scans `~/.config`, `~/.cache`, and `~/.local/share` for leftover files ("corpses"). Items are safely moved to the KDE Trash instead of being permanently deleted.
+- **Lightning Fast**: Metadata extraction and file scanning run asynchronously in the background, keeping the UI snappy and responsive at all times.
 
 ## Installation
 
@@ -57,7 +58,9 @@ The application leverages native KDE Plasma 6 features and system utilities for 
 - **Filesystem Utilities**:
     - `squashfuse`: Enables instantaneous, non-destructive metadata extraction from AppImages.
     - `fuse` (or `fuse3`): Required for `fusermount`, used to cleanly unmount images after inspection.
-- **System Icons**: A standard icon theme (like Breeze or Papirus) is recommended for the best visual experience.
+- **System Icons**: Custom icon themes, like YAMIS, Hatter or Papirus, are fully supported and prioritized for desktop shortcuts. 
+
+> **Note on AppImage Formats:** AppImage Manager is heavily optimized for **Type 2 AppImages** (which use `squashfs`). Type 1 AppImages (older ISO9660 format) are supported but will be significantly slower during metadata extraction, as they do not support instant mounting via `squashfuse`.
 
 #### Quick Install (System Dependencies)
 

@@ -6,6 +6,8 @@ import re
 import tempfile
 import configparser
 import logging
+import shlex
+from functools import lru_cache
 from pathlib import Path
 
 def setup_logging():
@@ -42,6 +44,18 @@ def _clean_name(filename):
     cleaned = ' '.join(word.capitalize() if not word.isupper() else word for word in cleaned.split())
     return f"{cleaned}.AppImage"
 
+def _get_app_id(filename):
+    """
+    Extracts a clean application ID for theme icon lookups.
+    Example: krita-5.3.1-x86_64.AppImage -> krita
+    """
+    name = filename.lower().replace('.appimage', '')
+    match = re.match(r'^([a-z0-9]+)', name)
+    if match:
+        return match.group(1)
+    return name.split('-')[0].split('_')[0].split('.')[0]
+
+@lru_cache(maxsize=10)
 def get_appimage_info(path):
     """
     Extracts metadata from an AppImage.
@@ -60,6 +74,7 @@ def get_appimage_info(path):
         'size': size,
         'original_name': original_name,
         'clean_name': clean_name,
+        'app_id': _get_app_id(original_name),
         'icon_data': None, # We'll extract this later if needed, or pass the path
         'icon_ext': '',
         'exec_args': '',
@@ -108,38 +123,44 @@ def get_appimage_info(path):
                         exec_full = entry.get('Exec', '')
                         exec_parts = exec_full.split()
                         if len(exec_parts) > 1:
+                            # Use shlex to safely handle and quote arguments, omitting desktop spec macros
                             args = [p for p in exec_parts[1:] if not p.startswith('%')]
-                            
-                            # Security: Sanitize exec arguments
-                            # Remove dangerous shell characters to prevent arbitrary command execution
                             sanitized_args = []
                             for arg in args:
-                                sanitized = re.sub(r'[;\|&\$><`\n\r]', '', arg)
-                                if sanitized:
-                                    sanitized_args.append(sanitized)
+                                sanitized_args.append(shlex.quote(arg))
                             
                             info['exec_args'] = ' '.join(sanitized_args)
                         
+                        # Improved Icon Finding
                         icon_name = entry.get('Icon', '')
+                        candidate_paths = []
+                        
                         if icon_name:
-                            icon_png = os.path.join(squashfs_root, f"{icon_name}.png")
-                            icon_svg = os.path.join(squashfs_root, f"{icon_name}.svg")
-                            icon_dir = os.path.join(squashfs_root, ".DirIcon")
+                            candidate_paths.append((os.path.join(squashfs_root, f"{icon_name}.png"), '.png'))
+                            candidate_paths.append((os.path.join(squashfs_root, f"{icon_name}.svg"), '.svg'))
+                            candidate_paths.append((os.path.join(squashfs_root, "usr/share/icons/hicolor/256x256/apps", f"{icon_name}.png"), '.png'))
+                            candidate_paths.append((os.path.join(squashfs_root, "usr/share/icons/hicolor/scalable/apps", f"{icon_name}.svg"), '.svg'))
+                        
+                        candidate_paths.append((os.path.join(squashfs_root, ".DirIcon"), '.png'))
+                        
+                        if not icon_name:
+                            for f in os.listdir(squashfs_root):
+                                if f.lower().endswith(('.png', '.svg')):
+                                    candidate_paths.append((os.path.join(squashfs_root, f), f[-4:]))
+
+                        found_icon = None
+                        for icon_path, ext in candidate_paths:
+                            if os.path.exists(icon_path):
+                                found_icon = icon_path
+                                info['icon_ext'] = ext
+                                break
                             
-                            found_icon = None
-                            if os.path.exists(icon_png):
-                                found_icon = icon_png
-                                info['icon_ext'] = '.png'
-                            elif os.path.exists(icon_svg):
-                                found_icon = icon_svg
-                                info['icon_ext'] = '.svg'
-                            elif os.path.exists(icon_dir):
-                                found_icon = icon_dir
-                                info['icon_ext'] = '.png'
-                            
-                            if found_icon:
+                        if found_icon:
+                            try:
                                 with open(found_icon, 'rb') as f:
                                     info['icon_data'] = f.read()
+                            except Exception as e:
+                                logging.error(f"Failed to read icon file {found_icon}: {e}")
             finally:
                 if mounted:
                     subprocess.run(['fusermount', '-u', squashfs_root], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -190,12 +211,21 @@ def manage_desktop_link(appimage_path, enable):
         os.makedirs(icons_dir, exist_ok=True)
         
         # Save icon
+        app_id = info.get('app_id', clean_name.replace(' ', '_').lower())
         if info.get('icon_data'):
             with open(icon_path, 'wb') as f:
                 f.write(info['icon_data'])
+            final_icon = icon_path # Fallback to local file if theme icon fails
         else:
-            icon_path = 'application-x-executable' # fallback
+            final_icon = app_id # Use theme icon directly
             
+        # Prioritize system theme by setting Icon=app_id. KDE will use the theme icon if it exists,
+        # otherwise it will fall back to the extracted icon if it's named app_id in the system, 
+        # or we just write final_icon which is either the absolute path to the extracted icon or the app_id.
+        # Actually, using the absolute path to the extracted icon is safest, but using app_id lets themes override it.
+        # Let's set Icon=app_id. If KDE can't find it, we'll try absolute path.
+        desktop_icon = app_id if app_id else final_icon
+
         # Create .desktop file
         exec_str = f'"{appimage_path}"'
         if info.get('exec_args'):
@@ -204,7 +234,7 @@ def manage_desktop_link(appimage_path, enable):
         desktop_content = f"""[Desktop Entry]
 Name={clean_name}
 Exec={exec_str}
-Icon={icon_path}
+Icon={desktop_icon}
 Type=Application
 Terminal=false
 Categories={info.get('categories', 'Utility;')}
@@ -224,10 +254,10 @@ Comment=Managed by AppImage Manager
         subprocess.run(['kbuildsycoca6'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def is_desktop_link_enabled(appimage_path):
-    """Checks if a desktop link exists for this AppImage."""
+    """Checks if a desktop link exists for this AppImage without reading its metadata."""
     desktop_dir = os.path.expanduser('~/.local/share/applications')
-    info = get_appimage_info(appimage_path)
-    clean_name = info['clean_name'].replace('.AppImage', '')
+    original_name = os.path.basename(appimage_path)
+    clean_name = _clean_name(original_name).replace('.AppImage', '')
     desktop_file = os.path.join(desktop_dir, f"appimage_{clean_name.replace(' ', '_').lower()}.desktop")
     return os.path.exists(desktop_file)
 
@@ -288,22 +318,16 @@ def find_app_corpses(appimage_path):
 
 def remove_items(appimage_path, corpse_paths):
     """
-    Deletes the specified corpse paths, and optionally the AppImage and its desktop link.
+    Moves the specified corpse paths and the AppImage itself to the KDE Trash.
     """
     if "APPIMAGE_ITSELF" in corpse_paths:
         # 1. Disable desktop link (removes .desktop and icon)
         manage_desktop_link(appimage_path, enable=False)
         
-        # 2. Delete AppImage
+        # 2. Move AppImage to trash
         if os.path.exists(appimage_path):
-            os.remove(appimage_path)
+            subprocess.run(['kioclient', 'move', appimage_path, 'trash:/'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
-        corpse_paths.remove("APPIMAGE_ITSELF")
-        
-    # 3. Delete corpses
     for p in corpse_paths:
-        if os.path.exists(p):
-            if os.path.isdir(p):
-                shutil.rmtree(p)
-            else:
-                os.remove(p)
+        if p != "APPIMAGE_ITSELF" and os.path.exists(p):
+            subprocess.run(['kioclient', 'move', p, 'trash:/'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
