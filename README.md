@@ -4,89 +4,124 @@
   <img src="assets/AppImage.gif" width="45%" />
   <img src="assets/context_menu.png" width="45%" />
 </p>
+<p align="center">
+  <img src="assets/gui_breeze.png" width="45%" />
+  <img src="assets/gui_material_papirus.png" width="45%" />
+</p>
+<p align="center">
+  <img src="assets/gui_material_you.png" width="45%" />
+  <img src="assets/gui_osx_light.png" width="45%" />
+</p>
 
-A lightweight, native AppImage manager for KDE Plasma.
+> **Disclaimer:** Portions of this project were assisted, generated, or heavily refactored by AI (Claude / Gemini). Always review the code before deploying to production environments.
 
-AppImage Manager integrates directly into your KDE desktop environment to handle AppImage files efficiently. It replaces the manual process of moving files, making them executable, and creating menu shortcuts with a clean, macOS-style installation window.
+A lightweight, native AppImage manager for KDE Plasma 6.
+
+AppImage Manager integrates directly into Dolphin to handle AppImage files with a clean, focused UI. It replaces the manual process of moving files, making them executable, and creating menu shortcuts.
 
 ## Features
 
-- **macOS-Style Installation**: Drag and drop the AppImage into the Applications folder directly from the popup window.
-- **Context Menu Plugin**: Adds a "Manage AppImage" option to the Dolphin right-click context menu.
-- **Smart Desktop Integration**: Automatically uses your system's icon theme (e.g., Papirus, YAMIS) for a native look. If none is found, it falls back to the AppImage's internal icon. Preserves original `Exec` arguments safely.
-- **Clean Uninstallation to Trash**: Asynchronously scans `~/.config`, `~/.cache`, and `~/.local/share` for leftover files ("corpses"). Items are safely moved to the KDE Trash instead of being permanently deleted.
-- **Lightning Fast**: Metadata extraction and file scanning run asynchronously in the background, keeping the UI snappy and responsive at all times.
+- **Drag-and-Drop Installation**: Drag the app icon onto the Applications folder in the popup window to move the AppImage to `~/Applications/` and make it executable.
+- **Dolphin Plugin**: Adds a "Manage AppImage" option to the right-click context menu — auto-discovered by Dolphin, no configuration needed.
+- **Smart Desktop Integration**: Checks your icon theme first (Papirus, YAMIS, etc.) for a native look. Falls back to the icon embedded inside the AppImage.
+- **Clean Uninstallation**: Asynchronously scans `~/.config`, `~/.cache`, and `~/.local/share` for leftover files ("corpses"). Items are moved to the KDE Trash, not permanently deleted.
+- **Responsive UI**: Metadata extraction and file scanning run on background threads — the UI never blocks.
 
 ## Installation
 
-To compile and install AppImage Manager, you need a C++ compiler and CMake:
+### Using CMake Presets (recommended)
 
 ```bash
-mkdir build && cd build
-cmake ..
-make -j$(nproc)
-sudo make install
+cmake --preset release
+cmake --build --preset release
+sudo cmake --install build/release
 ```
 
-This will install the standalone binary, the QML files, and the KIO Service Menu so that the "Manage AppImage" option appears in Dolphin.
+### Manual
+
+```bash
+cmake -B build -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build --parallel
+sudo cmake --install build
+```
+
+After installation, restart Dolphin (or log out and back in) to activate the plugin.
 
 ### Uninstallation
 
-To remove the application from your system, simply run the `uninstall` target from your build directory:
-
 ```bash
-cd build
-sudo make uninstall
+sudo cmake --build build --target uninstall
 ```
 
 ## Usage
 
 **Installing an AppImage:**
-1. Right-click any `.AppImage` file and select "Manage AppImage".
-2. Drag the application icon to the folder icon in the center of the window. The file will be moved to `~/Applications/` and made executable.
-3. Check the "Create Shortcut" box to add it to your system application launcher.
+1. Right-click any `.AppImage` file in Dolphin and select **Manage AppImage**.
+2. Drag the app icon onto the Applications folder icon. The file is moved to `~/Applications/` and made executable.
+3. Check **Create Shortcut** to add an entry to your application launcher.
 
 **Uninstalling an AppImage:**
-1. Right-click an installed AppImage and select "Manage AppImage".
-2. Click "Remove".
-3. A window will list the AppImage file along with any related configuration or cache directories found on your system. Select the items you want to delete and confirm.
+1. Right-click the installed AppImage and select **Manage AppImage**.
+2. Click **Remove**.
+3. A window lists the AppImage and any related config/cache files found on your system. Select the items to delete and confirm — all selected items are moved to Trash.
 
 ## Requirements
 
-AppImage Manager is a native C++ application built on Qt6 and KDE Frameworks 6.
-
 ### Build Dependencies
-You must have the following development packages installed to compile the project:
-- **C++20 Compiler** (GCC or Clang)
-- **CMake** & **Extra CMake Modules (ECM)**
-- **Qt6**: `qt6-base`, `qt6-declarative`
-- **KDE Frameworks 6**: `kirigami`, `ki18n`, `kcoreaddons`, `kio`, `kservice`, `kiconthemes`
 
-#### Quick Install (Build Dependencies)
+| Component | Minimum version |
+|-----------|----------------|
+| C++20 compiler (GCC or Clang) | GCC 12 / Clang 15 |
+| CMake | 3.22 |
+| Extra CMake Modules (ECM) | 6.0 |
+| Qt6 (Core, Gui, Quick, Qml, Concurrent) | 6.6 |
+| KDE Frameworks 6: CoreAddons, I18n, KIO, IconThemes, Notifications, Crash, DBusAddons | 6.0 |
+| Kirigami (ships with Plasma 6) | 6.0 |
 
-**Ubuntu/Debian/KDE Neon:**
+**Optional:** `libappimage` — enables in-process SquashFS metadata extraction without requiring FUSE at runtime.
+
+#### Arch Linux
 ```bash
-sudo apt install build-essential cmake extra-cmake-modules qt6-base-dev qt6-declarative-dev libkf6kirigami-dev libkf6i18n-dev libkf6coreaddons-dev libkf6kio-dev libkf6service-dev libkf6iconthemes-dev
+sudo pacman -S base-devel cmake extra-cmake-modules \
+  qt6-base qt6-declarative \
+  kcoreaddons ki18n kio kiconthemes \
+  knotifications kcrash kdbusaddons kirigami
 ```
 
-**Arch Linux:**
+#### Ubuntu / Debian / KDE Neon
 ```bash
-sudo pacman -S base-devel cmake extra-cmake-modules qt6-base qt6-declarative kirigami ki18n kcoreaddons kio kservice kiconthemes
+sudo apt install build-essential cmake extra-cmake-modules \
+  qt6-base-dev qt6-declarative-dev \
+  libkf6coreaddons-dev libkf6i18n-dev libkf6kio-dev \
+  libkf6iconthemes-dev libkf6notifications-dev \
+  libkf6crash-dev libkf6dbusaddons-dev \
+  libkf6kirigami-dev
 ```
 
-**Fedora:**
+#### Fedora
 ```bash
-sudo dnf install gcc-c++ cmake extra-cmake-modules qt6-qtbase-devel qt6-qtdeclarative-devel kf6-kirigami-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kio-devel kf6-kservice-devel kf6-kiconthemes-devel
+sudo dnf install gcc-c++ cmake extra-cmake-modules \
+  qt6-qtbase-devel qt6-qtdeclarative-devel \
+  kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kio-devel \
+  kf6-kiconthemes-devel kf6-knotifications-devel \
+  kf6-kcrash-devel kf6-kdbusaddons-devel \
+  kf6-kirigami-devel
 ```
 
 ### Runtime Dependencies
-- **System Icons**: Custom icon themes, like YAMIS, Hatter or Papirus, are fully supported and prioritized for desktop shortcuts. 
-- **squashfuse / fusermount3**: Used as a fallback for mounting AppImages if `libappimage` is not available at compile time.
 
-> **Note on AppImage Formats:** AppImage Manager is heavily optimized for **Type 2 AppImages** (which use `squashfs`). Type 1 AppImages (older ISO9660 format) are supported but metadata extraction may be limited.
+- **squashfuse** and **fusermount3** — only required when `libappimage` is not available at compile time (used as a fallback for Type 2 AppImage metadata extraction).
+
+> **AppImage format support:** Type 2 AppImages (squashfs-based) are fully supported. Type 1 AppImages (ISO9660) fall back to `--appimage-extract` for metadata; this requires the AppImage itself to be executable.
+
+## Dolphin Integration
+
+The app ships two integration mechanisms:
+
+- **KFileItemAction plugin** (`kf6/fileitemaction/appimagemanager.so`) — auto-discovered by Dolphin 24.02+. No setup needed after install.
+- **KIO Service Menu** (`kio/servicemenus/org.kde.appimagemanager.desktop`) — fallback for file managers that support service menus but not KFileItemAction plugins. Also allows invoking the app directly via `appimagemanager <file>`.
 
 ## Roadmap
 
-Future planned features for AppImage Manager:
-- **Delta Updates**: Implementation of `zsync` / `AppImageUpdate` for automatic delta updates of installed AppImages.
-- **Orphan Cleanup Daemon**: A background service utilizing `inotify` to automatically remove `.desktop` shortcuts when an AppImage is manually deleted from the `~/Applications` folder.
+- **Delta Updates**: Integration with `zsync` / AppImageUpdate for in-place updates of installed AppImages.
+- **Orphan Cleanup**: An `inotify`-based background service to remove stale `.desktop` shortcuts when an AppImage is deleted from `~/Applications/`.
