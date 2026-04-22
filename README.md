@@ -19,13 +19,25 @@ AppImage Manager integrates directly into your KDE desktop environment to handle
 
 ## Installation
 
-To set up the KDE Plasma integration, clone the repository and run the setup script:
+To compile and install AppImage Manager, you need a C++ compiler and CMake:
 
 ```bash
-python3 cli.py setup
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+sudo make install
 ```
 
-This command will create a KIO Service Menu in `~/.local/share/kio/servicemenus/` to enable the right-click option in Dolphin.
+This will install the standalone binary, the QML files, and the KIO Service Menu so that the "Manage AppImage" option appears in Dolphin.
+
+### Uninstallation
+
+To remove the application from your system, simply run the `uninstall` target from your build directory:
+
+```bash
+cd build
+sudo make uninstall
+```
 
 ## Usage
 
@@ -41,43 +53,37 @@ This command will create a KIO Service Menu in `~/.local/share/kio/servicemenus/
 
 ## Requirements
 
-### Python Environment
-- **Python 3.9+**
-- **PySide6**: 
-  ```bash
-  pip install -r requirements.txt
-  ```
+AppImage Manager is a native C++ application built on Qt6 and KDE Frameworks 6.
 
-### System Dependencies
-The application leverages native KDE Plasma 6 features and system utilities for performance and security. Ensure the following are installed via your package manager (e.g., `apt`, `pacman`, `dnf`):
+### Build Dependencies
+You must have the following development packages installed to compile the project:
+- **C++20 Compiler** (GCC or Clang)
+- **CMake** & **Extra CMake Modules (ECM)**
+- **Qt6**: `qt6-base`, `qt6-declarative`
+- **KDE Frameworks 6**: `kirigami`, `ki18n`, `kcoreaddons`, `kio`, `kservice`, `kiconthemes`
 
-- **KDE Frameworks 6**:
-    - `kirigami`: Required for the modernized UI components.
-    - `kio`: Provides `kioclient` for native file movement with progress notifications.
-    - `kservice`: Provides `kbuildsycoca6` to instantly update the application menu.
-- **Filesystem Utilities**:
-    - `squashfuse`: Enables instantaneous, non-destructive metadata extraction from AppImages.
-    - `fuse` (or `fuse3`): Required for `fusermount`, used to cleanly unmount images after inspection.
-- **System Icons**: Custom icon themes, like YAMIS, Hatter or Papirus, are fully supported and prioritized for desktop shortcuts. 
-
-> **Note on AppImage Formats:** AppImage Manager is heavily optimized for **Type 2 AppImages** (which use `squashfs`). Type 1 AppImages (older ISO9660 format) are supported but will be significantly slower during metadata extraction, as they do not support instant mounting via `squashfuse`.
-
-#### Quick Install (System Dependencies)
+#### Quick Install (Build Dependencies)
 
 **Ubuntu/Debian/KDE Neon:**
 ```bash
-sudo apt install squashfuse fuse3 libkf6kirigami-dev kio kservice
+sudo apt install build-essential cmake extra-cmake-modules qt6-base-dev qt6-declarative-dev libkf6kirigami-dev libkf6i18n-dev libkf6coreaddons-dev libkf6kio-dev libkf6service-dev libkf6iconthemes-dev
 ```
 
 **Arch Linux:**
 ```bash
-sudo pacman -S squashfuse fuse3 kirigami kio kservice6
+sudo pacman -S base-devel cmake extra-cmake-modules qt6-base qt6-declarative kirigami ki18n kcoreaddons kio kservice kiconthemes
 ```
 
 **Fedora:**
 ```bash
-sudo dnf install squashfuse fuse3 kf6-kirigami kio kf6-kservice
+sudo dnf install gcc-c++ cmake extra-cmake-modules qt6-qtbase-devel qt6-qtdeclarative-devel kf6-kirigami-devel kf6-ki18n-devel kf6-kcoreaddons-devel kf6-kio-devel kf6-kservice-devel kf6-kiconthemes-devel
 ```
+
+### Runtime Dependencies
+- **System Icons**: Custom icon themes, like YAMIS, Hatter or Papirus, are fully supported and prioritized for desktop shortcuts. 
+- **squashfuse / fusermount3**: Used as a fallback for mounting AppImages if `libappimage` is not available at compile time.
+
+> **Note on AppImage Formats:** AppImage Manager is heavily optimized for **Type 2 AppImages** (which use `squashfs`). Type 1 AppImages (older ISO9660 format) are supported but metadata extraction may be limited.
 
 ## Roadmap
 
