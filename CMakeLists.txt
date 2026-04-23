@@ -40,6 +40,9 @@ find_package(KF6 6.0 REQUIRED COMPONENTS
     DBusAddons
 )
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(Canberra IMPORTED_TARGET libcanberra)
+
 # Optional: libappimage for in-process SquashFS metadata extraction.
 # Falls back to squashfuse subprocess if not found.
 find_package(libappimage QUIET)

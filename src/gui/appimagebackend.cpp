@@ -17,8 +17,13 @@
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QIcon>
+#include <QProcess>
 #include <QtConcurrent/QtConcurrent>
 #include <QUrl>
+
+#ifdef HAVE_CANBERRA
+#include <canberra.h>
+#endif
 
 AppImageBackend::AppImageBackend(const QString &appImagePath,
                                  AppImageIconProvider *iconProvider,
@@ -80,6 +85,11 @@ QString AppImageBackend::formatBytes(qint64 bytes) const
 // ──────────────────────────────────────────────────────────────────────────────
 // Slots called from QML
 // ──────────────────────────────────────────────────────────────────────────────
+
+void AppImageBackend::launchAppImage()
+{
+    QProcess::startDetached(m_appImagePath, {});
+}
 
 void AppImageBackend::installAppImage()
 {
@@ -164,6 +174,14 @@ void AppImageBackend::onInstallJobFinished(KJob *job)
                    + QFileInfo(m_appImagePath).fileName();
     m_isInstalled = true;
     Q_EMIT installedChanged();
+
+#ifdef HAVE_CANBERRA
+    static ca_context *s_caCtx = nullptr;
+    if (!s_caCtx)
+        ca_context_create(&s_caCtx);
+    if (s_caCtx)
+        ca_context_play(s_caCtx, 0, CA_PROP_EVENT_ID, "outcome-success", nullptr);
+#endif
 
     KNotification::event(QStringLiteral("installed"),
                          i18n("AppImage installed"),

@@ -184,10 +184,17 @@ ApplicationWindow {
                         MouseArea {
                             id: dragArea
                             anchors.fill: parent
-                            drag.target: appIcon
-                            enabled: !backend.isInstalled
+                            hoverEnabled: backend.isInstalled
+                            drag.target: backend.isInstalled ? null : appIcon
+                            cursorShape: backend.isInstalled ? Qt.PointingHandCursor : Qt.OpenHandCursor
+
+                            onClicked: {
+                                if (backend.isInstalled)
+                                    backend.launchAppImage()
+                            }
 
                             onReleased: {
+                                if (backend.isInstalled) return
                                 var dropPos = appIcon.mapToItem(folderContainer, appIcon.width / 2, appIcon.height / 2)
                                 if (dropPos.x >= 0 && dropPos.x <= folderContainer.width
                                         && dropPos.y >= 0 && dropPos.y <= folderContainer.height) {
@@ -197,6 +204,9 @@ ApplicationWindow {
                                 appIcon.x = 0
                                 appIcon.y = 0
                             }
+
+                            ToolTip.visible: backend.isInstalled && containsMouse
+                            ToolTip.text: i18n("Launch %1", backend.cleanName)
                         }
                     }
 
@@ -262,6 +272,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignHCenter
             spacing: Kirigami.Units.largeSpacing
+            visible: backend.isInstalled
 
             CheckBox {
                 text: i18n("Create Shortcut")

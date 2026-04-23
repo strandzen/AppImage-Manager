@@ -87,6 +87,11 @@ target_link_libraries(appimagemanager_qml PUBLIC
     KF6::Notifications
 )
 
+if(Canberra_FOUND)
+    target_link_libraries(appimagemanager_qml PRIVATE PkgConfig::Canberra)
+    target_compile_definitions(appimagemanager_qml PRIVATE HAVE_CANBERRA)
+endif()
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Dolphin plugin — KAbstractFileItemActionPlugin (.so)
 # Auto-discovered by Dolphin via plugin JSON metadata.

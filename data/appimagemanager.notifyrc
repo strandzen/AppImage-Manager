@@ -6,7 +6,8 @@ Comment=AppImage Manager
 [Event/installed]
 Name=AppImage Installed
 Comment=AppImage was moved to ~/Applications
-Action=Popup
+Action=Sound|Popup
+Sound=outcome-success
 
 [Event/removed]
 Name=AppImage Removed

@@ -60,6 +60,7 @@ Q_SIGNALS:
 
 public Q_SLOTS:
     void installAppImage();
+    void launchAppImage();
     void toggleDesktopLink(bool enable);
     void findCorpses();
     void removeAppImageAndCorpses(const QStringList &paths);
