@@ -5,12 +5,10 @@
   <img src="assets/context_menu.png" alt="Dolphin context menu" width="45%" />
 </p>
 <p align="center">
-  <img src="assets/gui_breeze.png" alt="UI with Breeze theme" width="45%" />
-  <img src="assets/gui_material_papirus.png" alt="UI with Material Papirus theme" width="45%" />
+  <img src="assets/preinstall.png" alt="Security disclaimer before installation" width="90%" />
 </p>
 <p align="center">
-  <img src="assets/gui_material_you.png" alt="UI with Material You theme" width="45%" />
-  <img src="assets/gui_osx_light.png" alt="UI with macOS light theme" width="45%" />
+  <img src="assets/installed.png" alt="Main interface showing installed AppImages" width="90%" />
 </p>
 
 > **Disclaimer:** Portions of this project were assisted, generated, or heavily refactored by AI (Claude / Gemini). Always review the code before deploying to production environments.
