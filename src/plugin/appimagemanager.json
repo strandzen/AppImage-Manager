@@ -1,0 +1,23 @@
+{
+    "KPlugin": {
+        "Id": "appimagemanager",
+        "Name": "AppImage Manager",
+        "Name[de]": "AppImage-Verwaltung",
+        "Description": "Manage AppImage files in KDE Plasma",
+        "Description[de]": "AppImage-Dateien in KDE Plasma verwalten",
+        "Icon": "application-x-executable",
+        "MimeTypes": [
+            "application/vnd.appimage",
+            "application/x-iso9660-appimage"
+        ],
+        "ServiceTypes": ["KFileItemAction"],
+        "Version": "0.1",
+        "Website": "https://github.com/strandzen/AppImage-Manager",
+        "License": "GPL-2.0-or-later",
+        "Authors": [
+            {
+                "Name": "AppImage Manager Contributors"
+            }
+        ]
+    }
+}

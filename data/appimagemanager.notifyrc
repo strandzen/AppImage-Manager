@@ -1,0 +1,14 @@
+[Global]
+IconName=application-x-executable
+DesktopEntry=org.kde.appimagemanager
+Comment=AppImage Manager
+
+[Event/installed]
+Name=AppImage Installed
+Comment=AppImage was moved to ~/Applications
+Action=Popup
+
+[Event/removed]
+Name=AppImage Removed
+Comment=AppImage was moved to Trash
+Action=Popup

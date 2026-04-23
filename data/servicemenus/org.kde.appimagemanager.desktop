@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Service
+MimeType=application/vnd.appimage;application/x-iso9660-appimage;
+Actions=manageAppImage;
+X-KDE-MaxNumberOfUrls=1
+
+[Desktop Action manageAppImage]
+Name=Manage AppImage
+Name[de]=AppImage verwalten
+Icon=application-x-executable
+Exec=appimagemanager %f

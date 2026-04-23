@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- Placeholder Breeze-style icon — replace with final artwork -->
+  <rect x="4" y="4" width="40" height="40" rx="6" fill="#3daee9"/>
+  <text x="24" y="32" font-family="sans-serif" font-size="20" font-weight="bold"
+        text-anchor="middle" fill="white">AI</text>
+</svg>
