@@ -1,0 +1,139 @@
+# German translation for AppImage Manager.
+# Copyright (C) 2024 AppImage Manager Contributors
+# This file is distributed under the same license as the appimagemanager package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: appimagemanager 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/strandzen/AppImage-Manager/issues\n"
+"POT-Creation-Date: 2026-04-24 00:00+0000\n"
+"PO-Revision-Date: 2026-04-24 00:00+0000\n"
+"Last-Translator: AppImage Manager Contributors\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/main.cpp:21
+#: qml/ManageWindow.qml:40
+msgid "AppImage Manager"
+msgstr "AppImage-Verwaltung"
+
+#: src/main.cpp:23
+msgid "Manage AppImage files in KDE Plasma"
+msgstr "AppImage-Dateien in KDE Plasma verwalten"
+
+#: src/main.cpp:25
+#: qml/ManageWindow.qml:59
+msgid "© 2024 AppImage Manager Contributors"
+msgstr "© 2024 AppImage Manager Mitwirkende"
+
+#: src/main.cpp:47
+msgid "Path to the AppImage file to manage."
+msgstr "Pfad zur zu verwaltenden AppImage-Datei."
+
+#: src/core/appimagemanager.cpp:86
+msgid "Managed by AppImage Manager"
+msgstr "Verwaltet von AppImage-Verwaltung"
+
+#: src/gui/appimagebackend.cpp:187
+msgid "AppImage installed"
+msgstr "AppImage installiert"
+
+#: src/gui/appimagebackend.cpp:188
+#, kde-format
+msgid "%1 was moved to Applications."
+msgstr "%1 wurde nach Anwendungen verschoben."
+
+#: src/gui/appimagebackend.cpp:205
+msgid "AppImage removed"
+msgstr "AppImage entfernt"
+
+#: src/gui/appimagebackend.cpp:206
+#, kde-format
+msgid "%1 was moved to Trash."
+msgstr "%1 wurde in den Papierkorb verschoben."
+
+#: src/plugin/appimageactionplugin.cpp:46
+#: qml/ManageWindow.qml:18
+msgid "Manage AppImage"
+msgstr "AppImage verwalten"
+
+#: qml/ManageWindow.qml:27
+msgid "About AppImage Manager"
+msgstr "Über AppImage-Verwaltung"
+
+#: qml/ManageWindow.qml:46
+msgid "Version 0.1.0"
+msgstr "Version 0.1.0"
+
+#: qml/ManageWindow.qml:52
+msgid "A lightweight AppImage manager for KDE Plasma 6."
+msgstr "Eine schlanke AppImage-Verwaltung für KDE Plasma 6."
+
+#: qml/ManageWindow.qml:71
+msgid "License: GNU General Public License v2 or later"
+msgstr "Lizenz: GNU General Public License v2 oder neuer"
+
+#: qml/ManageWindow.qml:87
+msgid "About"
+msgstr "Über"
+
+#: qml/ManageWindow.qml:126
+#, kde-format
+msgid "Version: %1  •  Size: %2"
+msgstr "Version: %1  •  Größe: %2"
+
+#: qml/ManageWindow.qml:209
+#, kde-format
+msgid "Launch %1"
+msgstr "%1 starten"
+
+#: qml/ManageWindow.qml:250
+msgid "Applications"
+msgstr "Anwendungen"
+
+#: qml/ManageWindow.qml:267
+msgid "AppImages are unverified executables. Only install from sources you trust."
+msgstr "AppImages sind nicht verifizierte ausführbare Dateien. Installieren Sie nur aus vertrauenswürdigen Quellen."
+
+#: qml/ManageWindow.qml:285
+msgid "Create Shortcut"
+msgstr "Verknüpfung erstellen"
+
+#: qml/ManageWindow.qml:295
+#: qml/UninstallWindow.qml:179
+msgid "Remove"
+msgstr "Entfernen"
+
+#: qml/UninstallWindow.qml:13
+#, kde-format
+msgid "Uninstall %1"
+msgstr "%1 deinstallieren"
+
+#: qml/UninstallWindow.qml:26
+msgid "Move to Trash?"
+msgstr "In den Papierkorb verschieben?"
+
+#: qml/UninstallWindow.qml:27
+msgid "The selected items will be moved to the Trash. You can restore them from there if needed."
+msgstr "Die ausgewählten Elemente werden in den Papierkorb verschoben. Sie können diese bei Bedarf wiederherstellen."
+
+#: qml/UninstallWindow.qml:55
+#, kde-format
+msgid "Selected for removal: %1"
+msgstr "Zum Entfernen ausgewählt: %1"
+
+#: qml/UninstallWindow.qml:75
+msgid "Select items to remove:"
+msgstr "Zu entfernende Elemente auswählen:"
+
+#: qml/UninstallWindow.qml:105
+msgid " (AppImage)"
+msgstr " (AppImage)"
+
+#: qml/UninstallWindow.qml:174
+msgid "Cancel"
+msgstr "Abbrechen"

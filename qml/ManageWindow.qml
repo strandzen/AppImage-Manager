@@ -266,6 +266,13 @@ ApplicationWindow {
             type: Kirigami.MessageType.Warning
             text: i18n("AppImages are unverified executables. Only install from sources you trust.")
             showCloseButton: false
+
+            // Match the corner radius of the box above.
+            Component.onCompleted: {
+                if (background) {
+                    background.radius = Kirigami.Units.smallSpacing * 2;
+                }
+            }
         }
 
         ColumnLayout {
