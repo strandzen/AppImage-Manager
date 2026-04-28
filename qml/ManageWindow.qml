@@ -22,6 +22,8 @@ ApplicationWindow {
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
 
+    UninstallDialog { id: uninstallDialog }
+
     // ── About sheet ──────────────────────────────────────────────────────────
     Kirigami.OverlaySheet {
         id: aboutSheet
@@ -240,8 +242,8 @@ ApplicationWindow {
                 text: i18n("Remove"); icon.name: "edit-delete"
                 onClicked: {
                     backend.findCorpses()
-                    var component = Qt.createComponent("qrc:/appimagemanager/UninstallWindow.qml")
-                    if (component.status === Component.Ready) { component.createObject(root).show() }
+                    uninstallDialog.backend = backend
+                    uninstallDialog.open()
                 }
             }
         }

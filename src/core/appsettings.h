@@ -33,6 +33,7 @@ public:
 Q_SIGNALS:
     void applicationsPathChanged();
     void showDisclaimerChanged();
+    void applicationsPathError(const QString &message);
 
 private:
     explicit AppSettings(QObject *parent = nullptr);

@@ -26,7 +26,7 @@ public:
 private:
     explicit DashboardWindow(QObject *parent = nullptr);
     void setupAndShow();
-    AppImageBackend *createBackend(const QString &filePath);
+    AppImageBackend *createBackend(const QString &filePath, bool withCorpses = false);
 
     AppImageIconProvider      *m_iconProvider       = nullptr;
     AppImageListModel         *m_listModel          = nullptr;

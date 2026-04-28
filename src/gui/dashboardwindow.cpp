@@ -83,20 +83,21 @@ void DashboardWindow::setupAndShow()
     m_window->requestActivate();
 }
 
-AppImageBackend *DashboardWindow::createBackend(const QString &filePath)
+AppImageBackend *DashboardWindow::createBackend(const QString &filePath, bool withCorpses)
 {
     auto *iconProvider = new AppImageIconProvider;
     auto *backend      = new AppImageBackend(filePath, iconProvider, this);
     iconProvider->setParent(backend);
-    connect(backend, &AppImageBackend::metadataLoadedChanged, backend,
-            [backend]() { backend->findCorpses(); }, Qt::SingleShotConnection);
+    if (withCorpses)
+        connect(backend, &AppImageBackend::metadataLoadedChanged, backend,
+                [backend]() { backend->findCorpses(); }, Qt::SingleShotConnection);
     return backend;
 }
 
 QObject *DashboardWindow::createUninstallBackend(const QString &filePath)
 {
-    delete m_uninstallBackend;
-    m_uninstallBackend = createBackend(filePath);
+    if (m_uninstallBackend) m_uninstallBackend->deleteLater();
+    m_uninstallBackend = createBackend(filePath, true);
     connect(m_uninstallBackend, &AppImageBackend::uninstallFinished,
             m_listModel, &AppImageListModel::refresh);
     return m_uninstallBackend;
@@ -104,8 +105,8 @@ QObject *DashboardWindow::createUninstallBackend(const QString &filePath)
 
 QObject *DashboardWindow::createStorageBackend(const QString &filePath)
 {
-    delete m_storageBackend;
-    m_storageBackend = createBackend(filePath);
+    if (m_storageBackend) m_storageBackend->deleteLater();
+    m_storageBackend = createBackend(filePath, false);
     return m_storageBackend;
 }
 

@@ -41,7 +41,6 @@ include(GenerateExportHeader)
 # ──────────────────────────────────────────────────────────────────────────────
 set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
-    ${CMAKE_SOURCE_DIR}/qml/UninstallWindow.qml
     ${CMAKE_SOURCE_DIR}/qml/DashboardWindow.qml
     ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
@@ -50,8 +49,6 @@ set_source_files_properties(
 )
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
     PROPERTY QT_RESOURCE_ALIAS ManageWindow.qml)
-set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UninstallWindow.qml
-    PROPERTY QT_RESOURCE_ALIAS UninstallWindow.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/DashboardWindow.qml
     PROPERTY QT_RESOURCE_ALIAS DashboardWindow.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
@@ -66,7 +63,6 @@ qt_add_qml_module(appimagemanager_qml
     VERSION 1.0
     QML_FILES
         ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
-        ${CMAKE_SOURCE_DIR}/qml/UninstallWindow.qml
         ${CMAKE_SOURCE_DIR}/qml/DashboardWindow.qml
         ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml

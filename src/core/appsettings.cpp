@@ -32,6 +32,10 @@ void AppSettings::setApplicationsPath(const QString &path)
 {
     if (applicationsPath() == path)
         return;
+    if (!QDir().mkpath(path)) {
+        Q_EMIT applicationsPathError(path);
+        return;
+    }
     m_config->group(QStringLiteral("General"))
              .writeEntry(QStringLiteral("applicationsPath"), path);
     m_config->sync();
