@@ -1,20 +1,33 @@
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-ENV/
-.env
-.venv
+# Build artifacts
 build/
-dist/
-*.spec
+install/
+compile_commands.json
+
+# Qt / CMake generated
+*.user
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Editor / IDE
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
 .DS_Store
+
+# AppImage binaries
 *.AppImage
+*.appimage
+
+# Logs
 *.log
+
+# AI assistant context (local only)
+CLAUDE.md
+GEMINI.md
+
+# Packaging scripts (local workflow)
 packaging/
-compile_commands.json

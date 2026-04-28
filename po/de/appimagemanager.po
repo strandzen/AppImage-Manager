@@ -137,3 +137,64 @@ msgstr " (AppImage)"
 #: qml/UninstallWindow.qml:174
 msgid "Cancel"
 msgstr "Abbrechen"
+
+#: src/main.cpp:47
+msgid "AppImage file to manage. If omitted, opens the dashboard."
+msgstr "AppImage-Datei, die verwaltet werden soll. Ohne Angabe wird das Dashboard geöffnet."
+
+#: qml/DashboardWindow.qml:28
+msgid "Installed AppImages"
+msgstr "Installierte AppImages"
+
+#: qml/DashboardWindow.qml:31
+msgid "Refresh"
+msgstr "Aktualisieren"
+
+#: qml/DashboardWindow.qml:37
+#: qml/DashboardWindow.qml
+msgid "Settings"
+msgstr "Einstellungen"
+
+#: qml/DashboardWindow.qml:45
+msgid "No AppImages installed"
+msgstr "Keine AppImages installiert"
+
+#: qml/DashboardWindow.qml:47
+msgid "Right-click an AppImage file and choose \"Manage AppImage\" to install it."
+msgstr "Klicken Sie mit der rechten Maustaste auf eine AppImage-Datei und wählen Sie \"Manage AppImage\", um sie zu installieren."
+
+#: qml/DashboardWindow.qml:107
+msgid "Shortcut"
+msgstr "Verknüpfung"
+
+#: qml/DashboardWindow.qml:114
+msgid "Update"
+msgstr "Aktualisieren"
+
+#: qml/DashboardWindow.qml:117
+msgid "Update checking is not yet implemented"
+msgstr "Die Update-Prüfung ist noch nicht implementiert"
+
+#: qml/DashboardWindow.qml
+msgid "Applications folder:"
+msgstr "Anwendungsordner:"
+
+#: qml/DashboardWindow.qml
+msgid "Show security disclaimer"
+msgstr "Sicherheitshinweis anzeigen"
+
+#: qml/DashboardWindow.qml
+msgid "Sort"
+msgstr "Sortieren"
+
+#: qml/DashboardWindow.qml
+msgid "By name"
+msgstr "Nach Name"
+
+#: qml/DashboardWindow.qml
+msgid "By size"
+msgstr "Nach Größe"
+
+#: qml/DashboardWindow.qml
+msgid "By date added"
+msgstr "Nach Hinzufügedatum"

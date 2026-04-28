@@ -1,0 +1,21 @@
+[Desktop Entry]
+Type=Application
+Name=AppImage Manager
+Name[de]=AppImage-Verwaltung
+Name[es]=Gestor de AppImage
+Name[fr]=Gestionnaire AppImage
+Name[it]=Gestore AppImage
+Name[nb]=AppImage-behandler
+GenericName=AppImage Manager
+Comment=Manage AppImage files
+Comment[de]=AppImage-Dateien verwalten
+Comment[es]=Gestionar archivos AppImage
+Comment[fr]=Gérer les fichiers AppImage
+Comment[it]=Gestisci file AppImage
+Comment[nb]=Behandle AppImage-filer
+Exec=appimagemanager %f
+Icon=appimagemanager
+Terminal=false
+Categories=System;FileManager;
+Keywords=AppImage;install;manage;application;
+MimeType=application/vnd.appimage;application/x-iso9660-appimage;

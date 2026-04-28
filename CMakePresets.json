@@ -15,7 +15,8 @@
             "inherits": "base",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "/usr"
+                "CMAKE_INSTALL_PREFIX": "/usr",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         },
         {

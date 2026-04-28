@@ -53,7 +53,7 @@ void AppImageWindow::setupAndShow()
     m_engine->addImageProvider(QStringLiteral("icon"), new KQuickIconProvider);
     m_engine->rootContext()->setContextProperty(QStringLiteral("backend"), m_backend);
 
-    m_engine->load(QUrl(QStringLiteral("qrc:/org/kde/appimagemanager/ManageWindow.qml")));
+    m_engine->load(QUrl(QStringLiteral("qrc:/appimagemanager/ManageWindow.qml")));
 
     const QList<QObject *> rootObjects = m_engine->rootObjects();
     if (rootObjects.isEmpty()) {

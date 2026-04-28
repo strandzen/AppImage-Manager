@@ -18,9 +18,11 @@ A lightweight AppImage manager for KDE Plasma 6, designed for simplicity and sea
 
 ## Features
 
+- **Dashboard**: Browse, search, and manage all installed AppImages in one window — with sort by name, size, or date added.
 - **Drag-and-Drop Installation**: Move AppImages to `~/Applications/` and make them executable with a simple gesture.
 - **Dolphin Plugin**: Adds a "Manage AppImage" option to your right-click menu for instant access.
 - **Desktop Integration**: Automatically creates application launcher shortcuts with native icon theme support.
+- **Storage Analysis**: Inspect the AppImage file and any leftover config/cache files from a single dialog.
 - **Clean Uninstallation**: Safely removes leftover configuration and cache files when deleting an app.
 - **Safe by Design**: Moves files to the KDE Trash instead of permanent deletion, with clear confirmation dialogs.
 - **Performance Focused**: Metadata extraction and scanning run in the background for a responsive experience.
@@ -30,39 +32,47 @@ A lightweight AppImage manager for KDE Plasma 6, designed for simplicity and sea
 ### Build Dependencies
 
 - **C++20 Compiler** (GCC 12+ / Clang 15+)
-- **CMake** (3.22+)
+- **CMake** (3.22+) + **Ninja**
 - **Qt6** (6.6+ Core, Gui, Quick, Qml, Concurrent)
 - **KDE Frameworks 6** (CoreAddons, I18n, KIO, IconThemes, Notifications, Crash, DBusAddons)
 - **Kirigami 6**
 
 ### Optional
 
-- `libappimage`: For faster metadata extraction without FUSE.
-- `libcanberra`: For completion sound notifications.
+- `libappimage`: For faster in-process metadata extraction without FUSE.
+- `libcanberra`: For an audio notification on installation completion.
 
 ## Installation
 
-### Quick Start (Arch Linux)
+### Arch-based distros
 
 ```bash
-sudo pacman -S base-devel cmake extra-cmake-modules qt6-base qt6-declarative kcoreaddons ki18n kio kiconthemes knotifications kcrash kdbusaddons kirigami libcanberra
+sudo pacman -S base-devel cmake extra-cmake-modules ninja \
+    qt6-base qt6-declarative \
+    kcoreaddons ki18n kio kiconthemes knotifications kcrash kdbusaddons kirigami \
+    libcanberra
 ```
 
 ### Build and Install
 
 ```bash
-cmake -B build -DCMAKE_INSTALL_PREFIX=/usr
-cmake --build build --parallel
-sudo cmake --install build
+cmake --preset dev
+cmake --build --preset dev
+sudo cmake --install build/dev
 ```
 
-*Note: Restart Dolphin or log out/in after installation to activate the context menu plugin.*
+To reload Dolphin without logging out:
+
+```bash
+kquitapp6 dolphin && dolphin &
+```
 
 ## Usage
 
-1. **Install**: Right-click an `.AppImage` in Dolphin → **Manage AppImage** → Drag the icon to the Applications folder.
-2. **Launch**: Click the app icon in the manager window to run it immediately.
-3. **Remove**: Click **Remove** in the manager to clean up the AppImage and its associated configuration files.
+1. **Dashboard**: Run `appimagemanager --dashboard` or open it from the Dolphin right-click menu to see all installed AppImages.
+2. **Install**: Right-click an `.AppImage` in Dolphin → **Manage AppImage** → drag the icon to the Applications folder.
+3. **Launch**: Click the app icon in the manage window to run it immediately after installation.
+4. **Remove**: Click the delete button in the dashboard, or **Remove** in the manage window, to clean up the AppImage and its associated files.
 
 ## License
 

@@ -8,9 +8,11 @@ import org.kde.kirigami as Kirigami
 
 ApplicationWindow {
     id: uninstallWindow
-    width: 500
-    height: 400
-    title: i18n("Uninstall %1", backend.cleanName)
+    width: Kirigami.Units.gridUnit * 28
+    height: Kirigami.Units.gridUnit * 24
+    minimumWidth: Kirigami.Units.gridUnit * 24
+    minimumHeight: Kirigami.Units.gridUnit * 20
+    title: i18n("Uninstall %1", backend.displayName)
     flags: Qt.Window | Qt.WindowStaysOnTopHint
     modality: Qt.ApplicationModal
 
@@ -57,24 +59,24 @@ ApplicationWindow {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 15
-        spacing: 10
+        anchors.margins: Kirigami.Units.largeSpacing
+        spacing: Kirigami.Units.largeSpacing
 
         BusyIndicator {
-            anchors.centerIn: parent
-            running: backend.isFindingCorpses || backend.isRemovingItems
+            Layout.alignment: Qt.AlignHCenter
+            running: !backend.metadataLoaded || backend.isFindingCorpses || backend.isRemovingItems
             visible: running
         }
 
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: !backend.isFindingCorpses && !backend.isRemovingItems
+            visible: backend.metadataLoaded && !backend.isFindingCorpses && !backend.isRemovingItems
+            spacing: Kirigami.Units.mediumSpacing
 
-            Label {
-                text: i18n("Select items to remove:")
-                font.bold: true
-                color: Kirigami.Theme.textColor
+            Kirigami.Heading {
+                text: i18n("Select items to remove")
+                level: 3
             }
 
             ScrollView {
@@ -84,90 +86,94 @@ ApplicationWindow {
 
                 ListView {
                     id: listView
-                    spacing: 5
+                    spacing: 0
 
                     // The AppImage itself as the first (fixed) item
-                    header: RowLayout {
+                    header: ItemDelegate {
                         width: listView.width
-
-                        CheckBox {
-                            checked: uninstallWindow.appImageChecked
-                            onCheckedChanged: {
-                                uninstallWindow.appImageChecked = checked
-                                updateTotalSize()
-                            }
+                        onClicked: {
+                            uninstallWindow.appImageChecked = !uninstallWindow.appImageChecked
+                            updateTotalSize()
                         }
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-                            Label {
-                                text: backend.originalName + i18n(" (AppImage)")
-                                Layout.fillWidth: true
-                                elide: Label.ElideMiddle
-                                font.pixelSize: 12
-                                color: Kirigami.Theme.textColor
+                        contentItem: RowLayout {
+                            spacing: Kirigami.Units.largeSpacing
+                            CheckBox {
+                                checked: uninstallWindow.appImageChecked
+                                onClicked: { /* Handled by delegate onClicked */ }
                             }
-                            Label {
-                                text: backend.formatBytes(backend.appSize)
-                                font.pixelSize: 10
-                                opacity: 0.7
-                                color: Kirigami.Theme.textColor
+
+                            ColumnLayout {
+                                spacing: 0
+                                Layout.fillWidth: true
+                                Label {
+                                    text: backend.originalName
+                                    font.bold: true
+                                    elide: Label.ElideMiddle
+                                    Layout.fillWidth: true
+                                }
+                                Label {
+                                    text: i18n("Main AppImage File • %1", backend.formattedSize)
+                                    font.pixelSize: Kirigami.Units.fonts.small.pixelSize
+                                    opacity: 0.6
+                                }
                             }
                         }
                     }
 
-                    // Corpse files from the native C++ model
                     model: backend.corpseModel
 
-                    delegate: RowLayout {
+                    delegate: ItemDelegate {
                         required property string filePath
                         required property int fileSize
                         required property bool isChecked
                         required property int index
 
                         width: listView.width
-
-                        CheckBox {
-                            checked: isChecked
-                            onCheckedChanged: {
-                                backend.corpseModel.setData(
-                                    backend.corpseModel.index(index, 0),
-                                    checked,
-                                    backend.corpseModel.checkedRole)
-                                updateTotalSize()
-                            }
+                        onClicked: {
+                            backend.corpseModel.setData(
+                                backend.corpseModel.index(index, 0),
+                                !isChecked,
+                                backend.corpseModel.checkedRole)
+                            updateTotalSize()
                         }
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-                            Label {
-                                text: filePath
-                                Layout.fillWidth: true
-                                elide: Label.ElideMiddle
-                                font.pixelSize: 12
-                                color: Kirigami.Theme.textColor
+                        contentItem: RowLayout {
+                            spacing: Kirigami.Units.largeSpacing
+                            CheckBox {
+                                checked: isChecked
+                                onClicked: { /* Handled by delegate onClicked */ }
                             }
-                            Label {
-                                text: backend.formatBytes(fileSize)
-                                font.pixelSize: 10
-                                opacity: 0.7
-                                color: Kirigami.Theme.textColor
+
+                            ColumnLayout {
+                                spacing: 0
+                                Layout.fillWidth: true
+                                Label {
+                                    text: filePath
+                                    elide: Label.ElideMiddle
+                                    Layout.fillWidth: true
+                                }
+                                Label {
+                                    text: backend.formatBytes(fileSize)
+                                    font.pixelSize: Kirigami.Units.fonts.small.pixelSize
+                                    opacity: 0.6
+                                }
                             }
                         }
                     }
                 }
             }
 
+            Kirigami.Separator { Layout.fillWidth: true }
+
             RowLayout {
                 Layout.fillWidth: true
+                spacing: Kirigami.Units.largeSpacing
 
                 Label {
                     id: totalSizeLabel
                     Layout.fillWidth: true
                     font.bold: true
-                    color: Kirigami.Theme.textColor
                 }
 
                 Button {
@@ -178,8 +184,7 @@ ApplicationWindow {
                 Button {
                     text: i18n("Remove")
                     icon.name: "edit-delete"
-                    palette.button: Kirigami.Theme.negativeTextColor
-                    palette.buttonText: Kirigami.Theme.backgroundColor
+                    highlighted: true
                     onClicked: confirmDialog.open()
                 }
             }

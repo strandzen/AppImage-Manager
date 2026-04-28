@@ -7,6 +7,7 @@
 
 #include <KJob>
 #include <QObject>
+#include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
 class AppImageIconProvider;
@@ -19,11 +20,14 @@ class AppImageBackend : public QObject
     QML_UNCREATABLE("Use the 'backend' context property")
 
     Q_PROPERTY(bool   metadataLoaded  READ isMetadataLoaded  NOTIFY metadataLoadedChanged)
+    Q_PROPERTY(QString filePath       READ filePath          CONSTANT)
     Q_PROPERTY(QString appName        READ appName           NOTIFY infoChanged)
     Q_PROPERTY(QString cleanName      READ cleanName         NOTIFY infoChanged)
+    Q_PROPERTY(QString displayName    READ displayName       NOTIFY infoChanged)
     Q_PROPERTY(QString originalName   READ originalName      NOTIFY infoChanged)
     Q_PROPERTY(QString appVersion     READ appVersion        NOTIFY infoChanged)
     Q_PROPERTY(qint64  appSize        READ appSize           NOTIFY infoChanged)
+    Q_PROPERTY(QString formattedSize  READ formattedSize     NOTIFY infoChanged)
     Q_PROPERTY(QString appIconSource  READ appIconSource     NOTIFY infoChanged)
     Q_PROPERTY(bool    isInstalled    READ isInstalled       NOTIFY installedChanged)
     Q_PROPERTY(bool    hasDesktopLink READ hasDesktopLink    NOTIFY desktopLinkChanged)
@@ -37,11 +41,14 @@ public:
                              QObject *parent = nullptr);
 
     bool     isMetadataLoaded() const { return m_metadataLoaded; }
+    QString  filePath()         const { return m_appImagePath; }
     QString  appName()          const { return m_info.appName; }
     QString  cleanName()        const { return m_info.cleanName; }
+    QString  displayName()      const;
     QString  originalName()     const { return m_info.originalName; }
     QString  appVersion()       const { return m_info.version; }
     qint64   appSize()          const { return m_info.fileSize; }
+    QString  formattedSize()    const;
     QString  appIconSource()    const;
     bool     isInstalled()      const { return m_isInstalled; }
     bool     hasDesktopLink()   const { return m_hasDesktopLink; }
@@ -86,4 +93,6 @@ private:
     bool m_hasDesktopLink   = false;
     bool m_isFindingCorpses = false;
     bool m_isRemovingItems  = false;
+
+    QList<QUrl> m_lastTrashedUrls; // trash:/ destinations from last remove job
 };

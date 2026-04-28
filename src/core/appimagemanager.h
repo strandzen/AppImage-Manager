@@ -19,7 +19,7 @@ public:
     explicit AppImageManager(QObject *parent = nullptr);
 
     // Returns a KIO::CopyJob*. Connect to KJob::result() before calling start().
-    KIO::CopyJob *installAppImage(const QUrl &source);
+    KIO::CopyJob *installAppImage(const QUrl &source, const QString &applicationsDir);
 
     bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info);
     bool removeDesktopLink(const QString &appImagePath, const AppImageInfo &info);

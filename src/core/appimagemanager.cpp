@@ -25,9 +25,8 @@ AppImageManager::AppImageManager(QObject *parent)
 {
 }
 
-KIO::CopyJob *AppImageManager::installAppImage(const QUrl &source)
+KIO::CopyJob *AppImageManager::installAppImage(const QUrl &source, const QString &applicationsDir)
 {
-    const QString applicationsDir = QDir::homePath() + QLatin1String("/Applications");
     QDir().mkpath(applicationsDir);
 
     const QUrl dest = QUrl::fromLocalFile(
@@ -178,10 +177,20 @@ QList<QPair<QString, qint64>> AppImageManager::findCorpses(const AppImageInfo &i
     terms.removeDuplicates();
 
     const QStringList searchDirs = {
-        QDir::homePath() + QLatin1String("/.config"),
+        QStandardPaths::writableLocation(QStandardPaths::ConfigLocation),
         QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation),
-        QDir::homePath() + QLatin1String("/.cache"),
+        QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation),
     };
+
+    // Pre-compile word-boundary regexes outside the directory loop
+    QList<QRegularExpression> regexes;
+    regexes.reserve(terms.size());
+    for (const QString &term : std::as_const(terms)) {
+        regexes << QRegularExpression(
+            QStringLiteral("(?:^|[^a-z0-9])") +
+            QRegularExpression::escape(term) +
+            QStringLiteral("(?:[^a-z0-9]|$)"));
+    }
 
     const QSet<QString> &blacklist = corpseBlacklist();
     QList<QPair<QString, qint64>> corpses;
@@ -194,12 +203,7 @@ QList<QPair<QString, qint64>> AppImageManager::findCorpses(const AppImageInfo &i
             const QString entryLower = entry.toLower();
             if (blacklist.contains(entryLower))
                 continue;
-            for (const QString &term : std::as_const(terms)) {
-                // Word-boundary match: term must not be surrounded by alphanumerics
-                const QRegularExpression re(
-                    QStringLiteral("(?:^|[^a-z0-9])") +
-                    QRegularExpression::escape(term) +
-                    QStringLiteral("(?:[^a-z0-9]|$)"));
+            for (const QRegularExpression &re : std::as_const(regexes)) {
                 if (re.match(entryLower).hasMatch()) {
                     const QString fullPath = baseDir + QLatin1Char('/') + entry;
                     const qint64 size = QFileInfo(fullPath).isDir()
@@ -263,6 +267,5 @@ qint64 AppImageManager::dirSize(const QString &path)
 
 void AppImageManager::rebuildSycoca()
 {
-    QProcess::startDetached(QStringLiteral("kbuildsycoca6"),
-                            {QStringLiteral("--noincremental")});
+    QProcess::startDetached(QStringLiteral("kbuildsycoca6"), {});
 }

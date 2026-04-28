@@ -11,20 +11,25 @@ AppImageIconProvider::AppImageIconProvider()
 
 void AppImageIconProvider::setIconData(const QByteArray &data, const QString &ext)
 {
-    QWriteLocker locker(&m_lock);
-    m_data = data;
-    m_ext = ext;
+    setIconData(QStringLiteral("icon"), data, ext);
 }
 
-QPixmap AppImageIconProvider::requestPixmap(const QString & /*id*/,
+void AppImageIconProvider::setIconData(const QString &id, const QByteArray &data, const QString &ext)
+{
+    QWriteLocker locker(&m_lock);
+    m_icons.insert(id, {data, ext});
+}
+
+QPixmap AppImageIconProvider::requestPixmap(const QString &id,
                                              QSize *size,
                                              const QSize &requestedSize)
 {
     QReadLocker locker(&m_lock);
 
     QPixmap pixmap;
-    if (!m_data.isEmpty())
-        pixmap.loadFromData(m_data);
+    const auto it = m_icons.constFind(id);
+    if (it != m_icons.constEnd() && !it->data.isEmpty())
+        pixmap.loadFromData(it->data);
 
     if (pixmap.isNull())
         return pixmap;

@@ -6,10 +6,12 @@
 #include "logging.h"
 #include "../core/appimagemanager.h"
 #include "../core/appimagereader.h"
+#include "../core/appsettings.h"
 
 #include <KFormat>
 #include <KJob>
 #include <KIO/CopyJob>
+#include <KIO/RestoreJob>
 #include <KLocalizedString>
 #include <KNotification>
 
@@ -38,7 +40,7 @@ AppImageBackend::AppImageBackend(const QString &appImagePath,
 
     m_info.originalName = QFileInfo(appImagePath).fileName();
 
-    const QString applicationsDir = QDir::homePath() + QLatin1String("/Applications");
+    const QString applicationsDir = AppSettings::instance()->applicationsPath();
     m_isInstalled = (QFileInfo(appImagePath).absolutePath() == applicationsDir);
 
     startMetadataLoad();
@@ -93,7 +95,8 @@ void AppImageBackend::launchAppImage()
 
 void AppImageBackend::installAppImage()
 {
-    auto *job = m_manager->installAppImage(QUrl::fromLocalFile(m_appImagePath));
+    auto *job = m_manager->installAppImage(QUrl::fromLocalFile(m_appImagePath),
+                                            AppSettings::instance()->applicationsPath());
     connect(job, &KJob::result, this, &AppImageBackend::onInstallJobFinished);
     job->start();
 }
@@ -153,6 +156,15 @@ void AppImageBackend::removeAppImageAndCorpses(const QStringList &paths)
         return;
     }
 
+    // Collect trash:/ destination URLs so the notification can offer "Restore"
+    m_lastTrashedUrls.clear();
+    if (auto *copyJob = qobject_cast<KIO::CopyJob *>(job)) {
+        connect(copyJob, &KIO::CopyJob::copyingDone, this,
+                [this](KIO::Job *, const QUrl &, const QUrl &to, const QDateTime &, bool, bool) {
+                    m_lastTrashedUrls << to;
+                });
+    }
+
     connect(job, &KJob::result, this, &AppImageBackend::onRemoveJobFinished);
     job->start();
 }
@@ -169,8 +181,8 @@ void AppImageBackend::onInstallJobFinished(KJob *job)
         return;
     }
 
-    m_appImagePath = QDir::homePath()
-                   + QLatin1String("/Applications/")
+    m_appImagePath = AppSettings::instance()->applicationsPath()
+                   + QLatin1Char('/')
                    + QFileInfo(m_appImagePath).fileName();
     m_isInstalled = true;
     Q_EMIT installedChanged();
@@ -201,11 +213,21 @@ void AppImageBackend::onRemoveJobFinished(KJob *job)
         return;
     }
 
-    KNotification::event(QStringLiteral("removed"),
-                         i18n("AppImage removed"),
-                         i18n("%1 was moved to Trash.", m_info.appName),
-                         QStringLiteral("edit-delete"),
-                         KNotification::CloseOnTimeout);
+    auto *notification = new KNotification(QStringLiteral("removed"),
+                                           KNotification::CloseOnTimeout);
+    notification->setTitle(i18n("AppImage removed"));
+    notification->setText(i18n("%1 was moved to Trash.", m_info.appName));
+    notification->setIconName(QStringLiteral("edit-delete"));
+
+    if (!m_lastTrashedUrls.isEmpty()) {
+        const QList<QUrl> urls = m_lastTrashedUrls;
+        auto *restoreAction = notification->addAction(i18n("Restore"));
+        connect(restoreAction, &KNotificationAction::activated, this, [urls]() {
+            KIO::restoreFromTrash(urls)->start();
+        });
+    }
+
+    notification->sendEvent();
 
     Q_EMIT uninstallFinished();
 }
@@ -213,6 +235,20 @@ void AppImageBackend::onRemoveJobFinished(KJob *job)
 // ──────────────────────────────────────────────────────────────────────────────
 // Property helpers
 // ──────────────────────────────────────────────────────────────────────────────
+
+QString AppImageBackend::displayName() const
+{
+    if (!m_info.appName.isEmpty() && m_info.appName != m_info.cleanName)
+        return m_info.appName;
+    return m_info.cleanName.isEmpty()
+           ? QFileInfo(m_appImagePath).fileName()
+           : m_info.cleanName;
+}
+
+QString AppImageBackend::formattedSize() const
+{
+    return formatBytes(m_info.fileSize);
+}
 
 QString AppImageBackend::appIconSource() const
 {

@@ -1,6 +1,6 @@
 [Global]
 IconName=application-x-executable
-DesktopEntry=org.kde.appimagemanager
+DesktopEntry=appimagemanager
 Comment=AppImage Manager
 
 [Event/installed]
