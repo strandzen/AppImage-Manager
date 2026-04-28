@@ -25,8 +25,7 @@ Makefile
 # Logs
 *.log
 
-# AI assistant context (local only)
-CLAUDE.md
+# AI assistant context
 GEMINI.md
 
 # Packaging scripts (local workflow)
