@@ -318,6 +318,14 @@ AppImageInfo AppImageReader::readWithSquashfuse()
     }
 
     if (!mounted) {
+        if (appImageType == 2) {
+            // squashfuse unavailable for a Type 2 AppImage — returning partial info immediately.
+            // Install squashfuse or build with libappimage for full metadata extraction.
+            qCWarning(AIM_LOG) << "squashfuse unavailable for" << m_path
+                               << "— install squashfuse or libappimage to enable metadata/icon extraction";
+            return info;
+        }
+        // Type 1 (ISO9660): --appimage-extract is the only option.
         QProcess extract;
         extract.setWorkingDirectory(tempDir.path());
         extract.start(m_path, {QStringLiteral("--appimage-extract")});

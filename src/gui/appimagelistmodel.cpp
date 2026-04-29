@@ -48,37 +48,47 @@ QVariant AppImageListModel::data(const QModelIndex &index, int role) const
 
     switch (role) {
     case FilePathRole:       return item.filePath;
-    case CleanNameRole:      return item.info.cleanName.isEmpty()
-                                    ? QFileInfo(item.filePath).fileName()
-                                    : item.info.cleanName;
+    case CleanNameRole:      return item.info.cleanName;
     case AppNameRole:        return item.info.appName;
     case VersionRole:        return item.info.version;
     case HasDesktopLinkRole: return item.hasDesktopLink;
     case MetadataLoadedRole: return item.metadataLoaded;
     case AppSizeRole:        return item.info.fileSize;
-    case FormattedSizeRole: {
-        static const KFormat fmt;
-        return fmt.formatByteSize(static_cast<double>(item.info.fileSize));
-    }
+    case FormattedSizeRole:  return item.cachedFormattedSize;
     case AddedDateRole:      return item.addedDate;
-    case DisplayNameRole: {
-        if (!item.info.appName.isEmpty() && item.info.appName != item.info.cleanName)
-            return item.info.appName;
-        return item.info.cleanName.isEmpty()
-               ? QFileInfo(item.filePath).fileName()
-               : item.info.cleanName;
-    }
-    case IconSourceRole: {
-        if (!item.metadataLoaded)
-            return QStringLiteral("application-x-executable");
-        if (!item.info.appId.isEmpty() && QIcon::hasThemeIcon(item.info.appId))
-            return QStringLiteral("image://icon/%1").arg(item.info.appId);
-        if (!item.info.iconData.isEmpty())
-            return QStringLiteral("image://appimage/%1").arg(iconIdForPath(item.filePath));
-        return QStringLiteral("application-x-executable");
-    }
+    case DisplayNameRole:    return item.cachedDisplayName;
+    case IconSourceRole:     return item.cachedIconSource;
     default: return {};
     }
+}
+
+// static
+QString AppImageListModel::formatBytes(qint64 bytes)
+{
+    static const KFormat fmt;
+    return fmt.formatByteSize(static_cast<double>(bytes));
+}
+
+// static
+QString AppImageListModel::computeDisplayName(const Item &item)
+{
+    if (!item.info.appName.isEmpty() && item.info.appName != item.info.cleanName)
+        return item.info.appName;
+    return item.info.cleanName.isEmpty()
+           ? QFileInfo(item.filePath).fileName()
+           : item.info.cleanName;
+}
+
+// static
+QString AppImageListModel::computeIconSource(const Item &item)
+{
+    if (!item.metadataLoaded)
+        return QStringLiteral("application-x-executable");
+    if (!item.info.appId.isEmpty() && QIcon::hasThemeIcon(item.info.appId))
+        return QStringLiteral("image://icon/%1").arg(item.info.appId);
+    if (!item.info.iconData.isEmpty())
+        return QStringLiteral("image://appimage/%1").arg(iconIdForPath(item.filePath));
+    return QStringLiteral("application-x-executable");
 }
 
 QHash<int, QByteArray> AppImageListModel::roleNames() const
@@ -102,9 +112,12 @@ void AppImageListModel::scan()
 {
     if (m_scanning)
         return;
+    refresh();
+}
 
-    m_scanning = true;
-    Q_EMIT scanningChanged();
+void AppImageListModel::refresh()
+{
+    ++m_generation;
 
     const QString dir = AppSettings::instance()->applicationsPath();
     const QStringList filters = { QStringLiteral("*.AppImage"), QStringLiteral("*.appimage") };
@@ -113,35 +126,81 @@ void AppImageListModel::scan()
     if (!m_watcher.directories().contains(dir))
         m_watcher.addPath(dir);
 
-    if (!files.isEmpty()) {
-        beginInsertRows({}, 0, files.size() - 1);
-        for (const QFileInfo &fi : files) {
+    // Paths currently on disk
+    QSet<QString> diskPaths;
+    diskPaths.reserve(files.size());
+    for (const QFileInfo &fi : files)
+        diskPaths.insert(fi.absoluteFilePath());
+
+    // Count in-flight futures that are now stale (gen bump invalidated them).
+    // Each stale future still arrives and decrements m_pendingLoads once.
+    int staleFutures = 0;
+    for (const Item &item : std::as_const(m_items))
+        if (!item.metadataLoaded) ++staleFutures;
+
+    // Remove items no longer on disk (backwards to keep indices stable)
+    for (int i = m_items.size() - 1; i >= 0; --i) {
+        if (!diskPaths.contains(m_items.at(i).filePath)) {
+            beginRemoveRows({}, i, i);
+            m_items.removeAt(i);
+            endRemoveRows();
+        }
+    }
+
+    // Paths now tracked in the model
+    QSet<QString> trackedPaths;
+    trackedPaths.reserve(m_items.size());
+    for (const Item &item : std::as_const(m_items))
+        trackedPaths.insert(item.filePath);
+
+    // Re-trigger loading for existing items whose futures were invalidated by the gen bump.
+    // Each produces 1 stale decrement (old future) + 1 real decrement (new future) = 2 total.
+    int reTriggers = 0;
+    for (int i = 0; i < m_items.size(); ++i) {
+        if (!m_items.at(i).metadataLoaded) {
+            ++reTriggers;
+            loadMetadataForRow(i);
+        }
+    }
+
+    // Insert newly discovered files
+    QList<QFileInfo> toAdd;
+    for (const QFileInfo &fi : files) {
+        if (!trackedPaths.contains(fi.absoluteFilePath()))
+            toAdd.append(fi);
+    }
+
+    if (!toAdd.isEmpty()) {
+        const int first = m_items.size();
+        beginInsertRows({}, first, first + toAdd.size() - 1);
+        for (const QFileInfo &fi : toAdd) {
             Item item;
-            item.filePath          = fi.absoluteFilePath();
-            item.addedDate         = fi.metadataChangeTime();
-            item.info.originalName = fi.fileName();
-            item.info.cleanName    = fi.fileName();
-            item.info.fileSize     = fi.size();
+            item.filePath            = fi.absoluteFilePath();
+            item.addedDate           = fi.metadataChangeTime();
+            item.info.originalName   = fi.fileName();
+            item.info.cleanName      = fi.fileName();
+            item.info.fileSize       = fi.size();
+            item.cachedFormattedSize = formatBytes(fi.size());
+            item.cachedDisplayName   = fi.fileName();
             m_items.append(item);
         }
         endInsertRows();
-
-        m_pendingLoads = m_items.size();
-        for (int i = 0; i < m_items.size(); ++i)
+        for (int i = first; i < m_items.size(); ++i)
             loadMetadataForRow(i);
-    } else {
-        m_scanning = false;
-        Q_EMIT scanningChanged();
     }
-}
 
-void AppImageListModel::refresh()
-{
-    ++m_generation;
-    beginResetModel();
-    m_items.clear();
-    endResetModel();
-    scan();
+    // Total expected decrements:
+    //   staleFutures          – old gen futures arriving and returning early
+    //   reTriggers            – new futures spawned for existing unloaded items
+    //   toAdd.size()          – new futures for newly inserted items
+    // Re-triggered items produce 2 decrements each (stale + new), hence staleFutures + reTriggers.
+    m_pendingLoads = staleFutures + reTriggers + static_cast<int>(toAdd.size());
+
+    if (m_pendingLoads > 0) {
+        if (!m_scanning) { m_scanning = true; Q_EMIT scanningChanged(); }
+    } else {
+        if (m_scanning)  { m_scanning = false; Q_EMIT scanningChanged(); }
+    }
 }
 
 void AppImageListModel::loadMetadataForRow(int row)
@@ -150,33 +209,41 @@ void AppImageListModel::loadMetadataForRow(int row)
     const int gen = m_generation;
 
     auto *watcher = new QFutureWatcher<AppImageInfo>(this);
-    connect(watcher, &QFutureWatcher<AppImageInfo>::finished, this, [this, watcher, row, gen]() {
+    connect(watcher, &QFutureWatcher<AppImageInfo>::finished, this, [this, watcher, path, gen]() {
         watcher->deleteLater();
-        if (gen != m_generation || row >= m_items.size()) {
+
+        auto finalize = [this]() {
             if (--m_pendingLoads == 0 && m_scanning) {
                 m_scanning = false;
                 Q_EMIT scanningChanged();
             }
-            return;
+        };
+
+        if (gen != m_generation) { finalize(); return; }
+
+        // Locate by path — index may have shifted due to smart-diff inserts/removes
+        int row = -1;
+        for (int i = 0; i < m_items.size(); ++i) {
+            if (m_items.at(i).filePath == path) { row = i; break; }
         }
+        if (row < 0) { finalize(); return; }
 
         AppImageInfo info = watcher->result();
-        info.originalName = QFileInfo(m_items.at(row).filePath).fileName();
+        info.originalName = QFileInfo(path).fileName();
 
         if (!info.iconData.isEmpty())
-            m_iconProvider->setIconData(iconIdForPath(m_items.at(row).filePath),
-                                        info.iconData, info.iconExt);
+            m_iconProvider->setIconData(iconIdForPath(path), info.iconData, info.iconExt);
 
-        m_items[row].info           = info;
-        m_items[row].hasDesktopLink = m_manager->isDesktopLinkEnabled(m_items.at(row).filePath, info);
-        m_items[row].metadataLoaded = true;
+        Item &item          = m_items[row];
+        item.info           = info;
+        item.hasDesktopLink = m_manager->isDesktopLinkEnabled(path, info);
+        item.metadataLoaded = true;
+        item.cachedFormattedSize = formatBytes(info.fileSize);
+        item.cachedDisplayName   = computeDisplayName(item);
+        item.cachedIconSource    = computeIconSource(item);
 
         Q_EMIT dataChanged(index(row, 0), index(row, 0));
-
-        if (--m_pendingLoads == 0 && m_scanning) {
-            m_scanning = false;
-            Q_EMIT scanningChanged();
-        }
+        finalize();
     });
 
     watcher->setFuture(QtConcurrent::run([path]() {

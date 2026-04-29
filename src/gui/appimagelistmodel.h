@@ -42,6 +42,9 @@ private:
         QString   filePath;
         QDateTime addedDate;
         AppImageInfo info;
+        QString cachedIconSource    = QStringLiteral("application-x-executable");
+        QString cachedFormattedSize;
+        QString cachedDisplayName;
         bool metadataLoaded = false;
         bool hasDesktopLink = false;
     };
@@ -68,6 +71,9 @@ Q_SIGNALS:
 private:
     void loadMetadataForRow(int row);
     static QString iconIdForPath(const QString &path);
+    static QString formatBytes(qint64 bytes);
+    static QString computeDisplayName(const Item &item);
+    static QString computeIconSource(const Item &item);
 
     AppImageIconProvider  *m_iconProvider;
     AppImageManager       *m_manager;
