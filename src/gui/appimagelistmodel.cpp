@@ -17,7 +17,6 @@
 AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject *parent)
     : QAbstractListModel(parent)
     , m_iconProvider(iconProvider)
-    , m_manager(new AppImageManager(this))
 {
     m_refreshTimer.setSingleShot(true);
     m_refreshTimer.setInterval(500);
@@ -236,7 +235,7 @@ void AppImageListModel::loadMetadataForRow(int row)
 
         Item &item          = m_items[row];
         item.info           = info;
-        item.hasDesktopLink = m_manager->isDesktopLinkEnabled(path, info);
+        item.hasDesktopLink = AppImageManager::isDesktopLinkEnabled(path, info);
         item.metadataLoaded = true;
         item.cachedFormattedSize = formatBytes(info.fileSize);
         item.cachedDisplayName   = computeDisplayName(item);
@@ -258,8 +257,8 @@ void AppImageListModel::toggleDesktopLink(int row, bool enable)
 
     Item &item = m_items[row];
     const bool ok = enable
-        ? m_manager->createDesktopLink(item.filePath, item.info)
-        : m_manager->removeDesktopLink(item.filePath, item.info);
+        ? AppImageManager::createDesktopLink(item.filePath, item.info)
+        : AppImageManager::removeDesktopLink(item.filePath, item.info);
 
     if (ok) {
         item.hasDesktopLink = enable;

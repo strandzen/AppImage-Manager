@@ -11,7 +11,6 @@
 #include <QtQml/qqmlregistration.h>
 
 class AppImageIconProvider;
-class AppImageManager;
 
 class AppImageBackend : public QObject
 {
@@ -49,7 +48,7 @@ public:
     QString  appVersion()       const { return m_info.version; }
     qint64   appSize()          const { return m_info.fileSize; }
     QString  formattedSize()    const;
-    QString  appIconSource()    const;
+    QString  appIconSource()    const { return m_cachedIconSource; }
     bool     isInstalled()      const { return m_isInstalled; }
     bool     hasDesktopLink()   const { return m_hasDesktopLink; }
     CorpseModel *corpseModel()  const { return m_corpseModel; }
@@ -70,7 +69,7 @@ public Q_SLOTS:
     void launchAppImage();
     void toggleDesktopLink(bool enable);
     void findCorpses();
-    void removeAppImageAndCorpses(const QStringList &paths);
+    void removeAppImageAndCorpses(const QStringList &corpsePaths, bool includeAppImage);
 
     Q_INVOKABLE QString formatBytes(qint64 bytes) const;
 
@@ -84,9 +83,10 @@ private:
 
     QString m_appImagePath;
     AppImageInfo m_info;
-    AppImageManager *m_manager;
     AppImageIconProvider *m_iconProvider;
     CorpseModel *m_corpseModel;
+
+    QString m_cachedIconSource = QStringLiteral("image://icon/application-x-executable");
 
     bool m_metadataLoaded   = false;
     bool m_isInstalled      = false;

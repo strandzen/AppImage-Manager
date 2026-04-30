@@ -11,7 +11,6 @@
 #include <QtQml/qqmlregistration.h>
 
 class AppImageIconProvider;
-class AppImageManager;
 
 class AppImageListModel : public QAbstractListModel
 {
@@ -76,7 +75,6 @@ private:
     static QString computeIconSource(const Item &item);
 
     AppImageIconProvider  *m_iconProvider;
-    AppImageManager       *m_manager;
     QList<Item>            m_items;
     bool                   m_scanning    = false;
     int                    m_pendingLoads = 0;

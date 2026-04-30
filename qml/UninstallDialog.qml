@@ -30,6 +30,8 @@ Kirigami.Dialog {
     onBackendChanged: {
         _appChecked = true
         _totalText = ""
+        if (backend && backend.metadataLoaded)
+            backend.findCorpses()
     }
 
     onClosed: {
@@ -56,10 +58,9 @@ Kirigami.Dialog {
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
         onAccepted: {
             if (!dialog.backend) return
-            var paths = dialog.backend.corpseModel.checkedPaths()
-            if (dialog._appChecked)
-                paths.push("APPIMAGE_ITSELF")
-            dialog.backend.removeAppImageAndCorpses(paths)
+            dialog.backend.removeAppImageAndCorpses(
+                dialog.backend.corpseModel.checkedPaths(),
+                dialog._appChecked)
             dialog.close()
         }
     }

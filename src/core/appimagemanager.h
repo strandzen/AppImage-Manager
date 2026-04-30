@@ -5,38 +5,28 @@
 #include "appimageinfo.h"
 
 #include <QList>
-#include <QObject>
 #include <QPair>
 #include <QUrl>
 
-namespace KIO { class CopyJob; }
 class KJob;
+namespace KIO { class CopyJob; }
 
-class AppImageManager : public QObject
-{
-    Q_OBJECT
-public:
-    explicit AppImageManager(QObject *parent = nullptr);
-
+namespace AppImageManager {
     // Returns a KIO::CopyJob*. Connect to KJob::result() before calling start().
     KIO::CopyJob *installAppImage(const QUrl &source, const QString &applicationsDir);
 
     bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info);
     bool removeDesktopLink(const QString &appImagePath, const AppImageInfo &info);
-    bool isDesktopLinkEnabled(const QString &appImagePath, const AppImageInfo &info) const;
+    bool isDesktopLinkEnabled(const QString &appImagePath, const AppImageInfo &info);
 
     // Blocking — call via QtConcurrent::run.
-    QList<QPair<QString, qint64>> findCorpses(const AppImageInfo &info) const;
+    QList<QPair<QString, qint64>> findCorpses(const AppImageInfo &info);
 
     // Moves appImageUrl and all corpseUrls to Trash. Returns a KIO::CopyJob*.
     KJob *removeItems(const QUrl &appImageUrl,
                       const AppImageInfo &info,
                       const QList<QUrl> &corpseUrls);
 
-    static QString desktopFilePath(const AppImageInfo &info);
-    static QString iconFilePath(const AppImageInfo &info);
-
-private:
-    static qint64 dirSize(const QString &path);
-    void rebuildSycoca();
-};
+    QString desktopFilePath(const AppImageInfo &info);
+    QString iconFilePath(const AppImageInfo &info);
+}

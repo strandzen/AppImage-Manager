@@ -16,8 +16,9 @@ class AppSettings : public QObject
     QML_ELEMENT
     QML_SINGLETON
 
-    Q_PROPERTY(QString applicationsPath READ applicationsPath WRITE setApplicationsPath NOTIFY applicationsPathChanged)
-    Q_PROPERTY(bool    showDisclaimer   READ showDisclaimer   WRITE setShowDisclaimer   NOTIFY showDisclaimerChanged)
+    Q_PROPERTY(QString applicationsPath  READ applicationsPath  WRITE setApplicationsPath  NOTIFY applicationsPathChanged)
+    Q_PROPERTY(bool    showDisclaimer    READ showDisclaimer    WRITE setShowDisclaimer    NOTIFY showDisclaimerChanged)
+    Q_PROPERTY(bool    showNotifications READ showNotifications WRITE setShowNotifications NOTIFY showNotificationsChanged)
 
 public:
     // QML singleton factory — always returns the same C++ instance across all engines.
@@ -30,9 +31,13 @@ public:
     bool showDisclaimer() const;
     void setShowDisclaimer(bool enabled);
 
+    bool showNotifications() const;
+    void setShowNotifications(bool enabled);
+
 Q_SIGNALS:
     void applicationsPathChanged();
     void showDisclaimerChanged();
+    void showNotificationsChanged();
     void applicationsPathError(const QString &message);
 
 private:

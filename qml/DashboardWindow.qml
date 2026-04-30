@@ -132,6 +132,14 @@ Kirigami.ApplicationWindow {
                     width: listView.width
                     highlighted: listView.currentIndex === index
 
+                    background: Rectangle {
+                        color: delegate.highlighted
+                               ? Kirigami.Theme.highlightColor
+                               : index % 2 === 0
+                                 ? Kirigami.Theme.backgroundColor
+                                 : Kirigami.Theme.alternateBackgroundColor
+                    }
+
                     onDoubleClicked: {
                         if (model.metadataLoaded)
                             proxyModel.requestLaunch(index)
@@ -181,9 +189,11 @@ Kirigami.ApplicationWindow {
                                 }
                             }
 
-                            Controls.CheckBox {
+                            Kirigami.Chip {
                                 text: i18n("Shortcut")
+                                checkable: true
                                 checked: model.hasDesktopLink
+                                closable: false
                                 onToggled: proxyModel.toggleDesktopLink(index, checked)
                             }
 

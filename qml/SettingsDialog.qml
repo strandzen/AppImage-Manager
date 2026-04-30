@@ -68,6 +68,11 @@ Kirigami.Dialog {
                 checked: AppSettings.showDisclaimer
                 onToggled: AppSettings.showDisclaimer = checked
             }
+            Controls.CheckBox {
+                text: i18n("Show install/uninstall notifications")
+                checked: AppSettings.showNotifications
+                onToggled: AppSettings.showNotifications = checked
+            }
         }
     }
 }

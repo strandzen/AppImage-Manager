@@ -32,7 +32,6 @@ AppImageBackend::AppImageBackend(const QString &appImagePath,
                                  QObject *parent)
     : QObject(parent)
     , m_appImagePath(appImagePath)
-    , m_manager(new AppImageManager(this))
     , m_iconProvider(iconProvider)
     , m_corpseModel(new CorpseModel(this))
 {
@@ -66,7 +65,13 @@ void AppImageBackend::onMetadataReady(const AppImageInfo &info)
     if (!info.iconData.isEmpty())
         m_iconProvider->setIconData(info.iconData, info.iconExt);
 
-    m_hasDesktopLink = m_manager->isDesktopLinkEnabled(m_appImagePath, m_info);
+    m_hasDesktopLink = AppImageManager::isDesktopLinkEnabled(m_appImagePath, m_info);
+
+    if (!info.appId.isEmpty() && QIcon::hasThemeIcon(info.appId))
+        m_cachedIconSource = QLatin1String("image://icon/") + info.appId;
+    else if (!info.iconData.isEmpty())
+        m_cachedIconSource = QStringLiteral("image://appimage/icon");
+
     m_metadataLoaded = true;
 
     Q_EMIT infoChanged();
@@ -95,8 +100,8 @@ void AppImageBackend::launchAppImage()
 
 void AppImageBackend::installAppImage()
 {
-    auto *job = m_manager->installAppImage(QUrl::fromLocalFile(m_appImagePath),
-                                            AppSettings::instance()->applicationsPath());
+    auto *job = AppImageManager::installAppImage(QUrl::fromLocalFile(m_appImagePath),
+                                                AppSettings::instance()->applicationsPath());
     connect(job, &KJob::result, this, &AppImageBackend::onInstallJobFinished);
     job->start();
 }
@@ -104,9 +109,9 @@ void AppImageBackend::installAppImage()
 void AppImageBackend::toggleDesktopLink(bool enable)
 {
     if (enable)
-        m_manager->createDesktopLink(m_appImagePath, m_info);
+        AppImageManager::createDesktopLink(m_appImagePath, m_info);
     else
-        m_manager->removeDesktopLink(m_appImagePath, m_info);
+        AppImageManager::removeDesktopLink(m_appImagePath, m_info);
 
     m_hasDesktopLink = enable;
     Q_EMIT desktopLinkChanged();
@@ -126,29 +131,25 @@ void AppImageBackend::findCorpses()
         watcher->deleteLater();
         Q_EMIT busyChanged();
     });
-    watcher->setFuture(QtConcurrent::run([mgr = m_manager, info = m_info]() {
-        return mgr->findCorpses(info);
+    watcher->setFuture(QtConcurrent::run([info = m_info]() {
+        return AppImageManager::findCorpses(info);
     }));
 }
 
-void AppImageBackend::removeAppImageAndCorpses(const QStringList &paths)
+void AppImageBackend::removeAppImageAndCorpses(const QStringList &corpsePaths, bool includeAppImage)
 {
     m_isRemovingItems = true;
     Q_EMIT busyChanged();
 
-    const bool removeAppImage = paths.contains(QLatin1String("APPIMAGE_ITSELF"));
-
     QList<QUrl> corpseUrls;
-    for (const QString &p : paths) {
-        if (p != QLatin1String("APPIMAGE_ITSELF"))
-            corpseUrls << QUrl::fromLocalFile(p);
-    }
+    for (const QString &p : corpsePaths)
+        corpseUrls << QUrl::fromLocalFile(p);
 
     KJob *job = nullptr;
-    if (removeAppImage) {
-        job = m_manager->removeItems(QUrl::fromLocalFile(m_appImagePath), m_info, corpseUrls);
+    if (includeAppImage) {
+        job = AppImageManager::removeItems(QUrl::fromLocalFile(m_appImagePath), m_info, corpseUrls);
     } else if (!corpseUrls.isEmpty()) {
-        job = KIO::trash(corpseUrls, KIO::HideProgressInfo);
+        job = KIO::trash(corpseUrls);
     } else {
         m_isRemovingItems = false;
         Q_EMIT busyChanged();
@@ -187,19 +188,20 @@ void AppImageBackend::onInstallJobFinished(KJob *job)
     m_isInstalled = true;
     Q_EMIT installedChanged();
 
+    if (AppSettings::instance()->showNotifications()) {
 #ifdef HAVE_CANBERRA
-    static ca_context *s_caCtx = nullptr;
-    if (!s_caCtx)
-        ca_context_create(&s_caCtx);
-    if (s_caCtx)
-        ca_context_play(s_caCtx, 0, CA_PROP_EVENT_ID, "outcome-success", nullptr);
+        static ca_context *s_caCtx = nullptr;
+        if (!s_caCtx)
+            ca_context_create(&s_caCtx);
+        if (s_caCtx)
+            ca_context_play(s_caCtx, 0, CA_PROP_EVENT_ID, "outcome-success", nullptr);
 #endif
-
-    KNotification::event(QStringLiteral("installed"),
-                         i18n("AppImage installed"),
-                         i18n("%1 was moved to Applications.", m_info.appName),
-                         QStringLiteral("application-x-executable"),
-                         KNotification::CloseOnTimeout);
+        KNotification::event(QStringLiteral("installed"),
+                             i18n("AppImage installed"),
+                             i18n("%1 was moved to Applications.", m_info.appName),
+                             QStringLiteral("application-x-executable"),
+                             KNotification::CloseOnTimeout);
+    }
 }
 
 void AppImageBackend::onRemoveJobFinished(KJob *job)
@@ -213,21 +215,23 @@ void AppImageBackend::onRemoveJobFinished(KJob *job)
         return;
     }
 
-    auto *notification = new KNotification(QStringLiteral("removed"),
-                                           KNotification::CloseOnTimeout);
-    notification->setTitle(i18n("AppImage removed"));
-    notification->setText(i18n("%1 was moved to Trash.", m_info.appName));
-    notification->setIconName(QStringLiteral("edit-delete"));
+    if (AppSettings::instance()->showNotifications()) {
+        auto *notification = new KNotification(QStringLiteral("removed"),
+                                               KNotification::CloseOnTimeout);
+        notification->setTitle(i18n("AppImage removed"));
+        notification->setText(i18n("%1 was moved to Trash.", m_info.appName));
+        notification->setIconName(QStringLiteral("edit-delete"));
 
-    if (!m_lastTrashedUrls.isEmpty()) {
-        const QList<QUrl> urls = m_lastTrashedUrls;
-        auto *restoreAction = notification->addAction(i18n("Restore"));
-        connect(restoreAction, &KNotificationAction::activated, this, [urls]() {
-            KIO::restoreFromTrash(urls)->start();
-        });
+        if (!m_lastTrashedUrls.isEmpty()) {
+            const QList<QUrl> urls = m_lastTrashedUrls;
+            auto *restoreAction = notification->addAction(i18n("Restore"));
+            connect(restoreAction, &KNotificationAction::activated, this, [urls]() {
+                KIO::restoreFromTrash(urls)->start();
+            });
+        }
+
+        notification->sendEvent();
     }
-
-    notification->sendEvent();
 
     Q_EMIT uninstallFinished();
 }
@@ -250,11 +254,3 @@ QString AppImageBackend::formattedSize() const
     return formatBytes(m_info.fileSize);
 }
 
-QString AppImageBackend::appIconSource() const
-{
-    if (!m_info.appId.isEmpty() && QIcon::hasThemeIcon(m_info.appId))
-        return QLatin1String("image://icon/") + m_info.appId;
-    if (!m_info.iconData.isEmpty())
-        return QStringLiteral("image://appimage/icon");
-    return QStringLiteral("image://icon/application-x-executable");
-}

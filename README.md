@@ -18,13 +18,15 @@ A lightweight AppImage manager for KDE Plasma 6, designed for simplicity and sea
 
 ## Features
 
-- **Dashboard**: Browse, search, and manage all installed AppImages in one window — with sort by name, size, or date added.
-- **Drag-and-Drop Installation**: Move AppImages to `~/Applications/` and make them executable with a simple gesture.
+- **Dashboard**: Browse, search, and manage all installed AppImages in one window — with sort by name, size, or date added, alternating row colors, and per-row shortcut chip toggle.
+- **Drag-and-Drop Installation**: Move AppImages to `~/Applications/` and make them executable with a simple gesture. Smooth snap-back animation returns the icon precisely to its origin if you cancel mid-drag.
+- **Plasma Job Integration**: Install and remove operations show native Plasma progress bars in the system tray.
 - **Dolphin Plugin**: Adds a "Manage AppImage" option to your right-click menu for instant access.
 - **Desktop Integration**: Automatically creates application launcher shortcuts with native icon theme support.
 - **Storage Analysis**: Inspect the AppImage file and any leftover config/cache files from a single dialog.
-- **Clean Uninstallation**: Safely removes leftover configuration and cache files when deleting an app.
-- **Safe by Design**: Moves files to the KDE Trash instead of permanent deletion, with clear confirmation dialogs.
+- **Clean Uninstallation**: Detects leftover `~/.config`, `~/.local/share`, and `~/.cache` directories and safely trashes them alongside the AppImage.
+- **Safe by Design**: Moves files to the KDE Trash instead of permanent deletion, with clear confirmation dialogs and a one-click Restore notification action.
+- **Configurable Notifications**: Toggle install/uninstall desktop notifications independently via Settings.
 - **Performance Focused**: Metadata extraction and scanning run in the background for a responsive experience.
 
 ## Requirements

@@ -57,3 +57,19 @@ void AppSettings::setShowDisclaimer(bool enabled)
     m_config->sync();
     Q_EMIT showDisclaimerChanged();
 }
+
+bool AppSettings::showNotifications() const
+{
+    return m_config->group(QStringLiteral("General"))
+               .readEntry(QStringLiteral("showNotifications"), true);
+}
+
+void AppSettings::setShowNotifications(bool enabled)
+{
+    if (showNotifications() == enabled)
+        return;
+    m_config->group(QStringLiteral("General"))
+             .writeEntry(QStringLiteral("showNotifications"), enabled);
+    m_config->sync();
+    Q_EMIT showNotificationsChanged();
+}

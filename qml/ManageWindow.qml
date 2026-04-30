@@ -136,17 +136,10 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignHCenter
                         Kirigami.Icon {
                             id: appIcon
-                            width: parent.width; height: parent.height
+                            width: iconContainer.width; height: iconContainer.height
                             source: backend.appIconSource !== "" ? backend.appIconSource : "application-x-executable"
                             Drag.active: dragArea.drag.active
                             Drag.hotSpot.x: width / 2; Drag.hotSpot.y: height / 2; Drag.keys: ["appimage"]
-                            states: [
-                                State {
-                                    when: appIcon.Drag.active
-                                    ParentChange    { target: appIcon; parent: root.contentItem }
-                                    PropertyChanges { target: appIcon; width: iconContainer.width; height: iconContainer.height }
-                                }
-                            ]
                         }
                         MouseArea {
                             id: dragArea; anchors.fill: parent
@@ -154,6 +147,13 @@ ApplicationWindow {
                             drag.target: backend.isInstalled ? null : appIcon
                             cursorShape: backend.isInstalled ? Qt.PointingHandCursor : Qt.OpenHandCursor
                             onClicked: if (backend.isInstalled) backend.launchAppImage()
+                            onPressed: {
+                                if (backend.isInstalled) return
+                                snapBackX.stop(); snapBackY.stop()
+                                var pos = appIcon.mapToItem(root.contentItem, 0, 0)
+                                appIcon.parent = root.contentItem
+                                appIcon.x = pos.x; appIcon.y = pos.y
+                            }
                             onReleased: {
                                 if (backend.isInstalled) return
                                 const dropPos = appIcon.mapToItem(folderContainer, appIcon.width / 2, appIcon.height / 2)
@@ -163,16 +163,16 @@ ApplicationWindow {
                                     backend.installAppImage()
                                     appIcon.parent = iconContainer; appIcon.x = 0; appIcon.y = 0
                                 } else {
+                                    var pos = appIcon.mapToItem(iconContainer, 0, 0)
+                                    appIcon.parent = iconContainer
+                                    appIcon.x = pos.x; appIcon.y = pos.y
                                     snapBackX.to = 0; snapBackY.to = 0
                                     snapBackX.restart(); snapBackY.restart()
-                                    snapBackX.onStopped = function() {
-                                        appIcon.parent = iconContainer; appIcon.x = 0; appIcon.y = 0
-                                    }
                                 }
                             }
 
-                            NumberAnimation { id: snapBackX; target: appIcon; property: "x"; duration: Kirigami.Units.longDuration; easing.type: Easing.OutBack }
-                            NumberAnimation { id: snapBackY; target: appIcon; property: "y"; duration: Kirigami.Units.longDuration; easing.type: Easing.OutBack }
+                            NumberAnimation { id: snapBackX; target: appIcon; property: "x"; duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic }
+                            NumberAnimation { id: snapBackY; target: appIcon; property: "y"; duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic }
                             ToolTip.visible: backend.isInstalled && containsMouse
                             ToolTip.text: i18n("Launch %1", backend.displayName)
                         }
@@ -241,7 +241,6 @@ ApplicationWindow {
             Button {
                 text: i18n("Remove"); icon.name: "edit-delete"
                 onClicked: {
-                    backend.findCorpses()
                     uninstallDialog.backend = backend
                     uninstallDialog.open()
                 }
