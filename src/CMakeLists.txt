@@ -22,6 +22,7 @@ target_include_directories(appimagemanager_core PUBLIC
 )
 target_link_libraries(appimagemanager_core PUBLIC
     Qt6::Core
+    Qt6::Network
     KF6::CoreAddons
     KF6::I18n
     KF6::ConfigCore
@@ -84,6 +85,8 @@ qt_add_qml_module(appimagemanager_qml
         gui/appimagewindow.cpp
         gui/dashboardwindow.h
         gui/dashboardwindow.cpp
+        core/updatedaemon.h
+        core/updatedaemon.cpp
     RESOURCE_PREFIX "/"
     OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/appimagemanager"
 )

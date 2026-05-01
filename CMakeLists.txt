@@ -27,6 +27,7 @@ find_package(Qt6 6.6 REQUIRED COMPONENTS
     Quick
     Qml
     Concurrent
+    Network
 )
 
 find_package(KF6 6.0 REQUIRED COMPONENTS
@@ -58,3 +59,5 @@ add_subdirectory(data)
 ki18n_install(po)
 
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
+
+install(FILES data/org.kde.appimagemanager.daemon.desktop DESTINATION ${KDE_INSTALL_AUTOSTARTDIR})

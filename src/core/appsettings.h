@@ -19,6 +19,8 @@ class AppSettings : public QObject
     Q_PROPERTY(QString applicationsPath  READ applicationsPath  WRITE setApplicationsPath  NOTIFY applicationsPathChanged)
     Q_PROPERTY(bool    showDisclaimer    READ showDisclaimer    WRITE setShowDisclaimer    NOTIFY showDisclaimerChanged)
     Q_PROPERTY(bool    showNotifications READ showNotifications WRITE setShowNotifications NOTIFY showNotificationsChanged)
+    Q_PROPERTY(int     updateFrequency   READ updateFrequency   WRITE setUpdateFrequency   NOTIFY updateFrequencyChanged)
+    Q_PROPERTY(int     customUpdateDays  READ customUpdateDays  WRITE setCustomUpdateDays  NOTIFY customUpdateDaysChanged)
 
 public:
     // QML singleton factory — always returns the same C++ instance across all engines.
@@ -34,10 +36,18 @@ public:
     bool showNotifications() const;
     void setShowNotifications(bool enabled);
 
+    int updateFrequency() const;
+    void setUpdateFrequency(int frequency);
+
+    int customUpdateDays() const;
+    void setCustomUpdateDays(int days);
+
 Q_SIGNALS:
     void applicationsPathChanged();
     void showDisclaimerChanged();
     void showNotificationsChanged();
+    void updateFrequencyChanged();
+    void customUpdateDaysChanged();
     void applicationsPathError(const QString &message);
 
 private:

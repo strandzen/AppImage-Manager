@@ -1,0 +1,46 @@
+# Maintainer: strandzen <strandzen@gmail.com>
+pkgname=appimg-manager
+pkgver=1.0
+pkgrel=1
+pkgdesc="A lightweight AppImage manager for KDE Plasma 6"
+arch=('x86_64' 'aarch64')
+url="https://github.com/strandzen/AppImage-Manager"
+license=('GPL-2.0-or-later')
+depends=(
+    'qt6-base'
+    'qt6-declarative'
+    'kcoreaddons'
+    'ki18n'
+    'kconfig'
+    'kio'
+    'kiconthemes'
+    'knotifications'
+    'kcrash'
+    'kdbusaddons'
+    'kirigami'
+)
+makedepends=(
+    'cmake'
+    'extra-cmake-modules'
+    'ninja'
+)
+optdepends=(
+    'libappimage: faster AppImage metadata extraction without FUSE'
+    'libcanberra: completion sound notifications'
+)
+source=("$pkgname-$pkgver.tar.gz::https://github.com/strandzen/AppImage-Manager/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cmake \
+        -B build \
+        -S "AppImage-Manager-$pkgver" \
+        -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr
+    cmake --build build
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+}

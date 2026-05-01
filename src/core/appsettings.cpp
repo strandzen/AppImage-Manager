@@ -73,3 +73,35 @@ void AppSettings::setShowNotifications(bool enabled)
     m_config->sync();
     Q_EMIT showNotificationsChanged();
 }
+
+int AppSettings::updateFrequency() const
+{
+    return m_config->group(QStringLiteral("Updates"))
+               .readEntry(QStringLiteral("updateFrequency"), 1); // 1 = Daily
+}
+
+void AppSettings::setUpdateFrequency(int frequency)
+{
+    if (updateFrequency() == frequency)
+        return;
+    m_config->group(QStringLiteral("Updates"))
+             .writeEntry(QStringLiteral("updateFrequency"), frequency);
+    m_config->sync();
+    Q_EMIT updateFrequencyChanged();
+}
+
+int AppSettings::customUpdateDays() const
+{
+    return m_config->group(QStringLiteral("Updates"))
+               .readEntry(QStringLiteral("customUpdateDays"), 7);
+}
+
+void AppSettings::setCustomUpdateDays(int days)
+{
+    if (customUpdateDays() == days)
+        return;
+    m_config->group(QStringLiteral("Updates"))
+             .writeEntry(QStringLiteral("customUpdateDays"), days);
+    m_config->sync();
+    Q_EMIT customUpdateDaysChanged();
+}

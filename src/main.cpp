@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "gui/appimagewindow.h"
 #include "gui/dashboardwindow.h"
+#include "core/updatedaemon.h"
 
 #include <KAboutData>
 #include <KCrash>
@@ -45,8 +46,15 @@ int main(int argc, char *argv[])
         QStringLiteral("file"),
         i18n("AppImage file to manage. If omitted, opens the dashboard."),
         QStringLiteral("[file]"));
+    parser.addOption(QCommandLineOption(QStringLiteral("daemon"), i18n("Run in background as an update daemon")));
     parser.process(app);
     about.processCommandLine(&parser);
+
+    if (parser.isSet(QStringLiteral("daemon"))) {
+        UpdateDaemon *daemon = new UpdateDaemon(&app);
+        daemon->start();
+        return app.exec();
+    }
 
     const QStringList args = parser.positionalArguments();
     if (args.isEmpty()) {

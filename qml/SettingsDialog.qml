@@ -73,6 +73,27 @@ Kirigami.Dialog {
                 checked: AppSettings.showNotifications
                 onToggled: AppSettings.showNotifications = checked
             }
+
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: i18n("Background Updates")
+            }
+
+            Controls.ComboBox {
+                Kirigami.FormData.label: i18n("Check for updates:")
+                model: [i18n("Never"), i18n("Daily"), i18n("Weekly"), i18n("Monthly"), i18n("Custom")]
+                currentIndex: AppSettings.updateFrequency
+                onActivated: AppSettings.updateFrequency = currentIndex
+            }
+
+            Controls.SpinBox {
+                Kirigami.FormData.label: i18n("Custom interval (days):")
+                from: 1
+                to: 365
+                value: AppSettings.customUpdateDays
+                visible: AppSettings.updateFrequency === 4
+                onValueModified: AppSettings.customUpdateDays = value
+            }
         }
     }
 }
