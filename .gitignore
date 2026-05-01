@@ -25,8 +25,9 @@ Makefile
 # Logs
 *.log
 
-# AI assistant context
-GEMINI.md
+# Local build variants
+build_new/
+build_*/
 
-# Packaging scripts (local workflow)
-packaging/
+# Packaging scripts (local workflow only — packaging/aur/ is tracked)
+packaging/local/

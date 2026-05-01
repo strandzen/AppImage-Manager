@@ -12,7 +12,7 @@ This file is the authoritative reference for working on AppImage Manager.
 **License:** GPL-2.0-or-later.
 
 ### Roadmap (planned, not yet implemented)
-- **Update checking** — detect newer versions of installed AppImages (AppImageUpdate / zsync).
+
 - **Signature verification** — verify AppImage signatures before install.
 
 ---
@@ -66,6 +66,7 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 | `AppImageReader` | `appimagereader.h/.cpp` | **BLOCKING** extractor. Preferred: `libappimage` (in-process SquashFS). Fallback: `squashfuse` subprocess + `fusermount3`. Detects Type 1 vs 2 via ELF magic at byte offset 8. **Always call via `QtConcurrent::run`** |
 | `AppImageManager` | `appimagemanager.h/.cpp` | File operations: `installAppImage()` (KIO::CopyJob + chmod +x), `createDesktopLink()`, `removeDesktopLink()`, `isDesktopLinkEnabled()`, `findCorpses()` (blocking), `removeItems()` (KIO::trash). Also `rebuildSycoca()` |
 | `AppSettings` | `appsettings.h/.cpp` | QML singleton (`AppSettings`). KSharedConfig → `appimagemanagerrc`. Properties: `applicationsPath` (default `~/Applications`), `showDisclaimer`. Setter validates via `QDir::mkpath()`, emits `applicationsPathError(msg)` on failure |
+| `UpdateDaemon` | `updatedaemon.h/.cpp` | Background update checker. Launched via `--daemon` CLI flag (autostart desktop file installs to `$KDE_INSTALL_AUTOSTARTDIR`). Scans `applicationsPath` hourly, checks GitHub Releases API for newer versions, fires `KNotification` on update found. Uses `Qt6::Network` |
 
 ### GUI (`src/gui/`) — Qt Quick dependency
 
