@@ -144,14 +144,15 @@ AppImageInfo AppImageReader::readWithLibappimage()
                 info.appName    = entry.readEntry(QStringLiteral("Name"), info.appName);
                 info.categories = entry.readEntry(QStringLiteral("Categories"));
 
+                info.updateInfo = entry.readEntry(QStringLiteral("X-AppImage-Update-Information"));
+
                 // Version priority: X-AppImage-Version → X-AppImage-Update-Information
                 // prefix → filename regex → give up
                 QString ver = entry.readEntry(QStringLiteral("X-AppImage-Version"));
-                if (ver.isEmpty()) {
+                if (ver.isEmpty() && !info.updateInfo.isEmpty()) {
                     // Some AppImages embed version in the update URL: "zsync|url/App-1.2.3..."
-                    const QString updateInfo = entry.readEntry(QStringLiteral("X-AppImage-Update-Information"));
                     static const QRegularExpression verInUrl(QStringLiteral(R"([-_](\d+\.\d+[\d.]*))"));
-                    const auto m = verInUrl.match(updateInfo);
+                    const auto m = verInUrl.match(info.updateInfo);
                     if (m.hasMatch())
                         ver = m.captured(1);
                 }
@@ -390,11 +391,12 @@ AppImageInfo AppImageReader::parseSquashfsRoot(const QString &squashRoot)
     info.appName    = entry.readEntry(QStringLiteral("Name"));
     info.categories = entry.readEntry(QStringLiteral("Categories"));
 
+    info.updateInfo = entry.readEntry(QStringLiteral("X-AppImage-Update-Information"));
+
     QString ver = entry.readEntry(QStringLiteral("X-AppImage-Version"));
-    if (ver.isEmpty()) {
-        const QString updateInfo = entry.readEntry(QStringLiteral("X-AppImage-Update-Information"));
+    if (ver.isEmpty() && !info.updateInfo.isEmpty()) {
         static const QRegularExpression verInUrl(QStringLiteral(R"([-_](\d+\.\d+[\d.]*))"));
-        const auto m = verInUrl.match(updateInfo);
+        const auto m = verInUrl.match(info.updateInfo);
         if (m.hasMatch())
             ver = m.captured(1);
     }

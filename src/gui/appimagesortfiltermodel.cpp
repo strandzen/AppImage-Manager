@@ -9,7 +9,7 @@ AppImageSortFilterModel::AppImageSortFilterModel(QObject *parent)
     : QSortFilterProxyModel(parent)
 {
     setDynamicSortFilter(true);
-    sort(0); // enable proxy sorting
+    sort(0, Qt::AscendingOrder);
 }
 
 void AppImageSortFilterModel::setFilterText(const QString &text)
@@ -28,7 +28,16 @@ void AppImageSortFilterModel::setSortRole(int role)
         return;
     m_sortRole = role;
     Q_EMIT sortRoleChanged();
-    invalidate();
+    sort(0, m_sortOrder);
+}
+
+void AppImageSortFilterModel::setSortOrder(Qt::SortOrder order)
+{
+    if (m_sortOrder == order)
+        return;
+    m_sortOrder = order;
+    Q_EMIT sortOrderChanged();
+    sort(0, m_sortOrder);
 }
 
 bool AppImageSortFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
@@ -49,7 +58,15 @@ bool AppImageSortFilterModel::lessThan(const QModelIndex &left, const QModelInde
     case SortBySize:
         return left.data(AppImageListModel::AppSizeRole).toLongLong() < right.data(AppImageListModel::AppSizeRole).toLongLong();
     case SortByDate:
-        return left.data(AppImageListModel::AddedDateRole).toDateTime() > right.data(AppImageListModel::AddedDateRole).toDateTime();
+        return left.data(AppImageListModel::AddedDateRole).toDateTime() < right.data(AppImageListModel::AddedDateRole).toDateTime();
+    case SortByVersion: {
+        const QString a = left.data(AppImageListModel::VersionRole).toString();
+        const QString b = right.data(AppImageListModel::VersionRole).toString();
+        return a.compare(b, Qt::CaseInsensitive) < 0;
+    }
+    case SortByVisible:
+        return left.data(AppImageListModel::HasDesktopLinkRole).toBool()
+             < right.data(AppImageListModel::HasDesktopLinkRole).toBool();
     default: { // SortByName
         const QString a = left.data(AppImageListModel::CleanNameRole).toString();
         const QString b = right.data(AppImageListModel::CleanNameRole).toString();

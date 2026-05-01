@@ -8,6 +8,7 @@
 #include <QDateTime>
 #include <QFileSystemWatcher>
 #include <QTimer>
+#include <QNetworkAccessManager>
 #include <QtQml/qqmlregistration.h>
 
 class AppImageIconProvider;
@@ -33,6 +34,10 @@ public:
         FormattedSizeRole,
         AddedDateRole,
         DisplayNameRole,
+        UpdateAvailableRole,
+        UpdateVersionRole,
+        IsUpdatingRole,
+        UpdateProgressRole,
     };
     Q_ENUM(Roles)
 
@@ -44,6 +49,11 @@ private:
         QString cachedIconSource    = QStringLiteral("application-x-executable");
         QString cachedFormattedSize;
         QString cachedDisplayName;
+        QString updateVersion;
+        QString zsyncUrl;
+        bool updateAvailable = false;
+        bool isUpdating = false;
+        int updateProgress = 0;
         bool metadataLoaded = false;
         bool hasDesktopLink = false;
     };
@@ -62,6 +72,8 @@ public:
     Q_INVOKABLE void toggleDesktopLink(int row, bool enable);
     Q_INVOKABLE void requestRemoveAt(int row);
     Q_INVOKABLE void requestLaunch(int row);
+    Q_INVOKABLE void checkForUpdates();
+    Q_INVOKABLE void downloadUpdate(int row);
 
 Q_SIGNALS:
     void scanningChanged();
@@ -82,4 +94,5 @@ private:
 
     QFileSystemWatcher     m_watcher;
     QTimer                 m_refreshTimer;
+    QNetworkAccessManager *m_networkManager;
 };

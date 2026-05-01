@@ -17,6 +17,7 @@ struct AppImageInfo {
     qint64 fileSize = 0;
     QByteArray iconData;
     QString iconExt;
+    QString updateInfo;
     bool isValid = false;
 };
 

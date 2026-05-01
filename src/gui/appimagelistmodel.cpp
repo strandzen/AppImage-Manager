@@ -12,11 +12,19 @@
 #include <QFutureWatcher>
 #include <QIcon>
 #include <QProcess>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QRegularExpression>
+#include <KNotification>
+#include <KLocalizedString>
 #include <QtConcurrent/QtConcurrent>
 
 AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject *parent)
     : QAbstractListModel(parent)
     , m_iconProvider(iconProvider)
+    , m_networkManager(new QNetworkAccessManager(this))
 {
     m_refreshTimer.setSingleShot(true);
     m_refreshTimer.setInterval(500);
@@ -57,6 +65,10 @@ QVariant AppImageListModel::data(const QModelIndex &index, int role) const
     case AddedDateRole:      return item.addedDate;
     case DisplayNameRole:    return item.cachedDisplayName;
     case IconSourceRole:     return item.cachedIconSource;
+    case UpdateAvailableRole:return item.updateAvailable;
+    case UpdateVersionRole:  return item.updateVersion;
+    case IsUpdatingRole:     return item.isUpdating;
+    case UpdateProgressRole: return item.updateProgress;
     default: return {};
     }
 }
@@ -104,6 +116,10 @@ QHash<int, QByteArray> AppImageListModel::roleNames() const
         { FormattedSizeRole,  "formattedSize"  },
         { AddedDateRole,      "addedDate"      },
         { DisplayNameRole,    "displayName"    },
+        { UpdateAvailableRole,"updateAvailable"},
+        { UpdateVersionRole,  "updateVersion"  },
+        { IsUpdatingRole,     "isUpdating"     },
+        { UpdateProgressRole, "updateProgress" },
     };
 }
 
@@ -284,4 +300,160 @@ void AppImageListModel::requestLaunch(int row)
 QString AppImageListModel::iconIdForPath(const QString &path)
 {
     return QString::number(qHash(path));
+}
+
+void AppImageListModel::checkForUpdates()
+{
+    for (int i = 0; i < m_items.size(); ++i) {
+        const Item &item = m_items.at(i);
+        if (item.info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|"))) {
+            QStringList parts = item.info.updateInfo.split(QLatin1Char('|'));
+            if (parts.size() >= 3) {
+                QString owner = parts.at(1);
+                QString repo = parts.at(2);
+                QString url = QStringLiteral("https://api.github.com/repos/%1/%2/releases/latest").arg(owner, repo);
+                
+                QNetworkRequest request((QUrl(url)));
+                request.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
+                
+                QString filePath = item.filePath;
+                
+                QNetworkReply *reply = m_networkManager->get(request);
+                connect(reply, &QNetworkReply::finished, this, [this, reply, filePath]() {
+                    reply->deleteLater();
+                    if (reply->error() != QNetworkReply::NoError) {
+                        return;
+                    }
+                    
+                    QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+                    if (doc.isObject()) {
+                        QString tag = doc.object().value(QLatin1String("tag_name")).toString();
+                        if (!tag.isEmpty()) {
+                            QString versionStr = tag;
+                            if (versionStr.startsWith(QLatin1Char('v')) || versionStr.startsWith(QLatin1Char('V'))) {
+                                versionStr.remove(0, 1);
+                            }
+                            
+                            // Locate by path — index may have shifted
+                            int row = -1;
+                            for (int idx = 0; idx < m_items.size(); ++idx) {
+                                if (m_items.at(idx).filePath == filePath) { row = idx; break; }
+                            }
+                            if (row < 0) return;
+                            
+                            Item &modelItem = m_items[row];
+                            QString currentVer = modelItem.info.version;
+                            if (currentVer.startsWith(QLatin1Char('v')) || currentVer.startsWith(QLatin1Char('V'))) {
+                                currentVer.remove(0, 1);
+                            }
+                            
+                            if (versionStr != currentVer) {
+                                modelItem.updateAvailable = true;
+                                modelItem.updateVersion = versionStr;
+
+                                // Find the zsync url
+                                QJsonArray assets = doc.object().value(QLatin1String("assets")).toArray();
+                                for (const QJsonValue &assetVal : assets) {
+                                    QJsonObject asset = assetVal.toObject();
+                                    QString name = asset.value(QLatin1String("name")).toString();
+                                    if (name.endsWith(QLatin1String(".zsync"))) {
+                                        modelItem.zsyncUrl = asset.value(QLatin1String("browser_download_url")).toString();
+                                        break;
+                                    }
+                                }
+
+                                Q_EMIT dataChanged(index(row, 0), index(row, 0), {UpdateAvailableRole, UpdateVersionRole});
+                            }
+                        }
+                    }
+                });
+            }
+        } else if (item.info.updateInfo.startsWith(QStringLiteral("zsync|"))) {
+            QString url = item.info.updateInfo.mid(6);
+            // We would need to fetch the zsync header to get the version, 
+            // for now just make it available if we don't know the version
+            int row = i;
+            Item &modelItem = m_items[row];
+            modelItem.updateAvailable = true;
+            modelItem.zsyncUrl = url;
+            modelItem.updateVersion = i18n("Unknown");
+            Q_EMIT dataChanged(index(row, 0), index(row, 0), {UpdateAvailableRole, UpdateVersionRole});
+        }
+    }
+}
+
+void AppImageListModel::downloadUpdate(int row)
+{
+    if (row < 0 || row >= m_items.size()) return;
+    
+    Item &item = m_items[row];
+    if (item.zsyncUrl.isEmpty() || item.isUpdating) return;
+
+    item.isUpdating = true;
+    item.updateProgress = 0;
+    Q_EMIT dataChanged(index(row, 0), index(row, 0), {IsUpdatingRole, UpdateProgressRole});
+
+    QProcess *process = new QProcess(this);
+    QString oldFile = item.filePath;
+    QString newFile = oldFile + QStringLiteral(".new");
+
+    process->setProgram(QStringLiteral("zsync"));
+    process->setArguments({
+        QStringLiteral("-i"), oldFile,
+        QStringLiteral("-o"), newFile,
+        item.zsyncUrl
+    });
+
+    connect(process, &QProcess::readyReadStandardOutput, this, [this, process, row]() {
+        if (row >= m_items.size()) return;
+        
+        QString output = QString::fromUtf8(process->readAllStandardOutput());
+        static const QRegularExpression regex(QStringLiteral(R"((\d+\.\d+)%)"));
+        
+        auto match = regex.match(output);
+        if (match.hasMatch()) {
+            double percent = match.captured(1).toDouble();
+            m_items[row].updateProgress = static_cast<int>(percent);
+            Q_EMIT dataChanged(index(row, 0), index(row, 0), {UpdateProgressRole});
+        }
+    });
+
+    connect(process, &QProcess::finished, this, [this, process, row, oldFile, newFile](int exitCode, QProcess::ExitStatus) {
+        process->deleteLater();
+        if (row >= m_items.size()) return;
+
+        Item &item = m_items[row];
+        item.isUpdating = false;
+
+        if (exitCode == 0 && QFile::exists(newFile)) {
+            // Replace old file with new file
+            QFile::remove(oldFile);
+            QFile::rename(newFile, oldFile);
+            
+            // Make executable
+            QFile file(oldFile);
+            file.setPermissions(file.permissions() | QFileDevice::ExeUser | QFileDevice::ExeGroup | QFileDevice::ExeOther);
+
+            item.updateAvailable = false;
+            item.updateProgress = 0;
+            
+            // Notify user
+            KNotification *notification = new KNotification(QStringLiteral("updateDownloaded"), KNotification::CloseOnTimeout, this);
+            notification->setTitle(i18n("Update Completed"));
+            notification->setText(i18n("%1 has been successfully updated.", item.cachedDisplayName));
+            notification->setIconName(item.info.appId.isEmpty() ? QStringLiteral("application-x-executable") : item.info.appId);
+            notification->sendEvent();
+
+            // Refresh metadata
+            loadMetadataForRow(row);
+        } else {
+            // Failed
+            if (QFile::exists(newFile)) {
+                QFile::remove(newFile);
+            }
+            Q_EMIT dataChanged(index(row, 0), index(row, 0), {IsUpdatingRole, UpdateProgressRole});
+        }
+    });
+
+    process->start();
 }
