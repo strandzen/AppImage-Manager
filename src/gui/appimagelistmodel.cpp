@@ -404,54 +404,56 @@ void AppImageListModel::downloadUpdate(int row)
         item.zsyncUrl
     });
 
-    connect(process, &QProcess::readyReadStandardOutput, this, [this, process, row]() {
-        if (row >= m_items.size()) return;
-        
+    connect(process, &QProcess::readyReadStandardOutput, this, [this, process, oldFile]() {
+        int r = -1;
+        for (int i = 0; i < m_items.size(); ++i)
+            if (m_items.at(i).filePath == oldFile) { r = i; break; }
+        if (r < 0) return;
+
         QString output = QString::fromUtf8(process->readAllStandardOutput());
         static const QRegularExpression regex(QStringLiteral(R"((\d+\.\d+)%)"));
-        
         auto match = regex.match(output);
         if (match.hasMatch()) {
-            double percent = match.captured(1).toDouble();
-            m_items[row].updateProgress = static_cast<int>(percent);
-            Q_EMIT dataChanged(index(row, 0), index(row, 0), {UpdateProgressRole});
+            m_items[r].updateProgress = static_cast<int>(match.captured(1).toDouble());
+            Q_EMIT dataChanged(index(r, 0), index(r, 0), {UpdateProgressRole});
         }
     });
 
-    connect(process, &QProcess::finished, this, [this, process, row, oldFile, newFile](int exitCode, QProcess::ExitStatus) {
+    connect(process, &QProcess::finished, this, [this, process, oldFile, newFile](int exitCode, QProcess::ExitStatus) {
         process->deleteLater();
-        if (row >= m_items.size()) return;
 
-        Item &item = m_items[row];
+        int r = -1;
+        for (int i = 0; i < m_items.size(); ++i)
+            if (m_items.at(i).filePath == oldFile) { r = i; break; }
+        if (r < 0) return;
+
+        Item &item = m_items[r];
         item.isUpdating = false;
 
         if (exitCode == 0 && QFile::exists(newFile)) {
-            // Replace old file with new file
-            QFile::remove(oldFile);
-            QFile::rename(newFile, oldFile);
-            
-            // Make executable
+            if (!QFile::remove(oldFile) || !QFile::rename(newFile, oldFile)) {
+                QFile::remove(newFile);
+                Q_EMIT dataChanged(index(r, 0), index(r, 0), {IsUpdatingRole, UpdateProgressRole});
+                return;
+            }
+
             QFile file(oldFile);
             file.setPermissions(file.permissions() | QFileDevice::ExeUser | QFileDevice::ExeGroup | QFileDevice::ExeOther);
 
             item.updateAvailable = false;
             item.updateProgress = 0;
-            
-            // Notify user
-            KNotification *notification = new KNotification(QStringLiteral("updateDownloaded"), KNotification::CloseOnTimeout, this);
+
+            auto *notification = new KNotification(QStringLiteral("updateDownloaded"), KNotification::CloseOnTimeout, this);
             notification->setTitle(i18n("Update Completed"));
             notification->setText(i18n("%1 has been successfully updated.", item.cachedDisplayName));
             notification->setIconName(item.info.appId.isEmpty() ? QStringLiteral("application-x-executable") : item.info.appId);
             notification->sendEvent();
 
-            // Refresh metadata
-            loadMetadataForRow(row);
+            loadMetadataForRow(r);
         } else {
-            // Failed
-            if (QFile::exists(newFile)) {
+            if (QFile::exists(newFile))
                 QFile::remove(newFile);
-            }
-            Q_EMIT dataChanged(index(row, 0), index(row, 0), {IsUpdatingRole, UpdateProgressRole});
+            Q_EMIT dataChanged(index(r, 0), index(r, 0), {IsUpdatingRole, UpdateProgressRole});
         }
     });
 

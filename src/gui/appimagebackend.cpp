@@ -3,6 +3,7 @@
 #include "appimagebackend.h"
 #include "appimageiconprovider.h"
 #include "corpsemodel.h"
+#include "dashboardwindow.h"
 #include "logging.h"
 #include "../core/appimagemanager.h"
 #include "../core/appimagereader.h"
@@ -82,6 +83,11 @@ void AppImageBackend::onMetadataReady(const AppImageInfo &info)
 // ──────────────────────────────────────────────────────────────────────────────
 // Q_INVOKABLE
 // ──────────────────────────────────────────────────────────────────────────────
+
+void AppImageBackend::openDashboard()
+{
+    DashboardWindow::open();
+}
 
 QString AppImageBackend::formatBytes(qint64 bytes) const
 {

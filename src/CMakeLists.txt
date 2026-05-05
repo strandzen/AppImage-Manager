@@ -46,6 +46,7 @@ set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/StorageDialog.qml
+    ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
     PROPERTIES QT_RESOURCE_ALIAS ""
 )
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
@@ -58,6 +59,8 @@ set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
     PROPERTY QT_RESOURCE_ALIAS SettingsDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/StorageDialog.qml
     PROPERTY QT_RESOURCE_ALIAS StorageDialog.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
+    PROPERTY QT_RESOURCE_ALIAS UpdateDialog.qml)
 
 qt_add_qml_module(appimagemanager_qml
     URI "appimagemanager"
@@ -68,6 +71,7 @@ qt_add_qml_module(appimagemanager_qml
         ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/StorageDialog.qml
+        ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
     SOURCES
         core/appsettings.h
         core/appsettings.cpp
@@ -106,6 +110,7 @@ target_link_libraries(appimagemanager_qml PUBLIC
     Qt6::Quick
     Qt6::Qml
     Qt6::Concurrent
+    Qt6::Widgets
     KF6::I18nQml
     KF6::IconThemes
     KF6::Notifications

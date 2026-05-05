@@ -100,3 +100,10 @@ void AppImageSortFilterModel::requestLaunch(int proxyRow)
     if (src)
         src->requestLaunch(sourceRowFor(proxyRow));
 }
+
+void AppImageSortFilterModel::downloadUpdate(int proxyRow)
+{
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    if (src)
+        src->downloadUpdate(sourceRowFor(proxyRow));
+}

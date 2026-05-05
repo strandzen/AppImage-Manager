@@ -9,7 +9,7 @@
 #include <KDBusService>
 #include <KLocalizedString>
 
-#include <QGuiApplication>
+#include <QApplication>
 #include <QCommandLineParser>
 #include <QIcon>
 #include <QUrl>
@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 {
     KLocalizedString::setApplicationDomain("appimagemanager");
 
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
 
     KAboutData about(
         QStringLiteral("appimagemanager"),
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     );
     KAboutData::setApplicationData(about);
 
-    QGuiApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("appimagemanager"),
+    QApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("appimagemanager"),
                                                      QIcon::fromTheme(QStringLiteral("application-x-executable"))));
 
     KCrash::initialize();

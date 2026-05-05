@@ -17,9 +17,9 @@ public:
 
     AppImageInfo read();
 
-private:
-    // Shared helpers
     static QString cleanName(const QString &filename);
+
+private:
     static QString extractAppId(const QString &filename);
     static QString versionFromFilename(const QString &filename);
 

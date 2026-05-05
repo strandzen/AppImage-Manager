@@ -22,6 +22,12 @@ ApplicationWindow {
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
 
+    readonly property int managedIconSize: [
+        Kirigami.Units.iconSizes.huge,
+        Math.round(Kirigami.Units.iconSizes.huge * 1.5),
+        Kirigami.Units.iconSizes.enormous
+    ][AppSettings.manageIconSize]
+
     UninstallDialog { id: uninstallDialog }
 
     // ── About sheet ──────────────────────────────────────────────────────────
@@ -124,7 +130,7 @@ ApplicationWindow {
             RowLayout {
                 id: innerRow
                 anchors.centerIn: parent
-                spacing: Kirigami.Units.gridUnit * 2
+                spacing: Kirigami.Units.gridUnit * 4
 
                 ColumnLayout {
                     Layout.alignment: Qt.AlignVCenter
@@ -132,7 +138,7 @@ ApplicationWindow {
 
                     Item {
                         id: iconContainer
-                        width: Kirigami.Units.iconSizes.huge; height: Kirigami.Units.iconSizes.huge
+                        width: root.managedIconSize; height: root.managedIconSize
                         Layout.alignment: Qt.AlignHCenter
                         Kirigami.Icon {
                             id: appIcon
@@ -180,7 +186,7 @@ ApplicationWindow {
                     Label {
                         text: backend.displayName; horizontalAlignment: Text.AlignHCenter
                         Layout.alignment: Qt.AlignHCenter; elide: Label.ElideRight
-                        Layout.maximumWidth: Kirigami.Units.gridUnit * 8; font.bold: backend.isInstalled
+                        Layout.maximumWidth: Kirigami.Units.gridUnit * 10; font.bold: backend.isInstalled
                     }
                 }
 
@@ -193,19 +199,26 @@ ApplicationWindow {
 
                     Item {
                         id: folderContainer
-                        width: Kirigami.Units.iconSizes.huge; height: Kirigami.Units.iconSizes.huge
+                        width: root.managedIconSize; height: root.managedIconSize
                         Layout.alignment: Qt.AlignHCenter
                         DropArea { id: folderDropArea; anchors.fill: parent; keys: ["appimage"] }
                         Kirigami.Icon {
                             source: "system-file-manager"; anchors.fill: parent
-                            opacity: folderDropArea.containsDrag ? 1.0 : 0.6; scale: folderDropArea.containsDrag ? 1.2 : 1.0
+                            opacity: 1.0; scale: folderDropArea.containsDrag ? 1.2 : 1.0
                             Behavior on scale { NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutBack } }
-                            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: backend.openDashboard()
+                            ToolTip.text: i18n("Open Dashboard")
+                            ToolTip.visible: containsMouse && !folderDropArea.containsDrag
                         }
                     }
                     Label {
                         text: i18n("Applications"); horizontalAlignment: Text.AlignHCenter
-                        Layout.alignment: Qt.AlignHCenter; opacity: dragArea.drag.active ? 1.0 : 0.6; font.bold: dragArea.drag.active
+                        Layout.alignment: Qt.AlignHCenter; opacity: 1.0; font.bold: dragArea.drag.active
                     }
                 }
             }

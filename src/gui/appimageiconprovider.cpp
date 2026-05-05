@@ -31,8 +31,10 @@ QPixmap AppImageIconProvider::requestPixmap(const QString &id,
     if (it != m_icons.constEnd() && !it->data.isEmpty())
         pixmap.loadFromData(it->data);
 
-    if (pixmap.isNull())
+    if (pixmap.isNull()) {
+        if (size) *size = QSize(0, 0);
         return pixmap;
+    }
 
     const QSize target = (requestedSize.isValid() && !requestedSize.isEmpty())
                        ? requestedSize

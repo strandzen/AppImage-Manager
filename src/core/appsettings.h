@@ -21,6 +21,8 @@ class AppSettings : public QObject
     Q_PROPERTY(bool    showNotifications READ showNotifications WRITE setShowNotifications NOTIFY showNotificationsChanged)
     Q_PROPERTY(int     updateFrequency   READ updateFrequency   WRITE setUpdateFrequency   NOTIFY updateFrequencyChanged)
     Q_PROPERTY(int     customUpdateDays  READ customUpdateDays  WRITE setCustomUpdateDays  NOTIFY customUpdateDaysChanged)
+    Q_PROPERTY(int     manageIconSize    READ manageIconSize    WRITE setManageIconSize    NOTIFY manageIconSizeChanged)
+    Q_PROPERTY(bool    watchDownloads    READ watchDownloads    WRITE setWatchDownloads    NOTIFY watchDownloadsChanged)
 
 public:
     // QML singleton factory — always returns the same C++ instance across all engines.
@@ -42,12 +44,22 @@ public:
     int customUpdateDays() const;
     void setCustomUpdateDays(int days);
 
+    int manageIconSize() const;
+    void setManageIconSize(int size);
+
+    bool watchDownloads() const;
+    void setWatchDownloads(bool enabled);
+
+    Q_INVOKABLE void openFolderPicker();
+
 Q_SIGNALS:
     void applicationsPathChanged();
     void showDisclaimerChanged();
     void showNotificationsChanged();
     void updateFrequencyChanged();
     void customUpdateDaysChanged();
+    void manageIconSizeChanged();
+    void watchDownloadsChanged();
     void applicationsPathError(const QString &message);
 
 private:

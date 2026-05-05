@@ -10,12 +10,17 @@
 #include <KLocalizedQmlContext>
 #include <KQuickIconProvider>
 
+#include <algorithm>
+
+#include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickWindow>
 #include <QUrl>
+#include <QWindow>
 
 DashboardWindow *DashboardWindow::s_instance = nullptr;
 
@@ -40,12 +45,24 @@ DashboardWindow::DashboardWindow(QObject *parent)
 
 void DashboardWindow::setupAndShow()
 {
-    m_iconProvider = new AppImageIconProvider;
-    m_listModel    = new AppImageListModel(m_iconProvider, this);
-    m_proxyModel   = new AppImageSortFilterModel(this);
+    // Engine must be created FIRST and own the data models.
+    // Qt deletes children FIFO, so if models were children of DashboardWindow
+    // they'd be freed before the engine — causing a crash when QML teardown
+    // tries to evaluate bindings that reference them.
+    m_engine = new QQmlApplicationEngine(this);
+
+    m_iconProvider = new AppImageIconProvider;  // ownership transferred to engine via addImageProvider below
+    m_listModel    = new AppImageListModel(m_iconProvider, m_engine);
+    m_proxyModel   = new AppImageSortFilterModel(m_engine);
     m_proxyModel->setSourceModel(m_listModel);
 
-    m_engine = new QQmlApplicationEngine(this);
+    // Disconnect the engine's auto-quit so the dashboard closing does not kill
+    // the whole process when a manage window is also open. We handle quit
+    // ourselves in the closing handler below.
+    // Note: QCoreApplication::quit/exit are static slots — must use SIGNAL/SLOT strings.
+    QObject::disconnect(m_engine, SIGNAL(quit()), qApp, SLOT(quit()));
+    QObject::disconnect(m_engine, SIGNAL(exit(int)), qApp, SLOT(exit(int)));
+
     KLocalization::setupLocalizedContext(m_engine);
     m_engine->addImageProvider(QStringLiteral("appimage"), m_iconProvider);
     m_engine->addImageProvider(QStringLiteral("icon"), new KQuickIconProvider);
@@ -73,6 +90,14 @@ void DashboardWindow::setupAndShow()
 
     connect(m_window, &QQuickWindow::closing, this, [this]() {
         s_instance = nullptr;
+
+        // Quit only if the dashboard was the sole visible window.
+        const auto windows = qApp->topLevelWindows();
+        const bool otherVisible = std::any_of(windows.begin(), windows.end(),
+            [this](QWindow *w) { return w != m_window && w->isVisible(); });
+        if (!otherVisible)
+            QCoreApplication::quit();
+
         deleteLater();
     });
 

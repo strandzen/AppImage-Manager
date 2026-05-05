@@ -72,6 +72,7 @@ public Q_SLOTS:
     void removeAppImageAndCorpses(const QStringList &corpsePaths, bool includeAppImage);
 
     Q_INVOKABLE QString formatBytes(qint64 bytes) const;
+    Q_INVOKABLE void    openDashboard();
 
 private Q_SLOTS:
     void onMetadataReady(const AppImageInfo &info);

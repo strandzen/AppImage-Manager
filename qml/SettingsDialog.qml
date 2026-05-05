@@ -25,15 +25,7 @@ Kirigami.Dialog {
         }
     }
 
-    FolderDialog {
-        id: folderDialog
-        onAccepted: {
-            var path = selectedFolder.toString()
-            if (path.startsWith("file://"))
-                path = path.substring(7)
-            AppSettings.applicationsPath = path
-        }
-    }
+    // FolderDialog removed in favor of native C++ QFileDialog via AppSettings.openFolderPicker()
 
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
@@ -58,11 +50,28 @@ Kirigami.Dialog {
                 }
                 Controls.Button {
                     icon.name: "folder-open"
-                    onClicked: folderDialog.open()
+                    onClicked: AppSettings.openFolderPicker()
                     Controls.ToolTip.text: i18n("Browse…")
                     Controls.ToolTip.visible: hovered
                 }
             }
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: i18n("Appearance")
+            }
+
+            Controls.ComboBox {
+                Kirigami.FormData.label: i18n("Manage window icon size:")
+                model: [i18n("Small"), i18n("Medium"), i18n("Large")]
+                currentIndex: AppSettings.manageIconSize
+                onActivated: AppSettings.manageIconSize = currentIndex
+            }
+
+            Kirigami.Separator {
+                Kirigami.FormData.isSection: true
+                Kirigami.FormData.label: i18n("Behavior")
+            }
+
             Controls.CheckBox {
                 text: i18n("Show security disclaimer")
                 checked: AppSettings.showDisclaimer
@@ -72,6 +81,11 @@ Kirigami.Dialog {
                 text: i18n("Show install/uninstall notifications")
                 checked: AppSettings.showNotifications
                 onToggled: AppSettings.showNotifications = checked
+            }
+            Controls.CheckBox {
+                text: i18n("Notify when an AppImage is downloaded")
+                checked: AppSettings.watchDownloads
+                onToggled: AppSettings.watchDownloads = checked
             }
 
             Kirigami.Separator {

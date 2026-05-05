@@ -13,3 +13,8 @@ Sound=outcome-success
 Name=AppImage Removed
 Comment=AppImage was moved to Trash
 Action=Popup
+
+[Event/downloaded]
+Name=AppImage Downloaded
+Comment=A new AppImage appeared in the Downloads folder
+Action=Popup

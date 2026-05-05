@@ -5,6 +5,8 @@
 #include <KConfigGroup>
 
 #include <QDir>
+#include <QFileDialog>
+#include <KLocalizedString>
 
 AppSettings *AppSettings::instance()
 {
@@ -104,4 +106,44 @@ void AppSettings::setCustomUpdateDays(int days)
              .writeEntry(QStringLiteral("customUpdateDays"), days);
     m_config->sync();
     Q_EMIT customUpdateDaysChanged();
+}
+
+int AppSettings::manageIconSize() const
+{
+    return m_config->group(QStringLiteral("Appearance"))
+               .readEntry(QStringLiteral("manageIconSize"), 2); // 2 = Large
+}
+
+void AppSettings::setManageIconSize(int size)
+{
+    if (manageIconSize() == size)
+        return;
+    m_config->group(QStringLiteral("Appearance"))
+             .writeEntry(QStringLiteral("manageIconSize"), size);
+    m_config->sync();
+    Q_EMIT manageIconSizeChanged();
+}
+
+bool AppSettings::watchDownloads() const
+{
+    return m_config->group(QStringLiteral("Behavior"))
+               .readEntry(QStringLiteral("watchDownloads"), true);
+}
+
+void AppSettings::setWatchDownloads(bool enabled)
+{
+    if (watchDownloads() == enabled)
+        return;
+    m_config->group(QStringLiteral("Behavior"))
+             .writeEntry(QStringLiteral("watchDownloads"), enabled);
+    m_config->sync();
+    Q_EMIT watchDownloadsChanged();
+}
+
+void AppSettings::openFolderPicker()
+{
+    QString dir = QFileDialog::getExistingDirectory(nullptr, i18n("Select Applications Folder"), applicationsPath(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    if (!dir.isEmpty()) {
+        setApplicationsPath(dir);
+    }
 }

@@ -32,6 +32,7 @@ public:
     Q_INVOKABLE void toggleDesktopLink(int proxyRow, bool enable);
     Q_INVOKABLE void requestRemoveAt(int proxyRow);
     Q_INVOKABLE void requestLaunch(int proxyRow);
+    Q_INVOKABLE void downloadUpdate(int proxyRow);
 
 Q_SIGNALS:
     void filterTextChanged();
