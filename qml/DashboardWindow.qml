@@ -18,6 +18,10 @@ Kirigami.ApplicationWindow {
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
 
+    Controls.ActionGroup {
+        id: sortActionGroup
+    }
+
     // ── Role constants (AppImageListModel::Roles, starting at Qt::UserRole) ───
     readonly property int roleFilePath:       Qt.UserRole + 0
     readonly property int roleCleanName:      Qt.UserRole + 1
@@ -96,9 +100,6 @@ Kirigami.ApplicationWindow {
                     text: i18n("Sort")
                     displayHint: Kirigami.DisplayHint.IconOnly
 
-                    Controls.ActionGroup {
-                        id: sortActionGroup
-                    }
 
                     Kirigami.Action {
                         text: i18n("By Name")
@@ -263,7 +264,9 @@ Kirigami.ApplicationWindow {
                         Kirigami.SearchField {
                             id: searchField
                             Layout.fillWidth: true
-                            Layout.margins: Kirigami.Units.smallSpacing
+                            Layout.leftMargin: Kirigami.Units.smallSpacing
+                            Layout.rightMargin: Kirigami.Units.smallSpacing
+                            Layout.bottomMargin: Kirigami.Units.smallSpacing
                             placeholderText: i18n("Search…")
                             onTextChanged: proxyModel.filterText = text
                         }
@@ -275,10 +278,7 @@ Kirigami.ApplicationWindow {
                             visible: listModel.scanning
                             padding: 0
                         }
-                        Kirigami.Separator {
-                            Layout.fillWidth: true
-                            visible: !listModel.scanning
-                        }
+
 
                         Item {
                             Layout.fillWidth: true
