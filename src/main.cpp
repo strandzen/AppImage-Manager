@@ -28,6 +28,8 @@ int main(int argc, char *argv[])
         KAboutLicense::GPL_V2,
         i18n("© 2024 AppImage Manager Contributors")
     );
+    about.setOrganizationDomain("appimagemanager.org");
+    about.setDesktopFileName(QStringLiteral("appimagemanager"));
     KAboutData::setApplicationData(about);
 
     QApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("appimagemanager"),
@@ -46,7 +48,8 @@ int main(int argc, char *argv[])
         QStringLiteral("file"),
         i18n("AppImage file to manage. If omitted, opens the dashboard."),
         QStringLiteral("[file]"));
-    parser.addOption(QCommandLineOption(QStringLiteral("daemon"), i18n("Run in background as an update daemon")));
+    parser.addOption(QCommandLineOption(QStringLiteral("daemon"),    i18n("Run in background as an update daemon")));
+    parser.addOption(QCommandLineOption(QStringLiteral("dashboard"), i18n("Open the dashboard window")));
     parser.process(app);
     about.processCommandLine(&parser);
 
@@ -57,10 +60,10 @@ int main(int argc, char *argv[])
     }
 
     const QStringList args = parser.positionalArguments();
-    if (args.isEmpty()) {
-        DashboardWindow::open();
-    } else {
+    if (!args.isEmpty()) {
         AppImageWindow::open(args.first());
+    } else {
+        DashboardWindow::open();
     }
 
     return app.exec();

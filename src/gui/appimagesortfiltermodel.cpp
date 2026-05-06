@@ -18,8 +18,7 @@ void AppImageSortFilterModel::setFilterText(const QString &text)
         return;
     m_filterText = text;
     Q_EMIT filterTextChanged();
-    beginFilterChange();
-    endFilterChange();
+    invalidateFilter();
 }
 
 void AppImageSortFilterModel::setSortRole(int role)
@@ -28,7 +27,7 @@ void AppImageSortFilterModel::setSortRole(int role)
         return;
     m_sortRole = role;
     Q_EMIT sortRoleChanged();
-    sort(0, m_sortOrder);
+    invalidate();
 }
 
 void AppImageSortFilterModel::setSortOrder(Qt::SortOrder order)
@@ -55,24 +54,45 @@ bool AppImageSortFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex 
 bool AppImageSortFilterModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
     switch (m_sortRole) {
-    case SortBySize:
-        return left.data(AppImageListModel::AppSizeRole).toLongLong() < right.data(AppImageListModel::AppSizeRole).toLongLong();
-    case SortByDate:
-        return left.data(AppImageListModel::AddedDateRole).toDateTime() < right.data(AppImageListModel::AddedDateRole).toDateTime();
+    case SortBySize: {
+        const qint64 a = left.data(AppImageListModel::AppSizeRole).toLongLong();
+        const qint64 b = right.data(AppImageListModel::AppSizeRole).toLongLong();
+        if (a != b) return a < b;
+        break;
+    }
+    case SortByDate: {
+        const QDateTime a = left.data(AppImageListModel::AddedDateRole).toDateTime();
+        const QDateTime b = right.data(AppImageListModel::AddedDateRole).toDateTime();
+        if (a != b) return a < b;
+        break;
+    }
     case SortByVersion: {
         const QString a = left.data(AppImageListModel::VersionRole).toString();
         const QString b = right.data(AppImageListModel::VersionRole).toString();
-        return a.compare(b, Qt::CaseInsensitive) < 0;
+        const int cmp = a.compare(b, Qt::CaseInsensitive);
+        if (cmp != 0) return cmp < 0;
+        break;
     }
-    case SortByVisible:
-        return left.data(AppImageListModel::HasDesktopLinkRole).toBool()
-             < right.data(AppImageListModel::HasDesktopLinkRole).toBool();
-    default: { // SortByName
-        const QString a = left.data(AppImageListModel::CleanNameRole).toString();
-        const QString b = right.data(AppImageListModel::CleanNameRole).toString();
-        return a.compare(b, Qt::CaseInsensitive) < 0;
+    case SortByVisible: {
+        const bool a = left.data(AppImageListModel::HasDesktopLinkRole).toBool();
+        const bool b = right.data(AppImageListModel::HasDesktopLinkRole).toBool();
+        if (a != b) return a < b;
+        break;
     }
+    case SortByCategory: {
+        const QString a = left.data(AppImageListModel::CategoriesRole).toString();
+        const QString b = right.data(AppImageListModel::CategoriesRole).toString();
+        const int cmp = a.compare(b, Qt::CaseInsensitive);
+        if (cmp != 0) return cmp < 0;
+        break;
     }
+    default:
+        break;
+    }
+
+    const QString aName = left.data(AppImageListModel::DisplayNameRole).toString();
+    const QString bName = right.data(AppImageListModel::DisplayNameRole).toString();
+    return aName.compare(bName, Qt::CaseInsensitive) < 0;
 }
 
 int AppImageSortFilterModel::sourceRowFor(int proxyRow) const

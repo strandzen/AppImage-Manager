@@ -89,6 +89,15 @@ Kirigami.Dialog {
                 font.bold: true
             }
 
+            // Corpse confidence explanation + warning
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                visible: dialog.corpseModel && dialog.corpseModel.rowCount() > 0
+                type: Kirigami.MessageType.Warning
+                text: i18n("Leftover directories are sorted by match confidence — high-confidence entries are pre-selected. Only remove directories you are sure belong to this app.")
+                showCloseButton: false
+            }
+
             // AppImage itself
             RowLayout {
                 spacing: Kirigami.Units.smallSpacing

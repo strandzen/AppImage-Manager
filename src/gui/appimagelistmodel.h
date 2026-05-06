@@ -7,6 +7,7 @@
 #include <QAbstractListModel>
 #include <QDateTime>
 #include <QFileSystemWatcher>
+#include <QSet>
 #include <QTimer>
 #include <QNetworkAccessManager>
 #include <QtQml/qqmlregistration.h>
@@ -19,7 +20,9 @@ class AppImageListModel : public QAbstractListModel
     QML_ELEMENT
     QML_UNCREATABLE("Use the 'listModel' context property")
 
-    Q_PROPERTY(bool scanning READ isScanning NOTIFY scanningChanged)
+    Q_PROPERTY(bool scanning       READ isScanning      NOTIFY scanningChanged)
+    Q_PROPERTY(bool selectionMode  READ selectionMode   WRITE setSelectionMode  NOTIFY selectionModeChanged)
+    Q_PROPERTY(int  selectedCount  READ selectedCount   NOTIFY selectionChanged)
 
 public:
     enum Roles {
@@ -38,6 +41,9 @@ public:
         UpdateVersionRole,
         IsUpdatingRole,
         UpdateProgressRole,
+        IsSelectedRole,
+        CategoriesRole,
+        CommentRole,
     };
     Q_ENUM(Roles)
 
@@ -65,7 +71,11 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    bool isScanning() const { return m_scanning; }
+    bool isScanning()     const { return m_scanning; }
+    bool selectionMode()  const { return m_selectionMode; }
+    int  selectedCount()  const { return static_cast<int>(m_selected.size()); }
+
+    void setSelectionMode(bool mode);
 
     Q_INVOKABLE void scan();
     Q_INVOKABLE void refresh();
@@ -75,8 +85,16 @@ public:
     Q_INVOKABLE void checkForUpdates();
     Q_INVOKABLE void downloadUpdate(int row);
 
+    Q_INVOKABLE void setSelected(const QString &path, bool selected);
+    Q_INVOKABLE void selectAll();
+    Q_INVOKABLE void clearSelection();
+    Q_INVOKABLE QStringList selectedPaths() const;
+    Q_INVOKABLE void trashSelected();
+
 Q_SIGNALS:
     void scanningChanged();
+    void selectionModeChanged();
+    void selectionChanged();
     void openUninstallWindow(const QString &filePath);
 
 private:
@@ -88,9 +106,11 @@ private:
 
     AppImageIconProvider  *m_iconProvider;
     QList<Item>            m_items;
-    bool                   m_scanning    = false;
-    int                    m_pendingLoads = 0;
-    int                    m_generation  = 0;
+    bool                   m_scanning      = false;
+    int                    m_pendingLoads  = 0;
+    int                    m_generation    = 0;
+    bool                   m_selectionMode = false;
+    QSet<QString>          m_selected;
 
     QFileSystemWatcher     m_watcher;
     QTimer                 m_refreshTimer;

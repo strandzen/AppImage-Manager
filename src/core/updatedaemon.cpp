@@ -14,10 +14,14 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QStandardPaths>
-#include <KNotification>
 #include <KLocalizedString>
+#include <KNotification>
 #include <QProcess>
 #include <QtConcurrent/QtConcurrent>
+
+#ifdef HAVE_KSTATUSNOTIFIERITEM
+#include <KStatusNotifierItem>
+#endif
 
 static std::chrono::hours intervalForFrequency(int freq, int customDays)
 {
@@ -141,12 +145,30 @@ void UpdateDaemon::checkUpdates()
     auto *watcher = new QFutureWatcher<QList<AppImageInfo>>(this);
     connect(watcher, &QFutureWatcher<QList<AppImageInfo>>::finished, this, [this, watcher]() {
         watcher->deleteLater();
-        for (const AppImageInfo &info : watcher->result()) {
+
+        // Reset counters for this check cycle
+        m_updateCount = 0;
+        m_pendingChecks = 0;
+
+        const QList<AppImageInfo> infos = watcher->result();
+        for (const AppImageInfo &info : infos) {
+            if (info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|")))
+                ++m_pendingChecks;
+        }
+
+        if (m_pendingChecks == 0) {
+            updateTrayStatus();
+            return;
+        }
+
+        for (const AppImageInfo &info : infos) {
             if (!info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|")))
                 continue;
             const QStringList parts = info.updateInfo.split(QLatin1Char('|'));
-            if (parts.size() < 3)
+            if (parts.size() < 3) {
+                if (--m_pendingChecks == 0) updateTrayStatus();
                 continue;
+            }
             const QString url = QStringLiteral("https://api.github.com/repos/%1/%2/releases/latest")
                                     .arg(parts.at(1), parts.at(2));
             QNetworkRequest request((QUrl(url)));
@@ -155,34 +177,41 @@ void UpdateDaemon::checkUpdates()
             QNetworkReply *reply = m_networkManager->get(request);
             connect(reply, &QNetworkReply::finished, this, [this, reply, info]() mutable {
                 reply->deleteLater();
-                if (reply->error() != QNetworkReply::NoError)
-                    return;
-                const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-                if (!doc.isObject())
-                    return;
-                QString tag = doc.object().value(QLatin1String("tag_name")).toString();
-                if (tag.isEmpty())
-                    return;
-                if (tag.startsWith(QLatin1Char('v')) || tag.startsWith(QLatin1Char('V')))
-                    tag.remove(0, 1);
-                QString currentVer = info.version;
-                if (currentVer.startsWith(QLatin1Char('v')) || currentVer.startsWith(QLatin1Char('V')))
-                    currentVer.remove(0, 1);
-                if (!isNewerVersion(tag, currentVer))
-                    return;
-                auto *notification = new KNotification(QStringLiteral("updateAvailable"),
-                                                       KNotification::Persistent, this);
-                notification->setTitle(i18n("Update Available"));
-                notification->setText(i18n("An update is available for %1 (%2 → %3).",
-                                           info.cleanName.isEmpty() ? info.originalName : info.cleanName,
-                                           currentVer, tag));
-                notification->setIconName(info.appId.isEmpty()
-                                          ? QStringLiteral("application-x-executable") : info.appId);
-                auto *action = notification->addDefaultAction(i18n("Open Manager"));
-                connect(action, &KNotificationAction::activated, this, []() {
-                    QProcess::startDetached(QStringLiteral("appimagemanager"), {});
-                });
-                notification->sendEvent();
+                bool foundUpdate = false;
+                if (reply->error() == QNetworkReply::NoError) {
+                    const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+                    if (doc.isObject()) {
+                        QString tag = doc.object().value(QLatin1String("tag_name")).toString();
+                        if (!tag.isEmpty()) {
+                            if (tag.startsWith(QLatin1Char('v')) || tag.startsWith(QLatin1Char('V')))
+                                tag.remove(0, 1);
+                            QString currentVer = info.version;
+                            if (currentVer.startsWith(QLatin1Char('v')) || currentVer.startsWith(QLatin1Char('V')))
+                                currentVer.remove(0, 1);
+                            if (isNewerVersion(tag, currentVer)) {
+                                foundUpdate = true;
+                                ++m_updateCount;
+                                auto *notification = new KNotification(QStringLiteral("updateAvailable"),
+                                                                       KNotification::Persistent, this);
+                                notification->setTitle(i18n("Update Available"));
+                                notification->setText(i18n("An update is available for %1 (%2 → %3).",
+                                    info.cleanName.isEmpty() ? info.originalName : info.cleanName,
+                                    currentVer, tag));
+                                notification->setIconName(info.appId.isEmpty()
+                                    ? QStringLiteral("application-x-executable") : info.appId);
+                                auto *action = notification->addDefaultAction(i18n("Open Manager"));
+                                connect(action, &KNotificationAction::activated, this, []() {
+                                    QProcess::startDetached(QStringLiteral("appimagemanager"),
+                                                            {QStringLiteral("--dashboard")});
+                                });
+                                notification->sendEvent();
+                            }
+                        }
+                    }
+                }
+                Q_UNUSED(foundUpdate)
+                if (--m_pendingChecks == 0)
+                    updateTrayStatus();
             });
         }
     });
@@ -194,4 +223,29 @@ void UpdateDaemon::checkUpdates()
             results.append(AppImageReader(fi.absoluteFilePath()).read());
         return results;
     }));
+}
+
+void UpdateDaemon::updateTrayStatus()
+{
+#ifdef HAVE_KSTATUSNOTIFIERITEM
+    if (m_updateCount > 0) {
+        if (!m_trayIcon) {
+            m_trayIcon = new KStatusNotifierItem(QStringLiteral("appimagemanager-updates"), this);
+            m_trayIcon->setCategory(KStatusNotifierItem::ApplicationStatus);
+            m_trayIcon->setIconByName(QStringLiteral("software-update-available"));
+            connect(m_trayIcon, &KStatusNotifierItem::activateRequested,
+                    this, [](bool, const QPoint &) {
+                QProcess::startDetached(QStringLiteral("appimagemanager"),
+                                        {QStringLiteral("--dashboard")});
+            });
+        }
+        m_trayIcon->setStatus(KStatusNotifierItem::Active);
+        m_trayIcon->setToolTip(
+            QStringLiteral("software-update-available"),
+            i18n("AppImage Updates"),
+            i18np("%1 update available", "%1 updates available", m_updateCount));
+    } else if (m_trayIcon) {
+        m_trayIcon->setStatus(KStatusNotifierItem::Passive);
+    }
+#endif
 }

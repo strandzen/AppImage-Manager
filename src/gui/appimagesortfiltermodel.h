@@ -16,7 +16,7 @@ class AppImageSortFilterModel : public QSortFilterProxyModel
     Q_PROPERTY(Qt::SortOrder sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
 
 public:
-    enum SortRole { SortByName = 0, SortBySize = 1, SortByDate = 2, SortByVersion = 3, SortByVisible = 4 };
+    enum SortRole { SortByName = 0, SortBySize = 1, SortByDate = 2, SortByVersion = 3, SortByVisible = 4, SortByCategory = 5 };
     Q_ENUM(SortRole)
 
     explicit AppImageSortFilterModel(QObject *parent = nullptr);

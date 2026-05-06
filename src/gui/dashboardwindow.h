@@ -5,6 +5,7 @@
 #include "appimagemanager_qml_export.h"
 
 #include <QObject>
+#include <QUrl>
 
 class AppImageBackend;
 class AppImageIconProvider;
@@ -22,6 +23,7 @@ public:
     Q_INVOKABLE QObject *createUninstallBackend(const QString &filePath);
     Q_INVOKABLE QObject *createStorageBackend(const QString &filePath);
     Q_INVOKABLE void     openInFileManager(const QString &path);
+    Q_INVOKABLE void     installFromPath(const QUrl &url);
 
 private:
     explicit DashboardWindow(QObject *parent = nullptr);

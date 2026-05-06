@@ -129,8 +129,8 @@ void AppImageBackend::findCorpses()
     m_corpseModel->clear();
     Q_EMIT busyChanged();
 
-    auto *watcher = new QFutureWatcher<QList<QPair<QString, qint64>>>(this);
-    connect(watcher, &QFutureWatcher<QList<QPair<QString, qint64>>>::finished,
+    auto *watcher = new QFutureWatcher<QList<AppImageManager::CorpseEntry>>(this);
+    connect(watcher, &QFutureWatcher<QList<AppImageManager::CorpseEntry>>::finished,
             this, [this, watcher]() {
         m_corpseModel->setCorpses(watcher->result());
         m_isFindingCorpses = false;

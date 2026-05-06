@@ -13,6 +13,7 @@ ecm_qt_declare_logging_category(LOGGING_SRCS
 # ──────────────────────────────────────────────────────────────────────────────
 add_library(appimagemanager_core OBJECT
     core/appimagereader.cpp
+    core/appimagecache.cpp
     core/appimagemanager.cpp
     ${LOGGING_SRCS}
 )
@@ -91,6 +92,8 @@ qt_add_qml_module(appimagemanager_qml
         gui/dashboardwindow.cpp
         core/updatedaemon.h
         core/updatedaemon.cpp
+        dbus/appimagedbusadaptor.h
+        dbus/appimagedbusadaptor.cpp
     RESOURCE_PREFIX "/"
     OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/appimagemanager"
 )
@@ -107,6 +110,7 @@ target_include_directories(appimagemanager_qml PUBLIC
 )
 target_link_libraries(appimagemanager_qml PUBLIC
     appimagemanager_core
+    Qt6::DBus
     Qt6::Quick
     Qt6::Qml
     Qt6::Concurrent
@@ -119,6 +123,11 @@ target_link_libraries(appimagemanager_qml PUBLIC
 if(Canberra_FOUND)
     target_link_libraries(appimagemanager_qml PRIVATE PkgConfig::Canberra)
     target_compile_definitions(appimagemanager_qml PRIVATE HAVE_CANBERRA)
+endif()
+
+if(KF6StatusNotifierItem_FOUND)
+    target_link_libraries(appimagemanager_qml PUBLIC KF6::StatusNotifierItem)
+    target_compile_definitions(appimagemanager_qml PUBLIC HAVE_KSTATUSNOTIFIERITEM)
 endif()
 
 # ──────────────────────────────────────────────────────────────────────────────

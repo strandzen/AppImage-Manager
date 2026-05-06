@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "appimagereader.h"
+#include "appimagecache.h"
 #include "logging.h"
 
 #include <KDesktopFile>
 #include <KConfigGroup>
 #include <KShell>
 
-#include <QDir>
+#include <QDateTime>
 #include <QFile>
 #include <QFileInfo>
-#include <QProcess>
 #include <QRegularExpression>
-#include <QStandardPaths>
 #include <QTemporaryDir>
 
 #ifdef HAVE_LIBAPPIMAGE
@@ -31,11 +30,21 @@ AppImageInfo AppImageReader::read()
         return {};
     }
 
-#ifdef HAVE_LIBAPPIMAGE
-    return readWithLibappimage();
-#else
-    return readWithSquashfuse();
+#ifndef HAVE_LIBAPPIMAGE
+    qCCritical(AIM_LOG) << "libappimage not available — cannot read AppImage metadata for" << m_path
+                        << ". Rebuild with libappimage support.";
+    return {};
 #endif
+
+    const qint64 mtime = QFileInfo(m_path).lastModified().toMSecsSinceEpoch();
+    const AppImageInfo cached = AppImageCache::instance().load(m_path, mtime);
+    if (cached.isValid)
+        return cached;
+
+    const AppImageInfo info = readWithLibappimage();
+    if (info.isValid)
+        AppImageCache::instance().store(m_path, mtime, info);
+    return info;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -143,6 +152,7 @@ AppImageInfo AppImageReader::readWithLibappimage()
 
                 info.appName    = entry.readEntry(QStringLiteral("Name"), info.appName);
                 info.categories = entry.readEntry(QStringLiteral("Categories"));
+                info.comment    = entry.readEntry(QStringLiteral("Comment"));
 
                 info.updateInfo = entry.readEntry(QStringLiteral("X-AppImage-Update-Information"));
 
@@ -284,181 +294,3 @@ QByteArray AppImageReader::readFileFromAppImage(const QString &innerPath, QStrin
 }
 
 #endif // HAVE_LIBAPPIMAGE
-
-// ──────────────────────────────────────────────────────────────────────────────
-// squashfuse fallback path
-// ──────────────────────────────────────────────────────────────────────────────
-
-AppImageInfo AppImageReader::readWithSquashfuse()
-{
-    AppImageInfo info;
-    info.originalName = QFileInfo(m_path).fileName();
-    info.cleanName    = cleanName(info.originalName);
-    info.appId        = extractAppId(info.originalName);
-    info.appName      = info.cleanName;
-    info.appName.remove(QLatin1String(".AppImage"), Qt::CaseInsensitive);
-    info.version      = QStringLiteral("Unknown");
-    info.fileSize     = QFileInfo(m_path).size();
-
-    const int appImageType = detectType();
-    if (appImageType == 1)
-        qCWarning(AIM_LOG) << m_path << "is Type 1 (ISO9660); falling back to --appimage-extract";
-
-    QTemporaryDir tempDir;
-    if (!tempDir.isValid()) {
-        qCWarning(AIM_LOG) << "Failed to create temp dir";
-        return info;
-    }
-
-    const QString squashRoot = tempDir.filePath(QStringLiteral("squashfs-root"));
-    bool mounted = false;
-
-    if (appImageType == 2) {
-        QDir().mkpath(squashRoot);
-        mounted = mountWithSquashfuse(squashRoot);
-    }
-
-    if (!mounted) {
-        if (appImageType == 2) {
-            // squashfuse unavailable for a Type 2 AppImage — returning partial info immediately.
-            // Install squashfuse or build with libappimage for full metadata extraction.
-            qCWarning(AIM_LOG) << "squashfuse unavailable for" << m_path
-                               << "— install squashfuse or libappimage to enable metadata/icon extraction";
-            return info;
-        }
-        // Type 1 (ISO9660): --appimage-extract is the only option.
-        QProcess extract;
-        extract.setWorkingDirectory(tempDir.path());
-        extract.start(m_path, {QStringLiteral("--appimage-extract")});
-        if (!extract.waitForFinished(30000) || extract.exitCode() != 0) {
-            qCWarning(AIM_LOG) << "AppImage extraction failed for" << m_path;
-            return info;
-        }
-    }
-
-    const AppImageInfo parsed = parseSquashfsRoot(squashRoot);
-    if (parsed.isValid) {
-        info = parsed;
-        info.fileSize     = QFileInfo(m_path).size();
-        info.originalName = QFileInfo(m_path).fileName();
-        info.cleanName    = cleanName(info.originalName);
-        info.appId        = extractAppId(info.originalName);
-        if (info.appName.isEmpty())
-            info.appName = info.cleanName;
-        info.appName.remove(QLatin1String(".AppImage"), Qt::CaseInsensitive);
-    }
-
-    if (mounted)
-        unmount(squashRoot);
-
-    return info;
-}
-
-bool AppImageReader::mountWithSquashfuse(const QString &mountPoint)
-{
-    const QString squashfuse = QStandardPaths::findExecutable(QStringLiteral("squashfuse"));
-    if (squashfuse.isEmpty())
-        return false;
-
-    QProcess p;
-    p.start(squashfuse, {m_path, mountPoint});
-    if (!p.waitForFinished(5000) || p.exitCode() != 0) {
-        qCWarning(AIM_LOG) << "squashfuse failed for" << m_path;
-        return false;
-    }
-    return true;
-}
-
-void AppImageReader::unmount(const QString &mountPoint)
-{
-    if (!QProcess::startDetached(QStringLiteral("fusermount3"), {QStringLiteral("-u"), mountPoint}))
-        QProcess::startDetached(QStringLiteral("fusermount"), {QStringLiteral("-u"), mountPoint});
-}
-
-AppImageInfo AppImageReader::parseSquashfsRoot(const QString &squashRoot)
-{
-    AppImageInfo info;
-
-    const QStringList desktopFiles = QDir(squashRoot).entryList(
-        {QStringLiteral("*.desktop")}, QDir::Files);
-    if (desktopFiles.isEmpty())
-        return info;
-
-    const QString desktopPath = squashRoot + QLatin1Char('/') + desktopFiles.first();
-    KDesktopFile df(desktopPath);
-    const KConfigGroup entry = df.desktopGroup();
-
-    info.appName    = entry.readEntry(QStringLiteral("Name"));
-    info.categories = entry.readEntry(QStringLiteral("Categories"));
-
-    info.updateInfo = entry.readEntry(QStringLiteral("X-AppImage-Update-Information"));
-
-    QString ver = entry.readEntry(QStringLiteral("X-AppImage-Version"));
-    if (ver.isEmpty() && !info.updateInfo.isEmpty()) {
-        static const QRegularExpression verInUrl(QStringLiteral(R"([-_](\d+\.\d+[\d.]*))"));
-        const auto m = verInUrl.match(info.updateInfo);
-        if (m.hasMatch())
-            ver = m.captured(1);
-    }
-    info.version = ver.isEmpty() ? QStringLiteral("Unknown") : ver;
-
-    const QString execFull = entry.readEntry(QStringLiteral("Exec"));
-    const QStringList execParts = KShell::splitArgs(execFull);
-    if (execParts.size() > 1) {
-        QStringList args;
-        for (int i = 1; i < execParts.size(); ++i)
-            if (!execParts.at(i).startsWith(QLatin1Char('%')))
-                args << KShell::quoteArg(execParts.at(i));
-        info.execArgs = args.join(QLatin1Char(' '));
-    }
-
-    const QString iconName = entry.readEntry(QStringLiteral("Icon"));
-    info.iconData = findIcon(squashRoot, iconName, info.iconExt);
-    info.isValid  = true;
-    return info;
-}
-
-QByteArray AppImageReader::findIcon(const QString &squashRoot,
-                                    const QString &iconName,
-                                    QString &outExt)
-{
-    QStringList candidates;
-    if (!iconName.isEmpty()) {
-        candidates << squashRoot + QLatin1Char('/') + iconName + QLatin1String(".png");
-        candidates << squashRoot + QLatin1Char('/') + iconName + QLatin1String(".svg");
-        candidates << squashRoot + QLatin1String("/usr/share/icons/hicolor/256x256/apps/") + iconName + QLatin1String(".png");
-        candidates << squashRoot + QLatin1String("/usr/share/icons/hicolor/scalable/apps/")  + iconName + QLatin1String(".svg");
-    }
-    candidates << squashRoot + QLatin1String("/.DirIcon");
-
-    if (iconName.isEmpty()) {
-        const QStringList rootFiles = QDir(squashRoot).entryList(
-            {QStringLiteral("*.png"), QStringLiteral("*.svg")}, QDir::Files);
-        for (const QString &f : rootFiles)
-            candidates << squashRoot + QLatin1Char('/') + f;
-    }
-
-    for (const QString &path : std::as_const(candidates)) {
-        if (!QFile::exists(path))
-            continue;
-        outExt = QLatin1Char('.') + QFileInfo(path).suffix();
-        if (outExt == QLatin1String("."))
-            outExt = QStringLiteral(".png");
-        QFile f(path);
-        if (f.open(QIODevice::ReadOnly))
-            return f.readAll();
-    }
-    return {};
-}
-
-int AppImageReader::detectType()
-{
-    QFile f(m_path);
-    if (!f.open(QIODevice::ReadOnly))
-        return 2;
-    if (!f.seek(8))
-        return 2;
-    char byte = 0;
-    f.read(&byte, 1);
-    return (byte == 1) ? 1 : 2;
-}

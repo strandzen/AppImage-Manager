@@ -9,6 +9,10 @@
 class QFileSystemWatcher;
 class QNetworkAccessManager;
 
+#ifdef HAVE_KSTATUSNOTIFIERITEM
+class KStatusNotifierItem;
+#endif
+
 class APPIMAGEMANAGER_EXPORT UpdateDaemon : public QObject
 {
     Q_OBJECT
@@ -20,9 +24,17 @@ private:
     void checkUpdates();
     void watchDownloads();
     void onDownloadDirChanged();
+    void updateTrayStatus();
 
     QTimer               *m_timer;
     QNetworkAccessManager *m_networkManager;
     QFileSystemWatcher   *m_downloadWatcher = nullptr;
     QSet<QString>         m_knownDownloads;
+
+    int m_updateCount   = 0;
+    int m_pendingChecks = 0;
+
+#ifdef HAVE_KSTATUSNOTIFIERITEM
+    KStatusNotifierItem *m_trayIcon = nullptr;
+#endif
 };

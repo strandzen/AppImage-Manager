@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #pragma once
 
+#include "../core/appimagemanager.h"
+
 #include <QAbstractListModel>
 #include <QList>
-#include <QPair>
 
 // QML_ELEMENT is intentionally absent: Qt 6.11's constexpr metaobject generation
 // calls QMetaType::fromType<CorpseModel>() (value type) for QObject subclasses,
@@ -21,6 +22,7 @@ public:
         FilePathRole = Qt::UserRole + 1,
         FileSizeRole,
         IsCheckedRole,
+        ConfidenceRole,
     };
     Q_ENUM(Roles)
 
@@ -36,7 +38,7 @@ public:
     Qt::ItemFlags flags(const QModelIndex &index) const override;
 
     // Called from AppImageBackend after the corpse scan finishes
-    void setCorpses(const QList<QPair<QString, qint64>> &corpses);
+    void setCorpses(const QList<AppImageManager::CorpseEntry> &corpses);
     void clear();
 
     // Convenience: total size of all checked items
@@ -50,6 +52,7 @@ private:
         QString path;
         qint64 size = 0;
         bool checked = false;
+        AppImageManager::CorpseConfidence confidence = AppImageManager::CorpseConfidence::Low;
     };
     QList<Item> m_items;
 };

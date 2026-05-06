@@ -7,18 +7,19 @@
 #include "../core/appsettings.h"
 
 #include <KFormat>
+#include <KIO/CopyJob>
+#include <KLocalizedString>
+#include <KNotification>
 #include <QDir>
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QIcon>
-#include <QProcess>
-#include <QNetworkReply>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>
+#include <QNetworkReply>
+#include <QProcess>
 #include <QRegularExpression>
-#include <KNotification>
-#include <KLocalizedString>
 #include <QtConcurrent/QtConcurrent>
 
 AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject *parent)
@@ -69,6 +70,9 @@ QVariant AppImageListModel::data(const QModelIndex &index, int role) const
     case UpdateVersionRole:  return item.updateVersion;
     case IsUpdatingRole:     return item.isUpdating;
     case UpdateProgressRole: return item.updateProgress;
+    case IsSelectedRole:     return m_selected.contains(item.filePath);
+    case CategoriesRole:     return item.info.categories;
+    case CommentRole:        return item.info.comment;
     default: return {};
     }
 }
@@ -120,6 +124,9 @@ QHash<int, QByteArray> AppImageListModel::roleNames() const
         { UpdateVersionRole,  "updateVersion"  },
         { IsUpdatingRole,     "isUpdating"     },
         { UpdateProgressRole, "updateProgress" },
+        { IsSelectedRole,     "isSelected"     },
+        { CategoriesRole,     "categories"     },
+        { CommentRole,        "comment"        },
     };
 }
 
@@ -294,6 +301,77 @@ void AppImageListModel::requestLaunch(int row)
     if (row < 0 || row >= m_items.size())
         return;
     QProcess::startDetached(m_items.at(row).filePath, {});
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Batch selection
+// ──────────────────────────────────────────────────────────────────────────────
+
+void AppImageListModel::setSelectionMode(bool mode)
+{
+    if (m_selectionMode == mode)
+        return;
+    m_selectionMode = mode;
+    if (!mode)
+        clearSelection();
+    Q_EMIT selectionModeChanged();
+}
+
+void AppImageListModel::setSelected(const QString &path, bool selected)
+{
+    if (selected)
+        m_selected.insert(path);
+    else
+        m_selected.remove(path);
+
+    for (int i = 0; i < m_items.size(); ++i) {
+        if (m_items.at(i).filePath == path) {
+            const auto idx = index(i);
+            Q_EMIT dataChanged(idx, idx, {IsSelectedRole});
+            break;
+        }
+    }
+    Q_EMIT selectionChanged();
+}
+
+void AppImageListModel::selectAll()
+{
+    for (const Item &item : std::as_const(m_items))
+        m_selected.insert(item.filePath);
+    if (!m_items.isEmpty())
+        Q_EMIT dataChanged(index(0), index(rowCount() - 1), {IsSelectedRole});
+    Q_EMIT selectionChanged();
+}
+
+void AppImageListModel::clearSelection()
+{
+    if (m_selected.isEmpty())
+        return;
+    m_selected.clear();
+    if (!m_items.isEmpty())
+        Q_EMIT dataChanged(index(0), index(rowCount() - 1), {IsSelectedRole});
+    Q_EMIT selectionChanged();
+}
+
+QStringList AppImageListModel::selectedPaths() const
+{
+    return QStringList(m_selected.begin(), m_selected.end());
+}
+
+void AppImageListModel::trashSelected()
+{
+    QList<QUrl> urls;
+    for (const Item &item : std::as_const(m_items)) {
+        if (!m_selected.contains(item.filePath))
+            continue;
+        if (item.hasDesktopLink && item.metadataLoaded)
+            AppImageManager::removeDesktopLink(item.filePath, item.info);
+        urls << QUrl::fromLocalFile(item.filePath);
+    }
+    clearSelection();
+    setSelectionMode(false);
+    if (!urls.isEmpty())
+        KIO::trash(urls)->start();
 }
 
 // static

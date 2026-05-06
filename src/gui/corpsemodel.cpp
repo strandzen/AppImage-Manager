@@ -19,10 +19,12 @@ QVariant CorpseModel::data(const QModelIndex &index, int role) const
 
     const Item &item = m_items.at(index.row());
     switch (role) {
-    case FilePathRole:  return item.path;
-    case FileSizeRole:  return item.size;
-    case IsCheckedRole: return item.checked;
-    default:            return {};
+    case FilePathRole:   return item.path;
+    case FileSizeRole:   return item.size;
+    case IsCheckedRole:  return item.checked;
+    case ConfidenceRole: return item.confidence == AppImageManager::CorpseConfidence::High
+                                ? QStringLiteral("high") : QStringLiteral("low");
+    default:             return {};
     }
 }
 
@@ -39,9 +41,10 @@ bool CorpseModel::setData(const QModelIndex &index, const QVariant &value, int r
 QHash<int, QByteArray> CorpseModel::roleNames() const
 {
     return {
-        {FilePathRole,  "filePath"},
-        {FileSizeRole,  "fileSize"},
-        {IsCheckedRole, "isChecked"},
+        {FilePathRole,   "filePath"},
+        {FileSizeRole,   "fileSize"},
+        {IsCheckedRole,  "isChecked"},
+        {ConfidenceRole, "confidence"},
     };
 }
 
@@ -52,13 +55,19 @@ Qt::ItemFlags CorpseModel::flags(const QModelIndex &index) const
     return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable;
 }
 
-void CorpseModel::setCorpses(const QList<QPair<QString, qint64>> &corpses)
+void CorpseModel::setCorpses(const QList<AppImageManager::CorpseEntry> &corpses)
 {
     beginResetModel();
     m_items.clear();
     m_items.reserve(corpses.size());
-    for (const auto &[path, size] : corpses)
-        m_items.push_back({path, size, false});
+    for (const auto &entry : corpses) {
+        m_items.push_back({
+            entry.path,
+            entry.size,
+            entry.confidence == AppImageManager::CorpseConfidence::High, // pre-check High
+            entry.confidence,
+        });
+    }
     endResetModel();
 }
 

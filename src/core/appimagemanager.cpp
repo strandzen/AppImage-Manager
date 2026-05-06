@@ -14,8 +14,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QIcon>
+#include <QSet>
 #include <QStandardPaths>
 #include <QUrl>
+
+#include <algorithm>
 
 namespace {
 
@@ -109,23 +112,55 @@ bool isDesktopLinkEnabled(const QString & /*appImagePath*/, const AppImageInfo &
     return QFile::exists(desktopFilePath(info));
 }
 
-QList<QPair<QString, qint64>> findCorpses(const AppImageInfo &info)
+QList<CorpseEntry> findCorpses(const AppImageInfo &info)
 {
-    if (info.appId.isEmpty())
+    if (info.appId.isEmpty() && info.appName.isEmpty())
         return {};
 
     const QString home = QDir::homePath();
-    const QStringList candidates = {
-        home + QStringLiteral("/.config/")      + info.appId,
-        home + QStringLiteral("/.local/share/") + info.appId,
-        home + QStringLiteral("/.cache/")       + info.appId,
+    const QStringList baseDirs = {
+        home + QStringLiteral("/.config"),
+        home + QStringLiteral("/.local/share"),
+        home + QStringLiteral("/.cache"),
     };
 
-    QList<QPair<QString, qint64>> result;
-    for (const QString &path : candidates) {
-        if (QDir(path).exists())
-            result.append({ path, dirSize(path) });
+    const QString idLower = info.appId.toLower();
+
+    // Build fuzzy candidates from appName variations
+    const QString nameLower = info.appName.toLower().simplified();
+    QSet<QString> lowCandidates;
+    if (!nameLower.isEmpty()) {
+        lowCandidates << nameLower;
+        lowCandidates << QString(nameLower).replace(QLatin1Char(' '), QLatin1Char('-'));
+        lowCandidates << QString(nameLower).replace(QLatin1Char(' '), QLatin1Char('_'));
+        lowCandidates << QString(nameLower).remove(QLatin1Char(' '));
     }
+    lowCandidates.remove(idLower); // appId match is High, not Low
+
+    QList<CorpseEntry> result;
+    QSet<QString> seen;
+
+    for (const QString &base : baseDirs) {
+        const QStringList subdirs = QDir(base).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        for (const QString &sub : subdirs) {
+            const QString fullPath = base + QLatin1Char('/') + sub;
+            if (seen.contains(fullPath))
+                continue;
+            const QString subLower = sub.toLower();
+            if (!idLower.isEmpty() && subLower == idLower) {
+                seen.insert(fullPath);
+                result.append({fullPath, dirSize(fullPath), CorpseConfidence::High});
+            } else if (lowCandidates.contains(subLower)) {
+                seen.insert(fullPath);
+                result.append({fullPath, dirSize(fullPath), CorpseConfidence::Low});
+            }
+        }
+    }
+
+    std::stable_sort(result.begin(), result.end(), [](const CorpseEntry &a, const CorpseEntry &b) {
+        return a.confidence > b.confidence;
+    });
+
     return result;
 }
 

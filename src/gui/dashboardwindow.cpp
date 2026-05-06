@@ -5,10 +5,18 @@
 #include "appimageiconprovider.h"
 #include "appimagelistmodel.h"
 #include "appimagesortfiltermodel.h"
+#include "appimagemanager.h"
+#include "appsettings.h"
 #include "logging.h"
 
+#include <KIO/CopyJob>
 #include <KLocalizedQmlContext>
+#include <KLocalizedString>
+#include <KNotification>
 #include <KQuickIconProvider>
+#include "../dbus/appimagedbusadaptor.h"
+
+#include <QDBusConnection>
 
 #include <algorithm>
 
@@ -101,6 +109,13 @@ void DashboardWindow::setupAndShow()
         deleteLater();
     });
 
+    // Register D-Bus adaptor for querying installed AppImages
+    new AppImageDBusAdaptor(m_listModel);
+    QDBusConnection::sessionBus().registerObject(
+        QStringLiteral("/io/github/appimagemanager/Manager"), m_listModel);
+    QDBusConnection::sessionBus().registerService(
+        QStringLiteral("io.github.appimagemanager.Manager1"));
+
     m_listModel->scan();
 
     m_window->show();
@@ -139,4 +154,22 @@ void DashboardWindow::openInFileManager(const QString &path)
 {
     QFileInfo fi(path);
     QDesktopServices::openUrl(QUrl::fromLocalFile(fi.isDir() ? path : fi.absolutePath()));
+}
+
+void DashboardWindow::installFromPath(const QUrl &url)
+{
+    const QString dest = AppSettings::instance()->applicationsPath();
+    auto *job = AppImageManager::installAppImage(url, dest);
+    connect(job, &KJob::result, this, [url](KJob *j) {
+        if (j->error()) {
+            qCWarning(AIM_LOG) << "Install failed:" << j->errorString();
+            auto *n = KNotification::event(QStringLiteral("installFailed"),
+                                           i18n("Install failed"),
+                                           j->errorString(),
+                                           QStringLiteral("dialog-error"));
+            n->sendEvent();
+        }
+        // On success the QFileSystemWatcher in AppImageListModel picks up the new file automatically.
+    });
+    job->start();
 }

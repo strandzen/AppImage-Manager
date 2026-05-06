@@ -23,6 +23,7 @@ ecm_setup_version(${PROJECT_VERSION}
 
 find_package(Qt6 6.6 REQUIRED COMPONENTS
     Core
+    DBus
     Gui
     Quick
     Qml
@@ -41,6 +42,13 @@ find_package(KF6 6.0 REQUIRED COMPONENTS
     DBusAddons
 )
 
+find_package(KF6StatusNotifierItem QUIET)
+if(KF6StatusNotifierItem_FOUND)
+    message(STATUS "KStatusNotifierItem found — system tray support enabled")
+else()
+    message(STATUS "KStatusNotifierItem not found — system tray support disabled")
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Canberra IMPORTED_TARGET libcanberra)
 
@@ -50,7 +58,7 @@ find_package(libappimage QUIET)
 if(libappimage_FOUND)
     message(STATUS "libappimage found — using in-process AppImage metadata extraction")
 else()
-    message(STATUS "libappimage not found — using squashfuse subprocess (install libappimage for better performance)")
+    message(WARNING "libappimage not found — AppImage metadata extraction will not work. Install libappimage to enable it.")
 endif()
 
 add_subdirectory(src)
