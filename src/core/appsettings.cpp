@@ -140,6 +140,22 @@ void AppSettings::setWatchDownloads(bool enabled)
     Q_EMIT watchDownloadsChanged();
 }
 
+bool AppSettings::showInstallBox() const
+{
+    return m_config->group(QStringLiteral("Appearance"))
+               .readEntry(QStringLiteral("showInstallBox"), true);
+}
+
+void AppSettings::setShowInstallBox(bool enabled)
+{
+    if (showInstallBox() == enabled)
+        return;
+    m_config->group(QStringLiteral("Appearance"))
+             .writeEntry(QStringLiteral("showInstallBox"), enabled);
+    m_config->sync();
+    Q_EMIT showInstallBoxChanged();
+}
+
 void AppSettings::openFolderPicker()
 {
     QString dir = QFileDialog::getExistingDirectory(nullptr, i18n("Select Applications Folder"), applicationsPath(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);

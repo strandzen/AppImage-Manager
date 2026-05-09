@@ -10,7 +10,7 @@ import appimagemanager
 ApplicationWindow {
     id: root
     visible: true
-    title: i18n("Manage AppImage")
+    title: i18n("AppImage Manager")
 
     width:  Kirigami.Units.gridUnit * 26
     height: Kirigami.Units.gridUnit * 22
@@ -243,20 +243,14 @@ ApplicationWindow {
             }
         }
 
-        // ── Shortcut + Remove (installed) ─────────────────────────────────────
-        RowLayout {
-            Layout.fillWidth: true; Layout.alignment: Qt.AlignHCenter
-            spacing: Kirigami.Units.largeSpacing; visible: backend.isInstalled
-            CheckBox {
-                text: i18n("Create Shortcut"); checked: backend.hasDesktopLink
-                onCheckedChanged: if (checked !== backend.hasDesktopLink) backend.toggleDesktopLink(checked)
-            }
-            Button {
-                text: i18n("Remove"); icon.name: "edit-delete"
-                onClicked: {
-                    uninstallDialog.backend = backend
-                    uninstallDialog.open()
-                }
+        // ── Remove (installed) ────────────────────────────────────────────────
+        Button {
+            Layout.alignment: Qt.AlignHCenter
+            visible: backend.isInstalled
+            text: i18n("Remove"); icon.name: "edit-delete"
+            onClicked: {
+                uninstallDialog.backend = backend
+                uninstallDialog.open()
             }
         }
     }

@@ -44,6 +44,9 @@ public:
         IsSelectedRole,
         CategoriesRole,
         CommentRole,
+        DescriptionRole,
+        DeveloperNameRole,
+        HomepageRole,
     };
     Q_ENUM(Roles)
 
@@ -55,6 +58,7 @@ private:
         QString cachedIconSource    = QStringLiteral("application-x-executable");
         QString cachedFormattedSize;
         QString cachedDisplayName;
+        QString cachedDescription;
         QString updateVersion;
         QString zsyncUrl;
         bool updateAvailable = false;
@@ -99,6 +103,8 @@ Q_SIGNALS:
 
 private:
     void loadMetadataForRow(int row);
+    void updateDownloadWatcher();
+    void checkNewDownloads();
     static QString iconIdForPath(const QString &path);
     static QString formatBytes(qint64 bytes);
     static QString computeDisplayName(const Item &item);
@@ -115,4 +121,5 @@ private:
     QFileSystemWatcher     m_watcher;
     QTimer                 m_refreshTimer;
     QNetworkAccessManager *m_networkManager;
+    QSet<QString>          m_knownDownloads;
 };

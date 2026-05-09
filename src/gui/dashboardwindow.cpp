@@ -119,6 +119,7 @@ void DashboardWindow::setupAndShow()
     m_listModel->scan();
 
     m_window->show();
+    m_window->setTitle(QStringLiteral("AppImage Dashboard"));
     m_window->raise();
     m_window->requestActivate();
 }

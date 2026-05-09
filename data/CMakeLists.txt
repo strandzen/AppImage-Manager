@@ -16,3 +16,6 @@ install(FILES appimagemanager.desktop
     DESTINATION ${KDE_INSTALL_APPDIR}
 )
 
+install(FILES appimagemanager.metainfo.xml
+    DESTINATION ${KDE_INSTALL_METAINFODIR}
+)

@@ -177,7 +177,6 @@ void UpdateDaemon::checkUpdates()
             QNetworkReply *reply = m_networkManager->get(request);
             connect(reply, &QNetworkReply::finished, this, [this, reply, info]() mutable {
                 reply->deleteLater();
-                bool foundUpdate = false;
                 if (reply->error() == QNetworkReply::NoError) {
                     const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
                     if (doc.isObject()) {
@@ -189,7 +188,6 @@ void UpdateDaemon::checkUpdates()
                             if (currentVer.startsWith(QLatin1Char('v')) || currentVer.startsWith(QLatin1Char('V')))
                                 currentVer.remove(0, 1);
                             if (isNewerVersion(tag, currentVer)) {
-                                foundUpdate = true;
                                 ++m_updateCount;
                                 auto *notification = new KNotification(QStringLiteral("updateAvailable"),
                                                                        KNotification::Persistent, this);
@@ -209,7 +207,6 @@ void UpdateDaemon::checkUpdates()
                         }
                     }
                 }
-                Q_UNUSED(foundUpdate)
                 if (--m_pendingChecks == 0)
                     updateTrayStatus();
             });

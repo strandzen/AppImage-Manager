@@ -66,6 +66,11 @@ Kirigami.Dialog {
                 currentIndex: AppSettings.manageIconSize
                 onActivated: AppSettings.manageIconSize = currentIndex
             }
+            Controls.CheckBox {
+                text: i18n("Show install drag box in list")
+                checked: AppSettings.showInstallBox
+                onToggled: AppSettings.showInstallBox = checked
+            }
 
             Kirigami.Separator {
                 Kirigami.FormData.isSection: true

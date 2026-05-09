@@ -13,6 +13,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFutureWatcher>
+#include <QStandardPaths>
 #include <QIcon>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -32,13 +33,24 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
     connect(&m_refreshTimer, &QTimer::timeout, this, &AppImageListModel::refresh);
 
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged,
-            this, [this]() { m_refreshTimer.start(); });
+            this, [this](const QString &changedPath) {
+                const QString dlDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+                if (changedPath == dlDir)
+                    checkNewDownloads();
+                else
+                    m_refreshTimer.start();
+            });
 
     connect(AppSettings::instance(), &AppSettings::applicationsPathChanged,
             this, [this]() {
                 m_watcher.removePaths(m_watcher.directories());
                 m_refreshTimer.start();
             });
+
+    connect(AppSettings::instance(), &AppSettings::watchDownloadsChanged,
+            this, [this]() { updateDownloadWatcher(); });
+
+    updateDownloadWatcher();
 }
 
 int AppImageListModel::rowCount(const QModelIndex &parent) const
@@ -73,6 +85,9 @@ QVariant AppImageListModel::data(const QModelIndex &index, int role) const
     case IsSelectedRole:     return m_selected.contains(item.filePath);
     case CategoriesRole:     return item.info.categories;
     case CommentRole:        return item.info.comment;
+    case DescriptionRole:    return item.cachedDescription;
+    case DeveloperNameRole:  return item.info.developerName;
+    case HomepageRole:       return item.info.homepage;
     default: return {};
     }
 }
@@ -127,6 +142,9 @@ QHash<int, QByteArray> AppImageListModel::roleNames() const
         { IsSelectedRole,     "isSelected"     },
         { CategoriesRole,     "categories"     },
         { CommentRole,        "comment"        },
+        { DescriptionRole,    "description"    },
+        { DeveloperNameRole,  "developerName"  },
+        { HomepageRole,       "homepage"       },
     };
 }
 
@@ -263,6 +281,7 @@ void AppImageListModel::loadMetadataForRow(int row)
         item.cachedFormattedSize = formatBytes(info.fileSize);
         item.cachedDisplayName   = computeDisplayName(item);
         item.cachedIconSource    = computeIconSource(item);
+        item.cachedDescription   = info.description;
 
         Q_EMIT dataChanged(index(row, 0), index(row, 0));
         finalize();
@@ -536,4 +555,59 @@ void AppImageListModel::downloadUpdate(int row)
     });
 
     process->start();
+}
+
+void AppImageListModel::updateDownloadWatcher()
+{
+    const QString dlDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    if (dlDir.isEmpty())
+        return;
+
+    if (AppSettings::instance()->watchDownloads()) {
+        const QStringList filters = { QStringLiteral("*.AppImage"), QStringLiteral("*.appimage") };
+        m_knownDownloads.clear();
+        for (const QFileInfo &fi : QDir(dlDir).entryInfoList(filters, QDir::Files))
+            m_knownDownloads.insert(fi.absoluteFilePath());
+        if (!m_watcher.directories().contains(dlDir))
+            m_watcher.addPath(dlDir);
+    } else {
+        if (m_watcher.directories().contains(dlDir))
+            m_watcher.removePath(dlDir);
+    }
+}
+
+void AppImageListModel::checkNewDownloads()
+{
+    if (!AppSettings::instance()->watchDownloads())
+        return;
+
+    const QString dlDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    const QStringList filters = { QStringLiteral("*.AppImage"), QStringLiteral("*.appimage") };
+    const QFileInfoList entries = QDir(dlDir).entryInfoList(filters, QDir::Files);
+
+    for (const QFileInfo &fi : entries) {
+        const QString path = fi.absoluteFilePath();
+        if (m_knownDownloads.contains(path))
+            continue;
+        m_knownDownloads.insert(path);
+
+        QString displayName = AppImageReader::cleanName(fi.fileName());
+        displayName.remove(QStringLiteral(".AppImage"), Qt::CaseInsensitive);
+        displayName.remove(QRegularExpression(QStringLiteral(R"(\s+\d[\d.]*$)")));
+        displayName = displayName.trimmed();
+
+        auto *n = new KNotification(QStringLiteral("downloaded"), KNotification::Persistent, this);
+        n->setTitle(i18n("%1 downloaded", displayName));
+        n->setIconName(QStringLiteral("application-x-executable"));
+        auto *action = n->addAction(i18n("Manage"));
+        connect(action, &KNotificationAction::activated, this, [path]() {
+            QProcess::startDetached(QStringLiteral("appimagemanager"), { path });
+        });
+        n->sendEvent();
+    }
+
+    QSet<QString> current;
+    for (const QFileInfo &fi : entries)
+        current.insert(fi.absoluteFilePath());
+    m_knownDownloads.intersect(current);
 }

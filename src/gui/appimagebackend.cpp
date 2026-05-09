@@ -192,6 +192,9 @@ void AppImageBackend::onInstallJobFinished(KJob *job)
                    + QLatin1Char('/')
                    + QFileInfo(m_appImagePath).fileName();
     m_isInstalled = true;
+    m_hasDesktopLink = true;
+    AppImageManager::createDesktopLink(m_appImagePath, m_info);
+    QProcess::startDetached(QStringLiteral("kbuildsycoca6"), {});
     Q_EMIT installedChanged();
 
     if (AppSettings::instance()->showNotifications()) {

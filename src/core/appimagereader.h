@@ -27,6 +27,8 @@ private:
     QByteArray readFileFromAppImage(const QString &innerPath, QString &outExt);
     QString findDesktopFile();
     QString findIconFile(const QString &iconName);
+    QString findAppStreamFile();
+    void extractMetadataFromXml(const QByteArray &xmlData, AppImageInfo &info);
 #endif
 
     QString m_path;

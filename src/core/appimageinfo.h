@@ -14,6 +14,9 @@ struct AppImageInfo {
     QString version;
     QString categories;
     QString comment;
+    QString description;
+    QString developerName;
+    QString homepage;
     QString execArgs;
     qint64 fileSize = 0;
     QByteArray iconData;

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component type="desktop-application">
+  <id>appimagemanager.desktop</id>
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  
+  <name>AppImage Manager</name>
+  <summary>Lightweight utility to install and manage AppImages</summary>
+  
+  <description>
+    <p>
+      AppImage Manager is a native tool designed for the KDE Plasma desktop to make handling AppImage files easier. It integrates directly into the Dolphin file manager and provides a centralized dashboard to view everything you have installed.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Dolphin context menu integration for quick installation.</li>
+      <li>Drag-and-drop support into a centralized dashboard.</li>
+      <li>Extracts rich metadata, icons, and descriptions directly from the AppImages.</li>
+      <li>Clean uninstallation by automatically scanning for leftover cache and configuration files.</li>
+      <li>Background download monitoring to notify you when new AppImages are downloaded.</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">appimagemanager.desktop</launchable>
+  
+  <icon type="stock">appimagemanager</icon>
+  
+  <categories>
+    <category>System</category>
+    <category>FileManager</category>
+  </categories>
+  
+  <provides>
+    <binary>appimagemanager</binary>
+  </provides>
+  
+  <!-- Add your project URLs here once published -->
+  <url type="homepage">https://github.com/YOUR_USERNAME/AppImageManager</url>
+  <url type="bugtracker">https://github.com/YOUR_USERNAME/AppImageManager/issues</url>
+</component>

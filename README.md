@@ -8,7 +8,7 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 [![License](https://img.shields.io/badge/License-GPL--2.0--or--later-blue)](LICENSES/GPL-2.0-or-later.txt)
 [![Linux](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.kernel.org/)
 
-> **Disclaimer:** This project is built with AI asssistance.
+> **Disclaimer:** This project is built with AI assistance.
 
 ## 📸 Screenshots
 
@@ -18,15 +18,17 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 ## ✨ Features
 
 - **Native Dashboard:** Browse, search, and sort installed AppImages by name, size, category, or date.
+- **Rich Metadata:** Shows app icon, version, size category chip, and AppStream description extracted directly from the AppImage.
 - **Dolphin Integration:** Right-click any `.AppImage` to open the management window directly.
 - **Drag-and-Drop Install:** Drag an AppImage onto the dashboard to move it to your Applications folder and create desktop shortcuts automatically.
 - **Clean Uninstall:** Scans for leftover configuration and cache directories, moving everything to the KDE Trash instead of leaving orphans behind.
 - **Detailed Storage View:** Quickly see an AppImage's file size and its associated directories.
+- **Download Notifications:** Optionally watches `~/Downloads` and fires a native KDE notification when a new `.AppImage` is detected — click "Manage" to open it immediately.
 - **Plasma Integration:** Uses native Plasma progress bars, Kirigami styling, and KDE notifications.
 
 ## 🛠️ Working on: AppImage Updating
 
-Updating AppImages via `zsync` delta-patching is currently a **work in progress**. You will see update features and update buttons in the UI, but they are currently **placeholders and are not functioning**.
+Updating AppImages via `zsync` delta-patching is currently a **work in progress**. The Update button is visible in the UI but not yet functional.
 
 ## ⚙️ Requirements
 

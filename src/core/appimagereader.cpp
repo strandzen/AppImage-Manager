@@ -13,6 +13,7 @@
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QTemporaryDir>
+#include <QXmlStreamReader>
 
 #ifdef HAVE_LIBAPPIMAGE
 #include <appimage/appimage.h>
@@ -188,6 +189,17 @@ AppImageInfo AppImageReader::readWithLibappimage()
                     info.iconData = readFileFromAppImage(iconInner, iconExt);
                     info.iconExt = iconExt;
                 }
+                // Find and read AppStream XML
+                const QString appStreamInner = findAppStreamFile();
+                if (!appStreamInner.isEmpty()) {
+                    QString ext;
+                    const QByteArray appStreamData = readFileFromAppImage(appStreamInner, ext);
+                    if (!appStreamData.isEmpty())
+                        extractMetadataFromXml(appStreamData, info);
+                }
+
+                if (info.description.isEmpty())
+                    info.description = info.comment;
             }
         }
     }
@@ -291,6 +303,89 @@ QByteArray AppImageReader::readFileFromAppImage(const QString &innerPath, QStrin
         outExt = QStringLiteral(".png");
 
     return result;
+}
+
+QString AppImageReader::findAppStreamFile()
+{
+    const QByteArray pathBytes = m_path.toUtf8();
+    char **files = appimage_list_files(pathBytes.constData());
+    if (!files)
+        return {};
+
+    QString found;
+    for (int i = 0; files[i] != nullptr; ++i) {
+        QString f = QString::fromUtf8(files[i]);
+        QString stripped = f;
+        if (stripped.startsWith(QLatin1String("./"))) {
+            stripped = stripped.mid(2);
+        }
+        
+        if ((stripped.startsWith(QLatin1String("usr/share/metainfo/")) || 
+             stripped.startsWith(QLatin1String("usr/share/appdata/"))) &&
+            (stripped.endsWith(QLatin1String(".appdata.xml")) || stripped.endsWith(QLatin1String(".metainfo.xml")))) {
+            found = f; // Return original f for readFileFromAppImage
+            break;
+        }
+    }
+    appimage_string_list_free(files);
+    return found;
+}
+
+void AppImageReader::extractMetadataFromXml(const QByteArray &xmlData, AppImageInfo &info)
+{
+    QXmlStreamReader xml(xmlData);
+    QString description;
+    bool inDescription = false;
+    bool inDeveloper   = false;
+
+    while (!xml.atEnd() && !xml.hasError()) {
+        const auto token = xml.readNext();
+
+        if (token == QXmlStreamReader::StartElement) {
+            const auto ename = xml.name();
+
+            if (ename == QLatin1String("description") && !inDescription) {
+                inDescription = true;
+            } else if (ename == QLatin1String("developer")) {
+                inDeveloper = true;
+            } else if (ename == QLatin1String("developer_name") && !inDescription) {
+                if (info.developerName.isEmpty())
+                    info.developerName = xml.readElementText().trimmed();
+            } else if (ename == QLatin1String("name") && inDeveloper && !inDescription) {
+                if (info.developerName.isEmpty())
+                    info.developerName = xml.readElementText().trimmed();
+            } else if (ename == QLatin1String("url") && !inDescription) {
+                if (xml.attributes().value(QLatin1String("type")) == QLatin1String("homepage")
+                        && info.homepage.isEmpty())
+                    info.homepage = xml.readElementText().trimmed();
+            } else if (inDescription) {
+                if (ename == QLatin1String("p")) {
+                    if (!description.isEmpty() && !description.endsWith(QLatin1String("<br><br>")))
+                        description += QLatin1String("<br><br>");
+                } else if (ename == QLatin1String("li")) {
+                    if (!description.isEmpty() && !description.endsWith(QLatin1String("<br>")))
+                        description += QLatin1String("<br>");
+                    description += QStringLiteral("• ");
+                }
+            }
+        } else if (token == QXmlStreamReader::EndElement) {
+            const auto ename = xml.name();
+            if (ename == QLatin1String("description"))
+                inDescription = false;
+            else if (ename == QLatin1String("developer"))
+                inDeveloper = false;
+        } else if (token == QXmlStreamReader::Characters && inDescription) {
+            QString text = xml.text().toString().trimmed();
+            if (!text.isEmpty()) {
+                // Escape HTML — this text is injected into StyledText
+                text.replace(QLatin1Char('&'), QLatin1String("&amp;"));
+                text.replace(QLatin1Char('<'), QLatin1String("&lt;"));
+                text.replace(QLatin1Char('>'), QLatin1String("&gt;"));
+                description += text + QLatin1Char(' ');
+            }
+        }
+    }
+    info.description = description.trimmed();
 }
 
 #endif // HAVE_LIBAPPIMAGE

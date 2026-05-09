@@ -9,7 +9,7 @@ import appimagemanager
 
 Kirigami.ApplicationWindow {
     id: root
-    title: i18n("AppImage Manager")
+    title: i18n("AppImage Dashboard")
     width: Kirigami.Units.gridUnit * 50
     height: Kirigami.Units.gridUnit * 30
     minimumWidth: Kirigami.Units.gridUnit * 40
@@ -24,17 +24,17 @@ Kirigami.ApplicationWindow {
 
     // ── Role constants (AppImageListModel::Roles, starting at Qt::UserRole) ───
     readonly property int roleFilePath:       Qt.UserRole + 0
-    readonly property int roleCleanName:      Qt.UserRole + 1
-    readonly property int roleAppName:        Qt.UserRole + 2
     readonly property int roleVersion:        Qt.UserRole + 3
     readonly property int roleIconSource:     Qt.UserRole + 4
-    readonly property int roleHasDesktopLink: Qt.UserRole + 5
     readonly property int roleMetadataLoaded: Qt.UserRole + 6
-    readonly property int roleAppSize:        Qt.UserRole + 7
     readonly property int roleFormattedSize:  Qt.UserRole + 8
     readonly property int roleDisplayName:    Qt.UserRole + 10
+    readonly property int roleAddedDate:      Qt.UserRole + 9
     readonly property int roleCategories:     Qt.UserRole + 16
     readonly property int roleComment:        Qt.UserRole + 17
+    readonly property int roleDescription:    Qt.UserRole + 18
+    readonly property int roleDeveloperName:  Qt.UserRole + 19
+    readonly property int roleHomepage:       Qt.UserRole + 20
 
     // ── Selected item snapshot ────────────────────────────────────────────────
     property var currentItem: ({})
@@ -50,7 +50,11 @@ Kirigami.ApplicationWindow {
             formattedSize:  proxyModel.data(midx, roleFormattedSize)  ?? "",
             metadataLoaded: proxyModel.data(midx, roleMetadataLoaded) ?? false,
             comment:        proxyModel.data(midx, roleComment)        ?? "",
+            description:    proxyModel.data(midx, roleDescription)    ?? "",
             categories:     proxyModel.data(midx, roleCategories)     ?? "",
+            addedDate:      proxyModel.data(midx, roleAddedDate)      ?? null,
+            developerName:  proxyModel.data(midx, roleDeveloperName)  ?? "",
+            homepage:       proxyModel.data(midx, roleHomepage)       ?? "",
         }
     }
 
@@ -90,9 +94,9 @@ Kirigami.ApplicationWindow {
         Kirigami.Page {
             id: pageRoot
 
-            title: i18n("Installed Applications")
-
-            property bool listWidthSet: false
+            title: listView.count > 0
+                   ? i18n("Installed Applications (%1)", listView.count)
+                   : i18n("Installed Applications")
 
             actions: [
                 Kirigami.Action {
@@ -137,40 +141,11 @@ Kirigami.ApplicationWindow {
                 }
             ]
 
-            // ── Text metrics for dynamic left-pane width ──────────────────────
-            TextMetrics {
-                id: nameMetrics
-                font: Kirigami.Theme.defaultFont
-            }
-
-            function recalcListWidth() {
-                let maxW = Kirigami.Units.gridUnit * 8
-                const n = listView.count
-                for (let i = 0; i < n; i++) {
-                    nameMetrics.text = proxyModel.data(proxyModel.index(i, 0), root.roleDisplayName) || ""
-                    maxW = Math.max(maxW, nameMetrics.boundingRect.width)
-                }
-                leftPane.Controls.SplitView.preferredWidth = maxW + Kirigami.Units.gridUnit * 4
-                pageRoot.listWidthSet = true
-            }
-
-            Connections {
-                target: listModel
-                function onScanningChanged() {
-                    if (!listModel.scanning && !pageRoot.listWidthSet && listView.count > 0)
-                        pageRoot.recalcListWidth()
-                }
-            }
-
             Connections {
                 target: proxyModel
                 function onDataChanged(topLeft, bottomRight) {
                     if (listView.currentIndex >= topLeft.row && listView.currentIndex <= bottomRight.row)
                         root.refreshCurrentItemAt(listView.currentIndex)
-                }
-                function onModelReset() {
-                    pageRoot.listWidthSet = false
-                    leftPane.Controls.SplitView.preferredWidth = Kirigami.Units.gridUnit * 14
                 }
             }
 
@@ -183,75 +158,75 @@ Kirigami.ApplicationWindow {
             }
 
             // ── Empty state: no apps installed ────────────────────────────────
-            Item {
+            ColumnLayout {
                 anchors.fill: parent
+                anchors.margins: Kirigami.Units.gridUnit * 2
+                spacing: Kirigami.Units.largeSpacing
                 visible: !listModel.scanning && listView.count === 0 && proxyModel.filterText === ""
 
-                DropArea {
-                    id: emptyDropArea
-                    anchors.fill: parent
-                    keys: ["text/uri-list"]
-                    onDropped: (drop) => {
-                        for (const url of drop.urls) {
-                            if (url.toString().toLowerCase().endsWith(".appimage"))
-                                dashboardController.installFromPath(url)
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    DropArea {
+                        id: emptyDropArea
+                        anchors.fill: parent
+                        keys: ["text/uri-list"]
+                        onDropped: (drop) => {
+                            for (const url of drop.urls) {
+                                if (url.toString().toLowerCase().endsWith(".appimage"))
+                                    dashboardController.installFromPath(url)
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        color:  Kirigami.Theme.alternateBackgroundColor
+                        radius: Kirigami.Units.smallSpacing * 2
+                        border.color: Kirigami.Theme.focusColor
+                        border.width: globalDropArea.containsDrag ? 2 : 1
+                        Behavior on border.width { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            spacing: Kirigami.Units.largeSpacing
+
+                            Kirigami.Icon {
+                                source: "application-x-executable"
+                                implicitWidth:  Kirigami.Units.iconSizes.huge
+                                implicitHeight: Kirigami.Units.iconSizes.huge
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+
+                            Controls.Label {
+                                text: i18n("Drag AppImage here to install")
+                                Layout.alignment: Qt.AlignHCenter
+                            }
                         }
                     }
                 }
 
-                Rectangle {
-                    anchors.centerIn: parent
-                    width:  Kirigami.Units.gridUnit * 22
-                    height: Kirigami.Units.gridUnit * 13
-                    color:  Kirigami.Theme.alternateBackgroundColor
-                    radius: Kirigami.Units.smallSpacing * 2
-                    border.color: Kirigami.Theme.focusColor
-                    border.width: emptyDropArea.containsDrag ? 2 : 1
-                    Behavior on border.width { NumberAnimation { duration: Kirigami.Units.shortDuration } }
-
-                    ColumnLayout {
-                        anchors.centerIn: parent
-                        spacing: Kirigami.Units.largeSpacing
-
-                        Kirigami.Icon {
-                            source: "application-x-executable"
-                            implicitWidth:  Kirigami.Units.iconSizes.huge
-                            implicitHeight: Kirigami.Units.iconSizes.huge
-                            Layout.alignment: Qt.AlignHCenter
-                        }
-
-                        Controls.Label {
-                            text: i18n("Drag AppImage here to install")
-                            Layout.alignment: Qt.AlignHCenter
-                        }
-                    }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    visible: AppSettings.showDisclaimer
+                    type: Kirigami.MessageType.Warning
+                    text: i18n("AppImages are unverified executables. Only install from sources you trust.")
+                    showCloseButton: false
                 }
             }
 
-            // ── Populated state: master-detail SplitView ──────────────────────
-            Controls.SplitView {
-                id: splitView
+            // ── Populated state: master-detail ────────────────────────────────
+            RowLayout {
                 anchors.fill: parent
+                spacing: 0
                 visible: listView.count > 0 || proxyModel.filterText !== ""
-                orientation: Qt.Horizontal
-
-                handle: Item {
-                    implicitWidth: 8
-
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: 1
-                        height: parent.height
-                        visible: listView.currentIndex >= 0
-                        color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.15)
-                    }
-                }
 
                 // ── Left pane: master list ────────────────────────────────────
                 Item {
                     id: leftPane
-                    Controls.SplitView.preferredWidth: Kirigami.Units.gridUnit * 14
-                    Controls.SplitView.minimumWidth:   Kirigami.Units.gridUnit * 8
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
 
                     Kirigami.Theme.colorSet: Kirigami.Theme.Window
                     Kirigami.Theme.inherit: false
@@ -400,6 +375,61 @@ Kirigami.ApplicationWindow {
                                         onClicked: listView.currentIndex = index
                                     }
                                 }
+
+                                footer: Component {
+                                    Item {
+                                        width: listView.width
+                                        readonly property real remaining: listView.height - listView.count * (Kirigami.Units.gridUnit * 2.5)
+                                        height: AppSettings.showInstallBox
+                                                ? Math.max(Kirigami.Units.gridUnit * 8, remaining)
+                                                : 0
+                                        clip: true
+
+                                        DropArea {
+                                            id: listFooterDropArea
+                                            anchors.fill: parent
+                                            keys: ["text/uri-list"]
+                                            onDropped: (drop) => {
+                                                for (const url of drop.urls) {
+                                                    if (url.toString().toLowerCase().endsWith(".appimage"))
+                                                        dashboardController.installFromPath(url)
+                                                }
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            anchors.topMargin: Kirigami.Units.largeSpacing
+                                            anchors.leftMargin: 2
+                                            anchors.rightMargin: 2
+                                            anchors.bottomMargin: 2
+                                            visible: AppSettings.showInstallBox
+                                            color: Kirigami.Theme.alternateBackgroundColor
+                                            radius: Kirigami.Units.smallSpacing * 2
+                                            border.color: Kirigami.Theme.focusColor
+                                            border.width: globalDropArea.containsDrag ? 2 : 1
+                                            opacity: globalDropArea.containsDrag ? 1.0 : 0.5
+                                            Behavior on border.width { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+                                            Behavior on opacity    { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+
+                                            ColumnLayout {
+                                                anchors.centerIn: parent
+                                                spacing: Kirigami.Units.smallSpacing
+                                                Kirigami.Icon {
+                                                    source: "list-add"
+                                                    implicitWidth:  Kirigami.Units.iconSizes.medium
+                                                    implicitHeight: Kirigami.Units.iconSizes.medium
+                                                    Layout.alignment: Qt.AlignHCenter
+                                                }
+                                                Controls.Label {
+                                                    text: i18n("Drop to install")
+                                                    Layout.alignment: Qt.AlignHCenter
+                                                    font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             Kirigami.PlaceholderMessage {
@@ -409,19 +439,31 @@ Kirigami.ApplicationWindow {
                                 text: i18n("No results for \"%1\"", proxyModel.filterText)
                             }
                         }
+
+                        Kirigami.InlineMessage {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 2
+                            Layout.rightMargin: 2
+                            Layout.topMargin: Kirigami.Units.smallSpacing
+                            visible: AppSettings.showInstallBox && AppSettings.showDisclaimer
+                            type: Kirigami.MessageType.Warning
+                            text: i18n("AppImages are unverified executables. Only install from sources you trust.")
+                            showCloseButton: false
+                        }
                     }
                 }
 
                 // ── Right pane: detail view ───────────────────────────────────
                 Item {
                     id: rightPane
-                    Controls.SplitView.fillWidth: true
-                    Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 15
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                     visible: listView.currentIndex >= 0
 
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: Kirigami.Units.gridUnit
+                        anchors.bottomMargin: 2
                         spacing: Kirigami.Units.largeSpacing
 
                         Kirigami.Icon {
@@ -440,50 +482,97 @@ Kirigami.ApplicationWindow {
                             elide: Text.ElideRight
                         }
 
-                        Controls.Label {
-                            text: root.currentItem.comment ?? ""
-                            visible: (root.currentItem.metadataLoaded ?? false)
-                                     && (root.currentItem.comment ?? "") !== ""
-                            horizontalAlignment: Text.AlignHCenter
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            opacity: 0.7
-                        }
-
                         RowLayout {
-                            id: chipsRow
                             Layout.alignment: Qt.AlignHCenter
                             spacing: Kirigami.Units.smallSpacing
-                            visible: root.currentItem.metadataLoaded ?? false
+                            visible: (root.currentItem.developerName ?? "") !== ""
 
-                            Kirigami.Chip {
-                                text: i18n("Version: %1", root.currentItem.version || "—")
-                                closable: false
-                                checkable: false
+                            Controls.Label {
+                                text: root.currentItem.developerName ?? ""
+                                opacity: 0.6
+                                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                             }
 
-                            Kirigami.Chip {
-                                text: i18n("Size: %1", root.currentItem.formattedSize || "—")
-                                closable: false
-                                checkable: false
-                            }
-
-                            Kirigami.Chip {
-                                readonly property string cat: (root.currentItem.categories ?? "")
-                                    .split(";").filter(s => s.length > 0)[0] ?? ""
-                                text: cat
-                                visible: (root.currentItem.metadataLoaded ?? false) && cat !== ""
-                                closable: false
-                                checkable: false
+                            Controls.ToolButton {
+                                icon.name: "internet-web-browser"
+                                visible: (root.currentItem.homepage ?? "") !== ""
+                                flat: true
+                                implicitWidth:  Kirigami.Units.iconSizes.small + Kirigami.Units.smallSpacing * 2
+                                implicitHeight: implicitWidth
+                                onClicked: Qt.openUrlExternally(root.currentItem.homepage)
+                                Controls.ToolTip.text: root.currentItem.homepage
+                                Controls.ToolTip.visible: hovered
+                                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                             }
                         }
 
-                        Item { Layout.fillHeight: true }
+                        Item {
+                            Layout.fillWidth: true
+                            height: chipsFlow.height
+                            visible: root.currentItem.metadataLoaded ?? false
+
+                            Flow {
+                                id: chipsFlow
+                                x: implicitWidth <= parent.width
+                                   ? (parent.width - implicitWidth) / 2
+                                   : 0
+                                width: Math.min(implicitWidth, parent.width)
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Kirigami.Chip {
+                                    text: i18n("Version: %1", root.currentItem.version || "—")
+                                    closable: false
+                                    checkable: false
+                                }
+
+                                Kirigami.Chip {
+                                    text: i18n("Size: %1", root.currentItem.formattedSize || "—")
+                                    closable: false
+                                    checkable: false
+                                }
+
+                                Kirigami.Chip {
+                                    readonly property string cat: (root.currentItem.categories ?? "")
+                                        .split(";").filter(s => s.length > 0)[0] ?? ""
+                                    text: cat
+                                    visible: (root.currentItem.metadataLoaded ?? false) && cat !== ""
+                                    closable: false
+                                    checkable: false
+                                }
+
+                                Kirigami.Chip {
+                                    readonly property var d: root.currentItem.addedDate
+                                    text: d ? i18n("Added: %1", Qt.formatDate(d, "dd.MM.yy")) : ""
+                                    visible: !!d
+                                    closable: false
+                                    checkable: false
+                                }
+                            }
+                        }
+
+                        Controls.ScrollView {
+                            id: descScrollView
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            Layout.topMargin: Kirigami.Units.largeSpacing
+                            visible: (root.currentItem.metadataLoaded ?? false) && (root.currentItem.description ?? "") !== ""
+                            Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
+                            Controls.ScrollBar.vertical.policy: Controls.ScrollBar.AsNeeded
+
+                            Controls.Label {
+                                width: descScrollView.availableWidth
+                                text: root.currentItem.description ?? ""
+                                wrapMode: Text.WordWrap
+                                opacity: 0.8
+                                textFormat: Text.StyledText
+                            }
+                        }
+
+                        Item { Layout.fillHeight: true; visible: (root.currentItem.description ?? "") === "" }
 
                         RowLayout {
                             Layout.alignment: Qt.AlignHCenter
-                            Layout.bottomMargin: Kirigami.Units.gridUnit
-                            Layout.preferredWidth: chipsRow.implicitWidth
+                            Layout.fillWidth: true
                             spacing: Kirigami.Units.smallSpacing
 
                             Controls.Button {
@@ -521,10 +610,12 @@ Kirigami.ApplicationWindow {
             }
         }
 
+        readonly property bool noInnerBox: (proxyModel.rowCount() > 0 || proxyModel.filterText !== "") && !AppSettings.showInstallBox
+
         Rectangle {
             anchors.fill: parent
             color: Kirigami.Theme.highlightColor
-            opacity: globalDropArea.containsDrag ? 0.15 : 0.0
+            opacity: globalDropArea.containsDrag && parent.noInnerBox ? 0.15 : 0.0
             Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
         }
 
@@ -532,7 +623,7 @@ Kirigami.ApplicationWindow {
             anchors.centerIn: parent
             level: 2
             text: i18n("Drop to install")
-            visible: globalDropArea.containsDrag
+            visible: globalDropArea.containsDrag && parent.noInnerBox
             color: Kirigami.Theme.highlightedTextColor
         }
     }

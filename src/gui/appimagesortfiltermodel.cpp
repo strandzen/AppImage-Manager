@@ -3,7 +3,6 @@
 #include "appimagesortfiltermodel.h"
 #include "appimagelistmodel.h"
 
-#include <QDateTime>
 
 AppImageSortFilterModel::AppImageSortFilterModel(QObject *parent)
     : QSortFilterProxyModel(parent)
@@ -57,25 +56,6 @@ bool AppImageSortFilterModel::lessThan(const QModelIndex &left, const QModelInde
     case SortBySize: {
         const qint64 a = left.data(AppImageListModel::AppSizeRole).toLongLong();
         const qint64 b = right.data(AppImageListModel::AppSizeRole).toLongLong();
-        if (a != b) return a < b;
-        break;
-    }
-    case SortByDate: {
-        const QDateTime a = left.data(AppImageListModel::AddedDateRole).toDateTime();
-        const QDateTime b = right.data(AppImageListModel::AddedDateRole).toDateTime();
-        if (a != b) return a < b;
-        break;
-    }
-    case SortByVersion: {
-        const QString a = left.data(AppImageListModel::VersionRole).toString();
-        const QString b = right.data(AppImageListModel::VersionRole).toString();
-        const int cmp = a.compare(b, Qt::CaseInsensitive);
-        if (cmp != 0) return cmp < 0;
-        break;
-    }
-    case SortByVisible: {
-        const bool a = left.data(AppImageListModel::HasDesktopLinkRole).toBool();
-        const bool b = right.data(AppImageListModel::HasDesktopLinkRole).toBool();
         if (a != b) return a < b;
         break;
     }
