@@ -8,7 +8,7 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 [![License](https://img.shields.io/badge/License-GPL--2.0--or--later-blue)](LICENSES/GPL-2.0-or-later.txt)
 [![Linux](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.kernel.org/)
 
-> **Disclaimer:** This project is built with AI assistance.
+> **Disclaimer:** This project vibecoded.
 
 ## 📸 Preview
 
