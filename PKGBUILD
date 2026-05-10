@@ -1,24 +1,28 @@
 pkgname=appimagemanager-git
-pkgver=1.0.0
+pkgver=1.2.0
 pkgrel=1
 pkgdesc="A lightweight KDE Plasma utility for installing, managing, and removing AppImage files"
 arch=('x86_64' 'aarch64')
-url="https://github.com/YOUR_USERNAME/AppImageManager" # Update this to your repo URL
+url="https://github.com/strandzen/AppImage-Manager"
 license=('GPL-2.0-or-later')
 depends=(
     'qt6-base'
     'qt6-declarative'
     'kirigami'
-    'kf6-coreaddons'
-    'kf6-i18n'
-    'kf6-config'
-    'kf6-kio'
-    'kf6-iconthemes'
-    'kf6-notifications'
-    'kf6-crash'
-    'kf6-dbusaddons'
+    'kcoreaddons'
+    'ki18n'
+    'kconfig'
+    'kio'
+    'kiconthemes'
+    'knotifications'
+    'kcrash'
+    'kdbusaddons'
     'libappimage'
-    'libcanberra'
+)
+optdepends=(
+    'kstatusnotifieritem: system tray icon support'
+    'libcanberra: completion sound notifications'
+    'zsync2: downloading AppImage updates'
 )
 makedepends=(
     'git'
@@ -28,16 +32,16 @@ makedepends=(
 )
 provides=('appimagemanager')
 conflicts=('appimagemanager')
-source=("git+https://github.com/YOUR_USERNAME/AppImageManager.git") # Update to your repo URL
+source=("git+https://github.com/strandzen/AppImage-Manager.git")
 sha256sums=('SKIP')
 
 pkgver() {
-    cd "$srcdir/AppImageManager"
+    cd "$srcdir/AppImage-Manager"
     printf "%s" "$(git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g')"
 }
 
 build() {
-    cmake -B build -S "AppImageManager" \
+    cmake -B build -S "AppImage-Manager" \
         -DCMAKE_BUILD_TYPE='Release' \
         -DCMAKE_INSTALL_PREFIX='/usr' \
         -Wno-dev

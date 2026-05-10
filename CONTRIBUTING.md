@@ -8,7 +8,7 @@
 sudo pacman -S base-devel cmake extra-cmake-modules ninja \
     qt6-base qt6-declarative \
     kcoreaddons ki18n kio kiconthemes knotifications kcrash kdbusaddons kirigami \
-    libcanberra
+    libappimage libcanberra zsync2
 ```
 
 ### Build and install
@@ -35,7 +35,7 @@ rm -rf build/ && cmake --preset dev && cmake --build --preset dev
 
 | Target | Type | Description |
 |--------|------|-------------|
-| `appimagemanager_core` | Object library | Pure C++, no QML. `AppImageReader`, `AppImageManager`, `AppImageInfo`, `AppSettings` |
+| `appimagemanager_core` | Object library | Pure C++, no QML. `AppImageReader`, `AppImageManager`, `AppImageInfo`, `AppSettings`, `GitHubReleaseChecker` |
 | `appimagemanager_qml` | QML module | GUI backend classes + QML files (all windows and dialogs) |
 | `appimagemanager` (plugin) | `KAbstractFileItemActionPlugin` | Dolphin right-click integration |
 | `appimagemanager` (binary) | Executable | Standalone launcher opened by the Dolphin service menu |

@@ -66,6 +66,12 @@ bool AppImageSortFilterModel::lessThan(const QModelIndex &left, const QModelInde
         if (cmp != 0) return cmp < 0;
         break;
     }
+    case SortByDate: {
+        const QDateTime a = left.data(AppImageListModel::AddedDateRole).toDateTime();
+        const QDateTime b = right.data(AppImageListModel::AddedDateRole).toDateTime();
+        if (a != b) return a > b; // newest first
+        break;
+    }
     default:
         break;
     }

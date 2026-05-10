@@ -1,0 +1,36 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            git base-devel cmake extra-cmake-modules ninja \
+            qt6-base qt6-declarative qt6-tools \
+            kcoreaddons ki18n kio kiconthemes knotifications kcrash kdbusaddons kirigami \
+            kstatusnotifieritem libappimage libcanberra
+
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Validate metainfo
+        run: |
+          pacman -S --noconfirm appstream
+          appstreamcli validate --pedantic data/appimagemanager.metainfo.xml

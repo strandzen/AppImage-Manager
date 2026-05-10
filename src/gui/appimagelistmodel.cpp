@@ -5,21 +5,22 @@
 #include "../core/appimagemanager.h"
 #include "../core/appimagereader.h"
 #include "../core/appsettings.h"
+#include "../core/githubreleasechecker.h"
 
 #include <KFormat>
 #include <KIO/CopyJob>
 #include <KLocalizedString>
 #include <KNotification>
+#include <QDBusConnection>
+#include <QDBusConnectionInterface>
 #include <QDir>
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QStandardPaths>
 #include <QIcon>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QNetworkReply>
 #include <QProcess>
+#include <QCryptographicHash>
 #include <QRegularExpression>
 #include <QtConcurrent/QtConcurrent>
 
@@ -160,7 +161,7 @@ void AppImageListModel::refresh()
     ++m_generation;
 
     const QString dir = AppSettings::instance()->applicationsPath();
-    const QStringList filters = { QStringLiteral("*.AppImage"), QStringLiteral("*.appimage") };
+    const QStringList &filters = kAppImageFilters();
     const QFileInfoList files = QDir(dir).entryInfoList(filters, QDir::Files);
 
     if (!m_watcher.directories().contains(dir))
@@ -262,10 +263,7 @@ void AppImageListModel::loadMetadataForRow(int row)
         if (gen != m_generation) { finalize(); return; }
 
         // Locate by path — index may have shifted due to smart-diff inserts/removes
-        int row = -1;
-        for (int i = 0; i < m_items.size(); ++i) {
-            if (m_items.at(i).filePath == path) { row = i; break; }
-        }
+        const int row = findRowByPath(path);
         if (row < 0) { finalize(); return; }
 
         AppImageInfo info = watcher->result();
@@ -319,7 +317,8 @@ void AppImageListModel::requestLaunch(int row)
 {
     if (row < 0 || row >= m_items.size())
         return;
-    QProcess::startDetached(m_items.at(row).filePath, {});
+    if (!QProcess::startDetached(m_items.at(row).filePath, {}))
+        sendError(this, i18n("Launch Failed"), i18n("Could not launch %1.", m_items.at(row).cachedDisplayName));
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -399,84 +398,139 @@ QString AppImageListModel::iconIdForPath(const QString &path)
     return QString::number(qHash(path));
 }
 
+int AppImageListModel::findRowByPath(const QString &path) const
+{
+    for (int i = 0; i < m_items.size(); ++i)
+        if (m_items.at(i).filePath == path) return i;
+    return -1;
+}
+
+// static
+void AppImageListModel::sendError(QObject *parent, const QString &title, const QString &text)
+{
+    auto *n = new KNotification(QStringLiteral("error"), KNotification::CloseOnTimeout, parent);
+    n->setTitle(title);
+    n->setText(text);
+    n->sendEvent();
+}
+
+void AppImageListModel::finishOneUpdateCheck(bool foundUpdate)
+{
+    if (foundUpdate)
+        ++m_updatesFoundInCheck;
+    if (--m_pendingUpdateChecks == 0) {
+        m_updateCheckTimer.stop();
+        Q_EMIT checkingUpdatesChanged();
+        Q_EMIT updateCheckFinished(m_updatesFoundInCheck);
+    }
+}
+
 void AppImageListModel::checkForUpdates()
 {
+    int checkable = 0;
+    for (const Item &item : std::as_const(m_items)) {
+        if (item.info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|")) ||
+            item.info.updateInfo.startsWith(QStringLiteral("zsync|")))
+            ++checkable;
+    }
+    if (checkable == 0) {
+        Q_EMIT updateCheckFinished(0);
+        return;
+    }
+
+    m_pendingUpdateChecks = checkable;
+    m_updatesFoundInCheck = 0;
+    Q_EMIT checkingUpdatesChanged();
+
+    m_updateCheckTimer.setSingleShot(true);
+    m_updateCheckTimer.setInterval(30'000);
+    connect(&m_updateCheckTimer, &QTimer::timeout, this, [this]() {
+        m_pendingUpdateChecks = 0;
+        Q_EMIT checkingUpdatesChanged();
+        Q_EMIT updateCheckFinished(-1);
+    }, Qt::SingleShotConnection);
+    m_updateCheckTimer.start();
+
     for (int i = 0; i < m_items.size(); ++i) {
         const Item &item = m_items.at(i);
         if (item.info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|"))) {
-            QStringList parts = item.info.updateInfo.split(QLatin1Char('|'));
-            if (parts.size() >= 3) {
-                QString owner = parts.at(1);
-                QString repo = parts.at(2);
-                QString url = QStringLiteral("https://api.github.com/repos/%1/%2/releases/latest").arg(owner, repo);
-                
-                QNetworkRequest request((QUrl(url)));
-                request.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
-                
-                QString filePath = item.filePath;
-                
-                QNetworkReply *reply = m_networkManager->get(request);
-                connect(reply, &QNetworkReply::finished, this, [this, reply, filePath]() {
-                    reply->deleteLater();
-                    if (reply->error() != QNetworkReply::NoError) {
-                        return;
-                    }
-                    
-                    QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-                    if (doc.isObject()) {
-                        QString tag = doc.object().value(QLatin1String("tag_name")).toString();
-                        if (!tag.isEmpty()) {
-                            QString versionStr = tag;
-                            if (versionStr.startsWith(QLatin1Char('v')) || versionStr.startsWith(QLatin1Char('V'))) {
-                                versionStr.remove(0, 1);
-                            }
-                            
-                            // Locate by path — index may have shifted
-                            int row = -1;
-                            for (int idx = 0; idx < m_items.size(); ++idx) {
-                                if (m_items.at(idx).filePath == filePath) { row = idx; break; }
-                            }
-                            if (row < 0) return;
-                            
-                            Item &modelItem = m_items[row];
-                            QString currentVer = modelItem.info.version;
-                            if (currentVer.startsWith(QLatin1Char('v')) || currentVer.startsWith(QLatin1Char('V'))) {
-                                currentVer.remove(0, 1);
-                            }
-                            
-                            if (versionStr != currentVer) {
-                                modelItem.updateAvailable = true;
-                                modelItem.updateVersion = versionStr;
-
-                                // Find the zsync url
-                                QJsonArray assets = doc.object().value(QLatin1String("assets")).toArray();
-                                for (const QJsonValue &assetVal : assets) {
-                                    QJsonObject asset = assetVal.toObject();
-                                    QString name = asset.value(QLatin1String("name")).toString();
-                                    if (name.endsWith(QLatin1String(".zsync"))) {
-                                        modelItem.zsyncUrl = asset.value(QLatin1String("browser_download_url")).toString();
-                                        break;
-                                    }
-                                }
-
-                                Q_EMIT dataChanged(index(row, 0), index(row, 0), {UpdateAvailableRole, UpdateVersionRole});
-                            }
-                        }
-                    }
-                });
-            }
+            const QString filePath = item.filePath;
+            auto *checker = new GitHubReleaseChecker(m_networkManager, this);
+            connect(checker, &GitHubReleaseChecker::updateAvailable, this,
+                    [this, filePath, checker](const QString &ver, const QString &url) {
+                checker->deleteLater();
+                const int row = findRowByPath(filePath);
+                if (row >= 0) {
+                    Item &modelItem = m_items[row];
+                    modelItem.updateAvailable = true;
+                    modelItem.updateVersion = ver;
+                    modelItem.zsyncUrl = url;
+                    Q_EMIT dataChanged(index(row, 0), index(row, 0), {UpdateAvailableRole, UpdateVersionRole});
+                }
+                finishOneUpdateCheck(row >= 0);
+            });
+            connect(checker, &GitHubReleaseChecker::upToDate, this, [this, checker]() {
+                checker->deleteLater();
+                finishOneUpdateCheck(false);
+            });
+            connect(checker, &GitHubReleaseChecker::failed, this, [this, checker]() {
+                checker->deleteLater();
+                finishOneUpdateCheck(false);
+            });
+            checker->check(item.info.updateInfo, item.info.version);
         } else if (item.info.updateInfo.startsWith(QStringLiteral("zsync|"))) {
-            QString url = item.info.updateInfo.mid(6);
-            // We would need to fetch the zsync header to get the version, 
-            // for now just make it available if we don't know the version
-            int row = i;
-            Item &modelItem = m_items[row];
-            modelItem.updateAvailable = true;
-            modelItem.zsyncUrl = url;
-            modelItem.updateVersion = i18n("Unknown");
-            Q_EMIT dataChanged(index(row, 0), index(row, 0), {UpdateAvailableRole, UpdateVersionRole});
+            checkZsyncUpdate(i);
         }
     }
+}
+
+void AppImageListModel::checkZsyncUpdate(int row)
+{
+    const QString zsyncUrl = m_items.at(row).info.updateInfo.mid(6);
+    const QString filePath = m_items.at(row).filePath;
+
+    QNetworkRequest request((QUrl(zsyncUrl)));
+    request.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
+    request.setRawHeader("Range", "bytes=0-2047");
+
+    QNetworkReply *reply = m_networkManager->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, zsyncUrl, filePath]() {
+        reply->deleteLater();
+
+        const int row = findRowByPath(filePath);
+        if (row < 0) { finishOneUpdateCheck(false); return; }
+
+        QString remoteSha1;
+        if (reply->error() == QNetworkReply::NoError) {
+            const QByteArray data = reply->readAll();
+            for (const QByteArray &line : data.split('\n')) {
+                const QByteArray trimmed = line.trimmed();
+                if (trimmed.isEmpty()) break;
+                if (trimmed.startsWith("SHA-1: "))
+                    remoteSha1 = QString::fromLatin1(trimmed.mid(7)).trimmed();
+            }
+        }
+
+        if (!remoteSha1.isEmpty()) {
+            QFile f(filePath);
+            QString localSha1;
+            if (f.open(QIODevice::ReadOnly)) {
+                QCryptographicHash hash(QCryptographicHash::Sha1);
+                hash.addData(&f);
+                localSha1 = QString::fromLatin1(hash.result().toHex());
+            }
+            if (localSha1 == remoteSha1) { finishOneUpdateCheck(false); return; }
+        }
+
+        Item &modelItem = m_items[row];
+        modelItem.updateAvailable = true;
+        modelItem.zsyncUrl = zsyncUrl;
+        modelItem.updateVersion = remoteSha1.isEmpty()
+            ? i18n("New version available")
+            : remoteSha1.left(8);
+        Q_EMIT dataChanged(index(row, 0), index(row, 0), {UpdateAvailableRole, UpdateVersionRole});
+        finishOneUpdateCheck(true);
+    });
 }
 
 void AppImageListModel::downloadUpdate(int row)
@@ -494,7 +548,7 @@ void AppImageListModel::downloadUpdate(int row)
     QString oldFile = item.filePath;
     QString newFile = oldFile + QStringLiteral(".new");
 
-    process->setProgram(QStringLiteral("zsync"));
+    process->setProgram(QStringLiteral("zsync2"));
     process->setArguments({
         QStringLiteral("-i"), oldFile,
         QStringLiteral("-o"), newFile,
@@ -502,9 +556,7 @@ void AppImageListModel::downloadUpdate(int row)
     });
 
     connect(process, &QProcess::readyReadStandardOutput, this, [this, process, oldFile]() {
-        int r = -1;
-        for (int i = 0; i < m_items.size(); ++i)
-            if (m_items.at(i).filePath == oldFile) { r = i; break; }
+        const int r = findRowByPath(oldFile);
         if (r < 0) return;
 
         QString output = QString::fromUtf8(process->readAllStandardOutput());
@@ -519,9 +571,7 @@ void AppImageListModel::downloadUpdate(int row)
     connect(process, &QProcess::finished, this, [this, process, oldFile, newFile](int exitCode, QProcess::ExitStatus) {
         process->deleteLater();
 
-        int r = -1;
-        for (int i = 0; i < m_items.size(); ++i)
-            if (m_items.at(i).filePath == oldFile) { r = i; break; }
+        const int r = findRowByPath(oldFile);
         if (r < 0) return;
 
         Item &item = m_items[r];
@@ -530,12 +580,18 @@ void AppImageListModel::downloadUpdate(int row)
         if (exitCode == 0 && QFile::exists(newFile)) {
             if (!QFile::remove(oldFile) || !QFile::rename(newFile, oldFile)) {
                 QFile::remove(newFile);
+                sendError(this, i18n("Update Failed"),
+                          i18n("Could not replace %1. The file may be in use.", item.cachedDisplayName));
                 Q_EMIT dataChanged(index(r, 0), index(r, 0), {IsUpdatingRole, UpdateProgressRole});
                 return;
             }
 
             QFile file(oldFile);
             file.setPermissions(file.permissions() | QFileDevice::ExeUser | QFileDevice::ExeGroup | QFileDevice::ExeOther);
+
+            // Flash 100% before the progress bar disappears
+            item.updateProgress = 100;
+            Q_EMIT dataChanged(index(r, 0), index(r, 0), {UpdateProgressRole});
 
             item.updateAvailable = false;
             item.updateProgress = 0;
@@ -550,6 +606,7 @@ void AppImageListModel::downloadUpdate(int row)
         } else {
             if (QFile::exists(newFile))
                 QFile::remove(newFile);
+            sendError(this, i18n("Update Failed"), i18n("%1 could not be updated.", item.cachedDisplayName));
             Q_EMIT dataChanged(index(r, 0), index(r, 0), {IsUpdatingRole, UpdateProgressRole});
         }
     });
@@ -564,7 +621,7 @@ void AppImageListModel::updateDownloadWatcher()
         return;
 
     if (AppSettings::instance()->watchDownloads()) {
-        const QStringList filters = { QStringLiteral("*.AppImage"), QStringLiteral("*.appimage") };
+        const QStringList &filters = kAppImageFilters();
         m_knownDownloads.clear();
         for (const QFileInfo &fi : QDir(dlDir).entryInfoList(filters, QDir::Files))
             m_knownDownloads.insert(fi.absoluteFilePath());
@@ -580,9 +637,13 @@ void AppImageListModel::checkNewDownloads()
 {
     if (!AppSettings::instance()->watchDownloads())
         return;
+    // Daemon handles download notifications when running — avoid duplicates
+    const auto *iface = QDBusConnection::sessionBus().interface();
+    if (iface && iface->isServiceRegistered(QStringLiteral("io.github.appimagemanager.Daemon")))
+        return;
 
     const QString dlDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
-    const QStringList filters = { QStringLiteral("*.AppImage"), QStringLiteral("*.appimage") };
+    const QStringList &filters = kAppImageFilters();
     const QFileInfoList entries = QDir(dlDir).entryInfoList(filters, QDir::Files);
 
     for (const QFileInfo &fi : entries) {

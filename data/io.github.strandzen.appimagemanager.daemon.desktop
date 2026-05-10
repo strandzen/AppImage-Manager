@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=AppImage Manager Daemon
+Comment=Background daemon to check for AppImage updates
+Exec=appimagemanager --daemon
+Icon=application-x-executable
+Type=Application
+Terminal=false
+Categories=Utility;
+NoDisplay=true
+X-KDE-autostart-phase=2

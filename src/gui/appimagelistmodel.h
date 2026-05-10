@@ -20,9 +20,10 @@ class AppImageListModel : public QAbstractListModel
     QML_ELEMENT
     QML_UNCREATABLE("Use the 'listModel' context property")
 
-    Q_PROPERTY(bool scanning       READ isScanning      NOTIFY scanningChanged)
-    Q_PROPERTY(bool selectionMode  READ selectionMode   WRITE setSelectionMode  NOTIFY selectionModeChanged)
-    Q_PROPERTY(int  selectedCount  READ selectedCount   NOTIFY selectionChanged)
+    Q_PROPERTY(bool scanning        READ isScanning       NOTIFY scanningChanged)
+    Q_PROPERTY(bool checkingUpdates READ isCheckingUpdates NOTIFY checkingUpdatesChanged)
+    Q_PROPERTY(bool selectionMode  READ selectionMode    WRITE setSelectionMode  NOTIFY selectionModeChanged)
+    Q_PROPERTY(int  selectedCount  READ selectedCount    NOTIFY selectionChanged)
 
 public:
     enum Roles {
@@ -75,9 +76,10 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    bool isScanning()     const { return m_scanning; }
-    bool selectionMode()  const { return m_selectionMode; }
-    int  selectedCount()  const { return static_cast<int>(m_selected.size()); }
+    bool isScanning()        const { return m_scanning; }
+    bool isCheckingUpdates() const { return m_pendingUpdateChecks > 0; }
+    bool selectionMode()     const { return m_selectionMode; }
+    int  selectedCount()     const { return static_cast<int>(m_selected.size()); }
 
     void setSelectionMode(bool mode);
 
@@ -97,14 +99,20 @@ public:
 
 Q_SIGNALS:
     void scanningChanged();
+    void checkingUpdatesChanged();
+    void updateCheckFinished(int updatesFound);
     void selectionModeChanged();
     void selectionChanged();
     void openUninstallWindow(const QString &filePath);
 
 private:
     void loadMetadataForRow(int row);
+    void finishOneUpdateCheck(bool foundUpdate);
+    void checkZsyncUpdate(int row);
     void updateDownloadWatcher();
     void checkNewDownloads();
+    int findRowByPath(const QString &path) const;
+    static void sendError(QObject *parent, const QString &title, const QString &text);
     static QString iconIdForPath(const QString &path);
     static QString formatBytes(qint64 bytes);
     static QString computeDisplayName(const Item &item);
@@ -112,14 +120,17 @@ private:
 
     AppImageIconProvider  *m_iconProvider;
     QList<Item>            m_items;
-    bool                   m_scanning      = false;
-    int                    m_pendingLoads  = 0;
+    bool                   m_scanning             = false;
+    int                    m_pendingLoads         = 0;
+    int                    m_pendingUpdateChecks  = 0;
+    int                    m_updatesFoundInCheck  = 0;
     int                    m_generation    = 0;
     bool                   m_selectionMode = false;
     QSet<QString>          m_selected;
 
     QFileSystemWatcher     m_watcher;
     QTimer                 m_refreshTimer;
+    QTimer                 m_updateCheckTimer;
     QNetworkAccessManager *m_networkManager;
     QSet<QString>          m_knownDownloads;
 };

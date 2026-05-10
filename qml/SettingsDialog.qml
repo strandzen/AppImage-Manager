@@ -11,7 +11,7 @@ Kirigami.Dialog {
     id: dialog
     title: i18n("Settings")
     padding: Kirigami.Units.largeSpacing
-    standardButtons: Kirigami.Dialog.NoButton
+    standardButtons: Kirigami.Dialog.Close
 
     Connections {
         target: AppSettings
@@ -67,7 +67,7 @@ Kirigami.Dialog {
                 onActivated: AppSettings.manageIconSize = currentIndex
             }
             Controls.CheckBox {
-                text: i18n("Show install drag box in list")
+                text: i18n("Show drag-and-drop install zone at bottom of list")
                 checked: AppSettings.showInstallBox
                 onToggled: AppSettings.showInstallBox = checked
             }

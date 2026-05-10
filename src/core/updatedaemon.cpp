@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "updatedaemon.h"
+#include "appimageinfo.h"
 #include "appsettings.h"
 #include "appimagereader.h"
+#include <QDBusConnection>
 #include <QDir>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
@@ -34,25 +36,6 @@ static std::chrono::hours intervalForFrequency(int freq, int customDays)
     }
 }
 
-static bool isNewerVersion(const QString &remote, const QString &local)
-{
-    if (remote == local)
-        return false;
-    auto toInts = [](const QString &v) {
-        QList<int> parts;
-        for (const QString &p : v.split(QLatin1Char('.')))
-            parts.append(p.toInt());
-        while (parts.size() < 3) parts.append(0);
-        return parts;
-    };
-    const QList<int> r = toInts(remote);
-    const QList<int> l = toInts(local);
-    for (int i = 0; i < 3; ++i) {
-        if (r[i] > l[i]) return true;
-        if (r[i] < l[i]) return false;
-    }
-    return false;
-}
 
 UpdateDaemon::UpdateDaemon(QObject *parent)
     : QObject(parent)
@@ -71,6 +54,7 @@ UpdateDaemon::UpdateDaemon(QObject *parent)
 
 void UpdateDaemon::start()
 {
+    QDBusConnection::sessionBus().registerService(QStringLiteral("io.github.appimagemanager.Daemon"));
     const int freq = AppSettings::instance()->updateFrequency();
     m_timer->setInterval(intervalForFrequency(freq, AppSettings::instance()->customUpdateDays()));
     checkUpdates();
@@ -83,7 +67,7 @@ void UpdateDaemon::watchDownloads()
     if (dir.isEmpty())
         return;
 
-    const QStringList filters = { QStringLiteral("*.AppImage"), QStringLiteral("*.appimage") };
+    const QStringList &filters = kAppImageFilters();
     for (const QFileInfo &fi : QDir(dir).entryInfoList(filters, QDir::Files))
         m_knownDownloads.insert(fi.absoluteFilePath());
 
@@ -99,7 +83,7 @@ void UpdateDaemon::onDownloadDirChanged()
         return;
 
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
-    const QStringList filters = { QStringLiteral("*.AppImage"), QStringLiteral("*.appimage") };
+    const QStringList &filters = kAppImageFilters();
     const QFileInfoList entries = QDir(dir).entryInfoList(filters, QDir::Files);
 
     for (const QFileInfo &fi : entries) {
@@ -137,7 +121,7 @@ void UpdateDaemon::checkUpdates()
         return;
 
     const QString dir = AppSettings::instance()->applicationsPath();
-    const QStringList filters = { QStringLiteral("*.AppImage"), QStringLiteral("*.appimage") };
+    const QStringList &filters = kAppImageFilters();
     const QFileInfoList files = QDir(dir).entryInfoList(filters, QDir::Files);
     if (files.isEmpty())
         return;
@@ -180,21 +164,18 @@ void UpdateDaemon::checkUpdates()
                 if (reply->error() == QNetworkReply::NoError) {
                     const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
                     if (doc.isObject()) {
-                        QString tag = doc.object().value(QLatin1String("tag_name")).toString();
+                        const QString tag = doc.object().value(QLatin1String("tag_name")).toString();
                         if (!tag.isEmpty()) {
-                            if (tag.startsWith(QLatin1Char('v')) || tag.startsWith(QLatin1Char('V')))
-                                tag.remove(0, 1);
-                            QString currentVer = info.version;
-                            if (currentVer.startsWith(QLatin1Char('v')) || currentVer.startsWith(QLatin1Char('V')))
-                                currentVer.remove(0, 1);
-                            if (isNewerVersion(tag, currentVer)) {
+                            const QString remoteVer = normalizeVersion(tag);
+                            const QString currentVer = normalizeVersion(info.version);
+                            if (isNewerVersion(remoteVer, currentVer)) {
                                 ++m_updateCount;
                                 auto *notification = new KNotification(QStringLiteral("updateAvailable"),
                                                                        KNotification::Persistent, this);
                                 notification->setTitle(i18n("Update Available"));
                                 notification->setText(i18n("An update is available for %1 (%2 → %3).",
                                     info.cleanName.isEmpty() ? info.originalName : info.cleanName,
-                                    currentVer, tag));
+                                    currentVer, remoteVer));
                                 notification->setIconName(info.appId.isEmpty()
                                     ? QStringLiteral("application-x-executable") : info.appId);
                                 auto *action = notification->addDefaultAction(i18n("Open Manager"));

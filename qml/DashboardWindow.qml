@@ -18,10 +18,6 @@ Kirigami.ApplicationWindow {
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
 
-    Controls.ActionGroup {
-        id: sortActionGroup
-    }
-
     // ── Role constants (AppImageListModel::Roles, starting at Qt::UserRole) ───
     readonly property int roleFilePath:       Qt.UserRole + 0
     readonly property int roleVersion:        Qt.UserRole + 3
@@ -29,12 +25,24 @@ Kirigami.ApplicationWindow {
     readonly property int roleMetadataLoaded: Qt.UserRole + 6
     readonly property int roleFormattedSize:  Qt.UserRole + 8
     readonly property int roleDisplayName:    Qt.UserRole + 10
+    readonly property int roleHasDesktopLink:  Qt.UserRole + 5
     readonly property int roleAddedDate:      Qt.UserRole + 9
     readonly property int roleCategories:     Qt.UserRole + 16
     readonly property int roleComment:        Qt.UserRole + 17
     readonly property int roleDescription:    Qt.UserRole + 18
     readonly property int roleDeveloperName:  Qt.UserRole + 19
     readonly property int roleHomepage:       Qt.UserRole + 20
+    readonly property int roleUpdateAvailable: Qt.UserRole + 11
+    readonly property int roleUpdateVersion:   Qt.UserRole + 12
+    readonly property int roleIsUpdating:      Qt.UserRole + 13
+    readonly property int roleUpdateProgress:  Qt.UserRole + 14
+
+    function handleDrop(drop) {
+        for (const url of drop.urls) {
+            if (url.toString().toLowerCase().endsWith(".appimage"))
+                dashboardController.installFromPath(url)
+        }
+    }
 
     // ── Selected item snapshot ────────────────────────────────────────────────
     property var currentItem: ({})
@@ -55,7 +63,41 @@ Kirigami.ApplicationWindow {
             addedDate:      proxyModel.data(midx, roleAddedDate)      ?? null,
             developerName:  proxyModel.data(midx, roleDeveloperName)  ?? "",
             homepage:       proxyModel.data(midx, roleHomepage)       ?? "",
+            hasDesktopLink:  proxyModel.data(midx, roleHasDesktopLink)  ?? false,
+            updateAvailable: proxyModel.data(midx, roleUpdateAvailable) ?? false,
+            updateVersion:   proxyModel.data(midx, roleUpdateVersion)   ?? "",
+            isUpdating:      proxyModel.data(midx, roleIsUpdating)      ?? false,
+            updateProgress:  proxyModel.data(midx, roleUpdateProgress)  ?? 0,
         }
+    }
+
+    // ── Update check result ───────────────────────────────────────────────────
+    Connections {
+        target: listModel
+        function onUpdateCheckFinished(updatesFound) {
+            if (updatesFound === 0)
+                noUpdatesDialog.open()
+            else if (updatesFound < 0)
+                checkTimedOutDialog.open()
+        }
+    }
+
+    Kirigami.PromptDialog {
+        id: noUpdatesDialog
+        title: i18n("No Updates Found")
+        subtitle: i18n("All your AppImages are up to date.")
+        standardButtons: Kirigami.Dialog.Ok
+        Kirigami.Theme.colorSet: Kirigami.Theme.Window
+        Kirigami.Theme.inherit: false
+    }
+
+    Kirigami.PromptDialog {
+        id: checkTimedOutDialog
+        title: i18n("Update Check Failed")
+        subtitle: i18n("The update check timed out. Check your network connection and try again.")
+        standardButtons: Kirigami.Dialog.Ok
+        Kirigami.Theme.colorSet: Kirigami.Theme.Window
+        Kirigami.Theme.inherit: false
     }
 
     // ── Dialogs ───────────────────────────────────────────────────────────────
@@ -88,15 +130,15 @@ Kirigami.ApplicationWindow {
     }
 
     // ── Main page ─────────────────────────────────────────────────────────────
-    Component {
-        id: mainPage
+    pageStack.initialPage: Kirigami.Page {
+        id: pageRoot
 
-        Kirigami.Page {
-            id: pageRoot
-
-            title: listView.count > 0
-                   ? i18n("Installed Applications (%1)", listView.count)
-                   : i18n("Installed Applications")
+            title: {
+                const total = listModel.rowCount()
+                if (proxyModel.filterText !== "" && listView.count !== total)
+                    return i18n("Installed Applications (%1 of %2)", listView.count, total)
+                return total > 0 ? i18n("Installed Applications (%1)", total) : i18n("Installed Applications")
+            }
 
             actions: [
                 Kirigami.Action {
@@ -109,28 +151,32 @@ Kirigami.ApplicationWindow {
                         text: i18n("By Name")
                         checkable: true
                         checked: proxyModel.sortRole === 0
-                        Controls.ActionGroup.group: sortActionGroup
                         onTriggered: proxyModel.sortRole = 0
                     }
                     Kirigami.Action {
                         text: i18n("By Size")
                         checkable: true
                         checked: proxyModel.sortRole === 1
-                        Controls.ActionGroup.group: sortActionGroup
                         onTriggered: proxyModel.sortRole = 1
                     }
                     Kirigami.Action {
                         text: i18n("By Category")
                         checkable: true
                         checked: proxyModel.sortRole === 5
-                        Controls.ActionGroup.group: sortActionGroup
                         onTriggered: proxyModel.sortRole = 5
+                    }
+                    Kirigami.Action {
+                        text: i18n("By Date Added")
+                        checkable: true
+                        checked: proxyModel.sortRole === 9
+                        onTriggered: proxyModel.sortRole = 9
                     }
                 },
                 Kirigami.Action {
-                    icon.name: "view-refresh"
-                    text: i18n("Check for Updates")
+                    icon.name: listModel.checkingUpdates ? "process-working" : "view-refresh"
+                    text: listModel.checkingUpdates ? i18n("Checking…") : i18n("Check for Updates")
                     displayHint: Kirigami.DisplayHint.IconOnly
+                    enabled: !listModel.checkingUpdates
                     onTriggered: listModel.checkForUpdates()
                 },
                 Kirigami.Action {
@@ -172,12 +218,7 @@ Kirigami.ApplicationWindow {
                         id: emptyDropArea
                         anchors.fill: parent
                         keys: ["text/uri-list"]
-                        onDropped: (drop) => {
-                            for (const url of drop.urls) {
-                                if (url.toString().toLowerCase().endsWith(".appimage"))
-                                    dashboardController.installFromPath(url)
-                            }
-                        }
+                        onDropped: (drop) => root.handleDrop(drop)
                     }
 
                     Rectangle {
@@ -337,7 +378,7 @@ Kirigami.ApplicationWindow {
                                                 readonly property string cat: (model.categories ?? "")
                                                     .split(";").filter(s => s.length > 0)[0] ?? ""
                                                 text: cat
-                                                visible: listView.currentIndex < 0 && model.metadataLoaded && cat !== ""
+                                                visible: (listView.currentIndex < 0 || proxyModel.sortRole === 5) && model.metadataLoaded && cat !== ""
                                                 closable: false
                                                 checkable: false
                                                 Layout.alignment: Qt.AlignVCenter
@@ -353,16 +394,38 @@ Kirigami.ApplicationWindow {
 
                                             Kirigami.Chip {
                                                 text: model.formattedSize
-                                                visible: listView.currentIndex < 0 && model.metadataLoaded && model.appSize > 0
+                                                visible: (listView.currentIndex < 0 || proxyModel.sortRole === 1) && model.metadataLoaded && model.appSize > 0
                                                 closable: false
                                                 checkable: false
                                                 Layout.alignment: Qt.AlignVCenter
                                             }
 
+                                            Kirigami.Chip {
+                                                readonly property var d: model.addedDate
+                                                text: d ? Qt.formatDate(d, "d MMM yyyy") : ""
+                                                visible: proxyModel.sortRole === 9 && model.metadataLoaded && !!d
+                                                closable: false
+                                                checkable: false
+                                                Layout.alignment: Qt.AlignVCenter
+                                            }
+
+                                            Kirigami.Icon {
+                                                source: "software-update-available"
+                                                implicitWidth:  Kirigami.Units.iconSizes.small
+                                                implicitHeight: Kirigami.Units.iconSizes.small
+                                                color: Kirigami.Theme.positiveTextColor
+                                                visible: model.updateAvailable && !model.isUpdating
+                                                Layout.alignment: Qt.AlignVCenter
+                                                HoverHandler { id: updateIconHover }
+                                                Controls.ToolTip.text: i18n("Update available: %1", model.updateVersion)
+                                                Controls.ToolTip.visible: updateIconHover.hovered
+                                                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                                            }
+
                                             Controls.BusyIndicator {
                                                 implicitWidth:  Kirigami.Units.iconSizes.small
                                                 implicitHeight: Kirigami.Units.iconSizes.small
-                                                running: !model.metadataLoaded
+                                                running: !model.metadataLoaded || model.isUpdating
                                                 visible: running
                                             }
                                         }
@@ -389,12 +452,7 @@ Kirigami.ApplicationWindow {
                                             id: listFooterDropArea
                                             anchors.fill: parent
                                             keys: ["text/uri-list"]
-                                            onDropped: (drop) => {
-                                                for (const url of drop.urls) {
-                                                    if (url.toString().toLowerCase().endsWith(".appimage"))
-                                                        dashboardController.installFromPath(url)
-                                                }
-                                            }
+                                            onDropped: (drop) => root.handleDrop(drop)
                                         }
 
                                         Rectangle {
@@ -493,59 +551,73 @@ Kirigami.ApplicationWindow {
                                 font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                             }
 
-                            Controls.ToolButton {
-                                icon.name: "internet-web-browser"
-                                visible: (root.currentItem.homepage ?? "") !== ""
-                                flat: true
-                                implicitWidth:  Kirigami.Units.iconSizes.small + Kirigami.Units.smallSpacing * 2
-                                implicitHeight: implicitWidth
-                                onClicked: Qt.openUrlExternally(root.currentItem.homepage)
-                                Controls.ToolTip.text: root.currentItem.homepage
-                                Controls.ToolTip.visible: hovered
-                                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                            Controls.Label {
+                                readonly property string host: {
+                                    const url = root.currentItem.homepage ?? ""
+                                    if (!url) return ""
+                                    const m = url.match(/^https?:\/\/([^/]+)/)
+                                    return m ? m[1] : url
+                                }
+                                text: "<a href='" + (root.currentItem.homepage ?? "") + "'>" + host + "</a>"
+                                visible: host !== ""
+                                textFormat: Text.StyledText
+                                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                                onLinkActivated: Qt.openUrlExternally(root.currentItem.homepage)
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
                             }
                         }
 
                         Item {
                             Layout.fillWidth: true
-                            height: chipsFlow.height
-                            visible: root.currentItem.metadataLoaded ?? false
+                            implicitHeight: chipsRow.implicitHeight
+                            clip: true
+                            visible: opacity > 0
+                            opacity: (root.currentItem.metadataLoaded ?? false) ? 1 : 0
+                            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration } }
 
-                            Flow {
-                                id: chipsFlow
+                            Row {
+                                id: chipsRow
                                 x: implicitWidth <= parent.width
                                    ? (parent.width - implicitWidth) / 2
                                    : 0
-                                width: Math.min(implicitWidth, parent.width)
                                 spacing: Kirigami.Units.smallSpacing
-
-                                Kirigami.Chip {
-                                    text: i18n("Version: %1", root.currentItem.version || "—")
-                                    closable: false
-                                    checkable: false
-                                }
-
-                                Kirigami.Chip {
-                                    text: i18n("Size: %1", root.currentItem.formattedSize || "—")
-                                    closable: false
-                                    checkable: false
-                                }
 
                                 Kirigami.Chip {
                                     readonly property string cat: (root.currentItem.categories ?? "")
                                         .split(";").filter(s => s.length > 0)[0] ?? ""
                                     text: cat
-                                    visible: (root.currentItem.metadataLoaded ?? false) && cat !== ""
+                                    visible: cat !== ""
                                     closable: false
                                     checkable: false
                                 }
 
                                 Kirigami.Chip {
+                                    text: root.currentItem.formattedSize || "—"
+                                    closable: false
+                                    checkable: false
+                                    Controls.ToolTip.text: i18n("File size")
+                                    Controls.ToolTip.visible: hovered
+                                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                                }
+
+                                Kirigami.Chip {
+                                    text: root.currentItem.version || "—"
+                                    closable: false
+                                    checkable: false
+                                    Controls.ToolTip.text: i18n("Version")
+                                    Controls.ToolTip.visible: hovered
+                                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                                }
+
+                                Kirigami.Chip {
                                     readonly property var d: root.currentItem.addedDate
-                                    text: d ? i18n("Added: %1", Qt.formatDate(d, "dd.MM.yy")) : ""
+                                    text: d ? Qt.formatDate(d, "d MMM yyyy") : ""
                                     visible: !!d
                                     closable: false
                                     checkable: false
+                                    Controls.ToolTip.text: i18n("Date installed")
+                                    Controls.ToolTip.visible: hovered
+                                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                                 }
                             }
                         }
@@ -570,32 +642,104 @@ Kirigami.ApplicationWindow {
 
                         Item { Layout.fillHeight: true; visible: (root.currentItem.description ?? "") === "" }
 
-                        RowLayout {
-                            Layout.alignment: Qt.AlignHCenter
+                        ColumnLayout {
                             Layout.fillWidth: true
                             spacing: Kirigami.Units.smallSpacing
 
-                            Controls.Button {
-                                text: i18n("Update")
-                                icon.name: "system-software-update"
-                                enabled: false
+                            RowLayout {
                                 Layout.fillWidth: true
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Controls.Button {
+                                    text: i18n("Launch")
+                                    icon.name: "media-playback-start"
+                                    onClicked: proxyModel.requestLaunch(listView.currentIndex)
+                                    Layout.fillWidth: true
+                                }
+
+                                Controls.Button {
+                                    text: (root.currentItem.isUpdating ?? false)
+                                          ? i18n("Updating…")
+                                          : i18n("Update")
+                                    icon.name: "system-software-update"
+                                    enabled: (root.currentItem.updateAvailable ?? false)
+                                             && !(root.currentItem.isUpdating ?? false)
+                                    Layout.fillWidth: true
+                                    Controls.ToolTip.text: (root.currentItem.updateAvailable ?? false)
+                                        ? i18n("Update to version %1", root.currentItem.updateVersion ?? "")
+                                        : i18n("No update available — use \"Check for Updates\" in the toolbar")
+                                    Controls.ToolTip.visible: hovered
+                                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                                    onClicked: {
+                                        updateDialog.proxyRow       = listView.currentIndex
+                                        updateDialog.appName        = root.currentItem.displayName ?? ""
+                                        updateDialog.currentVersion = root.currentItem.version ?? ""
+                                        updateDialog.newVersion     = root.currentItem.updateVersion ?? ""
+                                        updateDialog.open()
+                                    }
+                                }
+
+                                Controls.Button {
+                                    text: i18n("Remove")
+                                    icon.name: "edit-delete"
+                                    onClicked: proxyModel.requestRemoveAt(listView.currentIndex)
+                                    Layout.fillWidth: true
+                                }
                             }
 
-                            Controls.Button {
-                                text: i18n("Remove")
-                                icon.name: "edit-delete"
-                                onClicked: proxyModel.requestRemoveAt(listView.currentIndex)
+                            Controls.ProgressBar {
                                 Layout.fillWidth: true
+                                visible: root.currentItem.isUpdating ?? false
+                                value: (root.currentItem.updateProgress ?? 0) / 100.0
+                            }
+
+                            Controls.CheckBox {
+                                text: i18n("Show in app menu")
+                                checked: root.currentItem.hasDesktopLink ?? false
+                                enabled: root.currentItem.metadataLoaded ?? false
+                                Layout.alignment: Qt.AlignHCenter
+                                onToggled: proxyModel.toggleDesktopLink(listView.currentIndex, checked)
                             }
                         }
                     }
                 }
             }
+
+            // ── Keyboard shortcuts ────────────────────────────────────────────────
+            Shortcut {
+                sequence: "Return"
+                enabled: (typeof listView !== 'undefined') && listView.currentIndex >= 0
+                onActivated: proxyModel.requestLaunch(listView.currentIndex)
+            }
+            Shortcut {
+                sequence: "Delete"
+                enabled: (typeof listView !== 'undefined') && listView.currentIndex >= 0
+                onActivated: proxyModel.requestRemoveAt(listView.currentIndex)
+            }
+            Shortcut {
+                sequence: "Escape"
+                enabled: searchField.text !== ""
+                onActivated: { searchField.text = ""; proxyModel.filterText = "" }
+            }
+            Shortcut {
+                sequence: "Escape"
+                enabled: searchField.text === "" && (typeof listView !== 'undefined') && listView.currentIndex >= 0
+                onActivated: listView.currentIndex = -1
+            }
+        }
+
+    Shortcut {
+        sequence: "Ctrl+F"
+        onActivated: {
+            // Find searchField inside the current page if it exists
+            const page = pageStack.currentItem
+            if (page && page.searchField) {
+                page.searchField.forceActiveFocus()
+            }
         }
     }
 
-    pageStack.initialPage: mainPage
+
 
     // ── Global drag-and-drop install overlay ──────────────────────────────────
     DropArea {
@@ -603,12 +747,7 @@ Kirigami.ApplicationWindow {
         anchors.fill: parent
         keys: ["text/uri-list"]
 
-        onDropped: (drop) => {
-            for (const url of drop.urls) {
-                if (url.toString().toLowerCase().endsWith(".appimage"))
-                    dashboardController.installFromPath(url)
-            }
-        }
+        onDropped: (drop) => root.handleDrop(drop)
 
         readonly property bool noInnerBox: (proxyModel.rowCount() > 0 || proxyModel.filterText !== "") && !AppSettings.showInstallBox
 

@@ -3,6 +3,7 @@
 import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
+import Qt.labs.platform as Platform
 import org.kde.kirigami as Kirigami
 
 Kirigami.Dialog {
@@ -18,18 +19,19 @@ Kirigami.Dialog {
 
     // Internal state
     property bool _appChecked: true
-    property string _totalText: ""
+    property int  _corpseRevision: 0   // bumped by Connections to invalidate _totalText binding
 
-    function _updateTotal() {
-        if (!backend) { _totalText = ""; return }
-        var total = backend.corpseModel.checkedSize()
-        if (_appChecked) total += backend.appSize
-        _totalText = i18n("Selected for removal: %1", backend.formatBytes(total))
+    readonly property string _totalText: {
+        _corpseRevision   // dependency: re-evaluate when corpse data changes
+        if (!backend || !backend.metadataLoaded) return ""
+        const corpseBytes = corpseModel ? corpseModel.checkedSize() : 0
+        const total = corpseBytes + (_appChecked ? backend.appSize : 0)
+        return i18n("Selected for removal: %1", backend.formatBytes(total))
     }
 
     onBackendChanged: {
         _appChecked = true
-        _totalText = ""
+        _corpseRevision = 0
         if (backend && backend.metadataLoaded)
             backend.findCorpses()
     }
@@ -37,24 +39,29 @@ Kirigami.Dialog {
     onClosed: {
         backend = null
         _appChecked = true
-        _totalText = ""
     }
 
     Connections {
         target: dialog.backend
-        function onBusyChanged() { dialog._updateTotal() }
+        function onBusyChanged() { dialog._corpseRevision++ }
     }
 
     Connections {
         target: dialog.corpseModel
-        function onModelReset() { dialog._updateTotal() }
-        function onDataChanged() { dialog._updateTotal() }
+        function onModelReset() { dialog._corpseRevision++ }
+        function onDataChanged() { dialog._corpseRevision++ }
     }
 
     Kirigami.PromptDialog {
         id: confirmRemoveDialog
         title: i18n("Move to Trash?")
-        subtitle: i18n("The selected items will be moved to the Trash. You can restore them from there if needed.")
+        subtitle: {
+            const corpseCount = dialog.corpseModel ? dialog.corpseModel.checkedCount() : 0
+            const total = (dialog._appChecked ? 1 : 0) + corpseCount
+            return i18ncp("@info",
+                "1 item will be moved to Trash. You can restore it if needed.",
+                "%1 items will be moved to Trash. You can restore them if needed.", total)
+        }
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
         onAccepted: {
             if (!dialog.backend) return
@@ -68,13 +75,24 @@ Kirigami.Dialog {
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
 
-        Controls.BusyIndicator {
+        ColumnLayout {
             Layout.alignment: Qt.AlignHCenter
-            running: !dialog.backend
+            spacing: Kirigami.Units.smallSpacing
+            visible: !dialog.backend
                      || !dialog.backend.metadataLoaded
                      || dialog.backend.isFindingCorpses
                      || dialog.backend.isRemovingItems
-            visible: running
+
+            Controls.BusyIndicator { running: parent.visible; Layout.alignment: Qt.AlignHCenter }
+
+            Controls.Label {
+                text: dialog.backend && dialog.backend.isRemovingItems
+                      ? i18n("Moving to Trash…")
+                      : i18n("Scanning for leftover data…")
+                opacity: 0.7
+                font: Kirigami.Theme.smallFont
+                Layout.alignment: Qt.AlignHCenter
+            }
         }
 
         ColumnLayout {
@@ -84,43 +102,67 @@ Kirigami.Dialog {
                      && !dialog.backend.isFindingCorpses
                      && !dialog.backend.isRemovingItems
 
-            Controls.Label {
-                text: i18n("Select items to remove:")
-                font.bold: true
-            }
+            RowLayout {
+                spacing: Kirigami.Units.smallSpacing
 
-            // Corpse confidence explanation + warning
-            Kirigami.InlineMessage {
-                Layout.fillWidth: true
-                visible: dialog.corpseModel && dialog.corpseModel.rowCount() > 0
-                type: Kirigami.MessageType.Warning
-                text: i18n("Leftover directories are sorted by match confidence — high-confidence entries are pre-selected. Only remove directories you are sure belong to this app.")
-                showCloseButton: false
+                Controls.Label {
+                    text: i18n("Select items to remove:")
+                    font.bold: true
+                    Layout.fillWidth: true
+                }
+
+                Controls.ToolButton {
+                    icon.name: "dialog-information"
+                    flat: true
+                    visible: dialog.corpseModel && dialog.corpseModel.rowCount() > 0
+                    Controls.ToolTip.text: i18n("Leftover directories are sorted by match confidence — high-confidence entries are pre-selected. Only remove directories you are sure belong to this app.")
+                    Controls.ToolTip.visible: hovered
+                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                }
+
+                Controls.Button {
+                    text: i18n("All")
+                    visible: dialog.corpseModel && dialog.corpseModel.rowCount() > 0
+                    onClicked: { dialog.corpseModel.setAllChecked(true); }
+                }
+                Controls.Button {
+                    text: i18n("None")
+                    visible: dialog.corpseModel && dialog.corpseModel.rowCount() > 0
+                    onClicked: { dialog.corpseModel.setAllChecked(false); }
+                }
             }
 
             // AppImage itself
-            RowLayout {
-                spacing: Kirigami.Units.smallSpacing
-                Controls.CheckBox {
-                    checked: dialog._appChecked
-                    onCheckedChanged: {
-                        dialog._appChecked = checked
-                        dialog._updateTotal()
+            Rectangle {
+                Layout.fillWidth: true
+                color: Kirigami.Theme.alternateBackgroundColor
+                radius: Kirigami.Units.smallSpacing
+                implicitHeight: appItemRow.implicitHeight + Kirigami.Units.smallSpacing * 2
+
+                RowLayout {
+                    id: appItemRow
+                    anchors { fill: parent; margins: Kirigami.Units.smallSpacing }
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Controls.CheckBox {
+                        checked: dialog._appChecked
+                        onCheckedChanged: {
+                            dialog._appChecked = checked
+                        }
                     }
-                }
-                ColumnLayout {
-                    spacing: 2
-                    Controls.Label {
-                        text: dialog.backend
-                              ? dialog.backend.originalName + i18n(" (AppImage)") : ""
-                        elide: Text.ElideMiddle
-                        Layout.fillWidth: true
-                    }
-                    Controls.Label {
-                        text: dialog.backend
-                              ? dialog.backend.formatBytes(dialog.backend.appSize) : ""
-                        opacity: 0.7
-                        font: Kirigami.Theme.smallFont
+                    ColumnLayout {
+                        spacing: 2
+                        Controls.Label {
+                            text: dialog.backend ? dialog.backend.originalName : ""
+                            elide: Text.ElideMiddle
+                            Layout.fillWidth: true
+                        }
+                        Controls.Label {
+                            text: dialog.backend
+                                  ? dialog.backend.formatBytes(dialog.backend.appSize) : ""
+                            opacity: 0.7
+                            font: Kirigami.Theme.smallFont
+                        }
                     }
                 }
             }
@@ -147,16 +189,20 @@ Kirigami.Dialog {
                                 dialog.backend.corpseModel.index(index, 0),
                                 checked,
                                 dialog.backend.corpseModel.checkedRole)
-                            dialog._updateTotal()
                         }
                     }
                     ColumnLayout {
                         spacing: 2
                         Layout.fillWidth: true
                         Controls.Label {
-                            text: filePath
-                            elide: Text.ElideMiddle
+                            readonly property string home: Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation)
+                            text: filePath.startsWith(home) ? "~" + filePath.slice(home.length) : filePath
+                            elide: Text.ElideRight
                             Layout.fillWidth: true
+                            HoverHandler { id: tooltipHover }
+                            Controls.ToolTip.text: filePath
+                            Controls.ToolTip.visible: tooltipHover.hovered
+                            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                         }
                         Controls.Label {
                             text: dialog.backend

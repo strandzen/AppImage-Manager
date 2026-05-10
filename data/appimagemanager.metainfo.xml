@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <component type="desktop-application">
-  <id>appimagemanager.desktop</id>
+  <id>io.github.strandzen.AppImageManager</id>
   <metadata_license>FSFAP</metadata_license>
   <project_license>GPL-2.0-or-later</project_license>
-  
+
   <name>AppImage Manager</name>
   <summary>Lightweight utility to install and manage AppImages</summary>
-  
+
+  <developer id="io.github.strandzen">
+    <name>strandzen</name>
+  </developer>
+
   <description>
     <p>
       AppImage Manager is a native tool designed for the KDE Plasma desktop to make handling AppImage files easier. It integrates directly into the Dolphin file manager and provides a centralized dashboard to view everything you have installed.
@@ -17,24 +21,46 @@
       <li>Drag-and-drop support into a centralized dashboard.</li>
       <li>Extracts rich metadata, icons, and descriptions directly from the AppImages.</li>
       <li>Clean uninstallation by automatically scanning for leftover cache and configuration files.</li>
+      <li>Built-in update system using zsync for efficient delta-patching.</li>
       <li>Background download monitoring to notify you when new AppImages are downloaded.</li>
     </ul>
   </description>
 
-  <launchable type="desktop-id">appimagemanager.desktop</launchable>
-  
+  <launchable type="desktop-id">io.github.strandzen.AppImageManager.desktop</launchable>
+
   <icon type="stock">appimagemanager</icon>
-  
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Dashboard showing installed AppImages</caption>
+      <image>https://raw.githubusercontent.com/strandzen/AppImage-Manager/main/assets/dashboard.png</image>
+    </screenshot>
+  </screenshots>
+
   <categories>
     <category>System</category>
     <category>FileManager</category>
   </categories>
-  
+
   <provides>
     <binary>appimagemanager</binary>
   </provides>
-  
-  <!-- Add your project URLs here once published -->
-  <url type="homepage">https://github.com/YOUR_USERNAME/AppImageManager</url>
-  <url type="bugtracker">https://github.com/YOUR_USERNAME/AppImageManager/issues</url>
+
+  <url type="homepage">https://github.com/strandzen/AppImage-Manager</url>
+  <url type="bugtracker">https://github.com/strandzen/AppImage-Manager/issues</url>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="1.2.0" date="2025-05-10">
+      <description>
+        <p>AppImage update system via zsync delta-patching. Code cleanup and stability improvements.</p>
+      </description>
+    </release>
+    <release version="1.0.0" date="2025-05-10">
+      <description>
+        <p>Initial release.</p>
+      </description>
+    </release>
+  </releases>
 </component>

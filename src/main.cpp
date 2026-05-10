@@ -3,6 +3,7 @@
 #include "gui/appimagewindow.h"
 #include "gui/dashboardwindow.h"
 #include "core/updatedaemon.h"
+#include "version.h"
 
 #include <KAboutData>
 #include <KCrash>
@@ -23,13 +24,13 @@ int main(int argc, char *argv[])
     KAboutData about(
         QStringLiteral("appimagemanager"),
         i18n("AppImage Manager"),
-        QStringLiteral("0.1.0"),
+        QStringLiteral(APPIMAGEMANAGER_VERSION_STRING),
         i18n("Manage AppImage files"),
         KAboutLicense::GPL_V2,
         i18n("© 2024 AppImage Manager Contributors")
     );
     about.setOrganizationDomain("appimagemanager.org");
-    about.setDesktopFileName(QStringLiteral("appimagemanager"));
+    about.setDesktopFileName(QStringLiteral("io.github.strandzen.AppImageManager"));
     KAboutData::setApplicationData(about);
 
     QApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("appimagemanager"),

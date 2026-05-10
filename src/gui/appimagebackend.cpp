@@ -101,7 +101,8 @@ QString AppImageBackend::formatBytes(qint64 bytes) const
 
 void AppImageBackend::launchAppImage()
 {
-    QProcess::startDetached(m_appImagePath, {});
+    if (!QProcess::startDetached(m_appImagePath, {}))
+        Q_EMIT errorOccurred(i18n("Could not launch the application."));
 }
 
 void AppImageBackend::installAppImage()

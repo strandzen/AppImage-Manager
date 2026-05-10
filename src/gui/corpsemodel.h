@@ -43,9 +43,12 @@ public:
 
     // Convenience: total size of all checked items
     Q_INVOKABLE qint64 checkedSize() const;
+    Q_INVOKABLE int checkedCount() const;
 
     // Returns the file paths of all checked items
     Q_INVOKABLE QStringList checkedPaths() const;
+
+    Q_INVOKABLE void setAllChecked(bool checked);
 
 private:
     struct Item {

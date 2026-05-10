@@ -30,13 +30,17 @@ ApplicationWindow {
 
     UninstallDialog { id: uninstallDialog }
 
-    // ── About sheet ──────────────────────────────────────────────────────────
-    Kirigami.OverlaySheet {
-        id: aboutSheet
-        header: Kirigami.Heading { text: i18n("About"); level: 2 }
+    // ── About dialog ─────────────────────────────────────────────────────────
+    Kirigami.Dialog {
+        id: aboutDialog
+        title: i18n("About")
+        padding: Kirigami.Units.largeSpacing
+        standardButtons: Kirigami.Dialog.Close
+
         ColumnLayout {
             spacing: Kirigami.Units.largeSpacing
-            width: Kirigami.Units.gridUnit * 18
+            implicitWidth: Kirigami.Units.gridUnit * 18
+
             Kirigami.Icon {
                 source: "application-x-executable"
                 implicitWidth: Kirigami.Units.iconSizes.huge
@@ -96,11 +100,17 @@ ApplicationWindow {
                     MouseArea { id: infoMouseArea; anchors.fill: parent; hoverEnabled: true }
                 }
 
-                Label {
-                    text: i18n("Version: %1  •  Size: %2",
-                                backend.appVersion || i18n("Unknown"),
-                                backend.formattedSize)
-                    opacity: 0.7; horizontalAlignment: Text.AlignHCenter; Layout.fillWidth: true
+                Flow {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: Kirigami.Units.smallSpacing
+                    Kirigami.Chip {
+                        text: i18n("Version: %1", backend.appVersion || i18n("Unknown"))
+                        closable: false; checkable: false
+                    }
+                    Kirigami.Chip {
+                        text: i18n("Size: %1", backend.formattedSize)
+                        closable: false; checkable: false
+                    }
                 }
             }
 
@@ -108,7 +118,7 @@ ApplicationWindow {
 
             ToolButton {
                 icon.name: "help-about"
-                onClicked: aboutSheet.open()
+                onClicked: aboutDialog.open()
                 ToolTip.text: i18n("About"); ToolTip.visible: hovered
                 Layout.alignment: Qt.AlignTop
             }
@@ -188,25 +198,37 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignHCenter; elide: Label.ElideRight
                         Layout.maximumWidth: Kirigami.Units.gridUnit * 10; font.bold: backend.isInstalled
                     }
+                    Label {
+                        text: i18n("Drag icon to install")
+                        visible: !backend.isInstalled
+                        opacity: 0.5
+                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                        Layout.alignment: Qt.AlignHCenter
+                    }
                 }
 
                 ColumnLayout {
                     Layout.alignment: Qt.AlignVCenter
                     spacing: Kirigami.Units.smallSpacing
-                    visible: opacity > 0
-                    opacity: backend.isInstalled ? 0 : 1
-                    Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic } }
 
                     Item {
                         id: folderContainer
                         width: root.managedIconSize; height: root.managedIconSize
                         Layout.alignment: Qt.AlignHCenter
-                        DropArea { id: folderDropArea; anchors.fill: parent; keys: ["appimage"] }
+
+                        DropArea {
+                            id: folderDropArea
+                            anchors.fill: parent
+                            keys: ["appimage"]
+                            enabled: !backend.isInstalled
+                        }
+
                         Kirigami.Icon {
                             source: "system-file-manager"; anchors.fill: parent
-                            opacity: 1.0; scale: folderDropArea.containsDrag ? 1.2 : 1.0
+                            scale: folderDropArea.containsDrag ? 1.2 : 1.0
                             Behavior on scale { NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutBack } }
                         }
+
                         MouseArea {
                             anchors.fill: parent
                             hoverEnabled: true
@@ -216,9 +238,12 @@ ApplicationWindow {
                             ToolTip.visible: containsMouse && !folderDropArea.containsDrag
                         }
                     }
+
                     Label {
-                        text: i18n("Applications"); horizontalAlignment: Text.AlignHCenter
-                        Layout.alignment: Qt.AlignHCenter; opacity: 1.0; font.bold: dragArea.drag.active
+                        text: i18n("Applications")
+                        horizontalAlignment: Text.AlignHCenter
+                        Layout.alignment: Qt.AlignHCenter
+                        font.bold: dragArea.drag.active && !backend.isInstalled
                     }
                 }
             }
@@ -258,5 +283,18 @@ ApplicationWindow {
     Connections {
         target: backend
         function onUninstallFinished() { root.close() }
+        function onErrorOccurred(message) {
+            errorMessage.text = message
+            errorMessage.visible = true
+        }
+    }
+
+    Kirigami.InlineMessage {
+        id: errorMessage
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: Kirigami.Units.largeSpacing }
+        type: Kirigami.MessageType.Error
+        visible: false
+        showCloseButton: true
+        onVisibleChanged: if (!visible) text = ""
     }
 }

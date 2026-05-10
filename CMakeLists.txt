@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(AppImageManager VERSION 1.0.0 LANGUAGES CXX)
+project(AppImageManager VERSION 1.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -68,4 +68,4 @@ ki18n_install(po)
 
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
 
-install(FILES data/org.kde.appimagemanager.daemon.desktop DESTINATION ${KDE_INSTALL_AUTOSTARTDIR})
+install(FILES data/io.github.strandzen.appimagemanager.daemon.desktop DESTINATION ${KDE_INSTALL_AUTOSTARTDIR})

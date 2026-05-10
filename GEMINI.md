@@ -65,11 +65,12 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 | Class | Files | Role |
 |-------|-------|------|
 | `AppImageInfo` | `appimageinfo.h` | Value struct: `originalName`, `cleanName`, `appId`, `appName`, `version`, `categories`, `comment`, `description`, `execArgs`, `fileSize`, `iconData`, `iconExt`, `updateInfo`, `isValid`. `description` = AppStream XML content; falls back to `comment` (`.desktop Comment=`) if XML absent |
-| `AppImageReader` | `appimagereader.h/.cpp` | **BLOCKING** extractor. Preferred: `libappimage` (in-process SquashFS). Fallback: `squashfuse` subprocess + `fusermount3`. Reads `.desktop` via `KDesktopFile`, then AppStream XML from `usr/share/metainfo/*.appdata.xml` or `usr/share/appdata/*.metainfo.xml` via `QXmlStreamReader`. **Always call via `QtConcurrent::run`** |
+| `AppImageReader` | `appimagereader.h/.cpp` | **BLOCKING** extractor. Requires `libappimage` (in-process SquashFS, no FUSE/subprocess). Reads `.desktop` via `KDesktopFile`, then AppStream XML from `usr/share/metainfo/*.appdata.xml` or `usr/share/appdata/*.metainfo.xml` via `QXmlStreamReader`. **Always call via `QtConcurrent::run`** |
 | `AppImageCache` | `appimagecache.h/.cpp` | Thread-safe on-disk cache (`QSettings` INI, keyed by MD5(path)+mtime). **Version 2** — serializes `comment` and `description`. Entries with `cacheVersion < 2` auto-invalidate. |
 | `AppImageManager` | `appimagemanager.h/.cpp` | File operations: `installAppImage()` (KIO::CopyJob + chmod +x), `createDesktopLink()`, `removeDesktopLink()`, `isDesktopLinkEnabled()`, `findCorpses()` (blocking), `removeItems()` (KIO::trash). Also `rebuildSycoca()` |
 | `AppSettings` | `appsettings.h/.cpp` | QML singleton (`AppSettings`). KSharedConfig → `appimagemanagerrc`. Properties: `applicationsPath`, `showDisclaimer`, `showNotifications`, `updateFrequency`, `customUpdateDays`, `manageIconSize`, `watchDownloads` (controls both daemon + dashboard download detection), `showInstallBox`. Setter validates path via `QDir::mkpath()`, emits `applicationsPathError(msg)` on failure |
-| `UpdateDaemon` | `updatedaemon.h/.cpp` | Background update checker. Launched via `--daemon` CLI flag (autostart desktop file installs to `$KDE_INSTALL_AUTOSTARTDIR`). Scans `applicationsPath` hourly, checks GitHub Releases API for newer versions, fires `KNotification` on update found. Also watches `~/Downloads` for new AppImages (same notification logic as `AppImageListModel::checkNewDownloads`). Uses `Qt6::Network` |
+| `GitHubReleaseChecker` | `githubreleasechecker.h/.cpp` | Parses `gh-releases-zsync\|owner\|repo\|...` update info, hits GitHub Releases API, emits `updateAvailable(newVersion, zsyncUrl)`, `upToDate()`, or `failed()`. Used by both `UpdateDaemon` and `AppImageListModel` — single source of truth for GitHub update logic |
+| `UpdateDaemon` | `updatedaemon.h/.cpp` | Background update checker. Launched via `--daemon` CLI flag (autostart desktop file installs to `$KDE_INSTALL_AUTOSTARTDIR`). Scans `applicationsPath` hourly, uses `GitHubReleaseChecker` for GitHub updates, fires `KNotification` on update found. Also watches `~/Downloads` for new AppImages. Registers D-Bus name `io.github.appimagemanager.Daemon` on start so the dashboard can skip duplicate download notifications. Uses `Qt6::Network` |
 
 ### GUI (`src/gui/`) — Qt Quick dependency
 
@@ -79,7 +80,7 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 | `AppImageIconProvider` | `appimageiconprovider.h/.cpp` | `QQuickImageProvider` for `image://appimage/<id>`. Thread-safe via `QReadWriteLock`. Key "icon" = manage window single icon; key = `qHash(path)` decimal string = dashboard per-file icon |
 | `CorpseModel` | `corpsemodel.h/.cpp` | `QAbstractListModel` for leftover config/cache dirs. Roles: `filePath`, `fileSize`, `isChecked`. **No `QML_ELEMENT`** — Qt 6.11 constexpr metaobject bug. Exposed only via `AppImageBackend::corpseModel` Q_PROPERTY. `checkedRole` Q_PROPERTY replaces enum access from QML |
 | `AppImageWindow` | `appimagewindow.h/.cpp` | One `QQuickWindow` per AppImage path. Deduplicates via `static QHash<QString, AppImageWindow*> s_instances`. Re-opening same path raises existing window |
-| `AppImageListModel` | `appimagelistmodel.h/.cpp` | Dashboard list model. Roles: `filePath`, `displayName`, `cleanName`, `appName`, `version`, `iconSource`, `hasDesktopLink`, `metadataLoaded`, `appSize`, `formattedSize`, `addedDate`, `categories`, `comment`, `description`. Watches `applicationsPath` via `QFileSystemWatcher` + 500ms debounce. When `watchDownloads` is on, also watches `~/Downloads` — `directoryChanged` routes by path: downloads dir → `checkNewDownloads()` (KNotification + "Manage" action), other → refresh. `m_pendingLoads` tracks async futures; `scanning` stays true until all finish |
+| `AppImageListModel` | `appimagelistmodel.h/.cpp` | Dashboard list model. Roles: `filePath`, `displayName`, `cleanName`, `appName`, `version`, `iconSource`, `hasDesktopLink`, `metadataLoaded`, `appSize`, `formattedSize`, `addedDate`, `categories`, `comment`, `description`. Watches `applicationsPath` via `QFileSystemWatcher` + 500ms debounce. When `watchDownloads` is on, also watches `~/Downloads` — `directoryChanged` routes by path: downloads dir → `checkNewDownloads()` (KNotification + "Manage" action, skipped if daemon D-Bus name is registered), other → refresh. `m_pendingLoads` tracks async futures; `scanning` stays true until all finish. Private helpers: `findRowByPath(path)` — returns row index or -1; `checkZsyncUpdate(row)` — handles `zsync\|` header fetch; `sendError(parent, title, text)` — static KNotification helper |
 | `AppImageSortFilterModel` | `appimagesortfiltermodel.h/.cpp` | Proxy over `AppImageListModel`. Sort: name / size / date (SortRole enum). Filter: case-insensitive text match on `cleanName` + `appName`. Uses `invalidateFilter()` — **not** `beginFilterChange/endFilterChange` (Qt 6.9+ only) |
 | `DashboardWindow` | `dashboardwindow.h/.cpp` | Singleton dashboard host. Creates its own `QQmlApplicationEngine`. Holds `m_listModel`, `m_proxyModel`, `m_uninstallBackend`, `m_storageBackend`. `createBackend(path, withCorpses)` — storage backend passes `false` (skips corpse scan) |
 
@@ -110,9 +111,7 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 ```
 AppImageWindow::open(path)
   └─ AppImageBackend(path)            starts QtConcurrent::run
-       └─ AppImageReader::read()      BLOCKING, worker thread
-            ├─ libappimage path: in-process SquashFS (preferred)
-            └─ squashfuse path: subprocess mount → parse → fusermount3 unmount
+       └─ AppImageReader::read()      BLOCKING, worker thread (libappimage in-process)
        └─ onMetadataReady(info)       main thread; emits metadataLoadedChanged
   └─ ManageWindow.qml                BusyIndicator until metadataLoaded; then icon + info shown
   └─ user drags icon to folder
@@ -136,7 +135,7 @@ DashboardWindow::setupAndShow()
                  → if (--m_pendingLoads == 0) scanning = false
   └─ QFileSystemWatcher watches applicationsPath (and ~/Downloads when watchDownloads is on)
        └─ directoryChanged(path)
-            ├─ path == ~/Downloads → checkNewDownloads() → KNotification "Manage"
+            ├─ path == ~/Downloads → checkNewDownloads() → KNotification "Manage" (skipped if daemon running)
             └─ other path → 500ms debounce → refresh() [clears + re-scans]
 ```
 
@@ -161,36 +160,55 @@ user clicks Remove
 ## Key Conventions
 
 ### Threading
+
 - `AppImageReader::read()` and `AppImageManager::findCorpses()` are **always blocking** — call only via `QtConcurrent::run`.
 - All async results marshal back to main thread via `QFutureWatcher::finished`.
 - Never touch `m_items` or `m_scanning` from worker threads.
 
 ### Deletion
+
 - User files go to `KIO::trash()` — **never** `QFile::remove()` or `QDir::removeRecursively()`.
 - Connect `KJob::result()` before calling `job->start()`.
 
 ### Backend lifetimes
+
 - `AppImageWindow` owns one `AppImageBackend` for its entire lifetime.
 - `DashboardWindow::m_uninstallBackend` / `m_storageBackend`: use `deleteLater()` when replacing, never raw `delete` — in-flight `QFutureWatcher` lambdas capture `this`.
 - `AppImageIconProvider` is parented to the backend (`iconProvider->setParent(backend)`) so it outlives engine teardown. Pass pointer to engine via `addImageProvider()`.
 
 ### Desktop file paths
+
 - `AppImageManager::desktopFilePath(info)` → `~/.local/share/applications/<appId>.desktop`
 - `AppImageManager::iconFilePath(info)` → `~/.local/share/icons/<appId>.<ext>`
 - Both derived from `AppImageInfo::appId`.
 
 ### QML patterns
+
 - All windows: `Kirigami.Theme.colorSet: Kirigami.Theme.Window` + `Kirigami.Theme.inherit: false`.
 - Animated show/hide: `visible: opacity > 0` + `Behavior on opacity { NumberAnimation }`.
 - Dialogs: take a `backend` property, set it to `null` in `onClosed`.
 - `UninstallDialog` is a dialog, not a window — it is instantiated inline in its parent.
 - `StorageDialog` backend is created with `withCorpses = false` — it never reads `corpseModel`.
 
+### Shared helpers (`appimageinfo.h`)
+
+Three `inline` utilities defined at file scope in `appimageinfo.h` (included by everything):
+
+- `normalizeVersion(v)` — strips leading `v`/`V` from version strings.
+- `isNewerVersion(remote, local)` — compares dot-split version tuples; returns true if remote > local.
+- `kAppImageFilters()` — returns `{ "*.AppImage", "*.appimage" }` as a static `QStringList`. Use everywhere instead of inline literals.
+
+### D-Bus service name
+
+The daemon registers `io.github.appimagemanager.Daemon` on the session bus when started. `AppImageListModel::checkNewDownloads()` checks for this name via `QDBusConnection::sessionBus().interface()->isServiceRegistered(...)` and silently returns if the daemon is running — prevents duplicate download notifications when both the daemon and dashboard are active simultaneously.
+
 ### AppImage type support
+
 - **Type 2** (SquashFS, ELF+magic 0x414902): primary target, full support.
 - **Type 1** (ISO9660): detected, best-effort only — not a priority, may have extraction gaps.
 
 ### i18n
+
 - QML: `i18n("string")` / `i18n("string %1", value)`. Enabled by `KLocalization::setupLocalizedContext(engine)`.
 - C++: `i18n()` from `<KLocalizedString>`.
 - `.pot` regenerated by CMake (`ki18n_install(po)`). Add language: copy `po/appimagemanager.pot` → `po/<lang>/appimagemanager.po`.

@@ -3,6 +3,7 @@
 import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
+import Qt.labs.platform as Platform
 import org.kde.kirigami as Kirigami
 
 Kirigami.Dialog {
@@ -24,12 +25,21 @@ Kirigami.Dialog {
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
 
-        Controls.BusyIndicator {
+        ColumnLayout {
             Layout.alignment: Qt.AlignHCenter
-            running: !dialog.backend
+            spacing: Kirigami.Units.smallSpacing
+            visible: !dialog.backend
                      || !dialog.backend.metadataLoaded
                      || dialog.backend.isFindingCorpses
-            visible: running
+
+            Controls.BusyIndicator { running: parent.visible; Layout.alignment: Qt.AlignHCenter }
+
+            Controls.Label {
+                text: i18n("Loading file information…")
+                opacity: 0.7
+                font: Kirigami.Theme.smallFont
+                Layout.alignment: Qt.AlignHCenter
+            }
         }
 
         ColumnLayout {
@@ -79,7 +89,20 @@ Kirigami.Dialog {
 
             Kirigami.Separator {
                 Layout.fillWidth: true
-                visible: dialog.corpseModel && dialog.corpseModel.count > 0
+                visible: dialog.corpseModel !== null
+            }
+
+            Controls.Label {
+                text: i18n("Related Files")
+                font.bold: true
+                Layout.topMargin: Kirigami.Units.smallSpacing
+                visible: dialog.corpseModel !== null
+            }
+
+            Controls.Label {
+                text: i18n("No related files found.")
+                opacity: 0.6
+                visible: dialog.corpseModel !== null && dialog.corpseModel.count === 0
             }
 
             // Related files / folders
@@ -102,9 +125,13 @@ Kirigami.Dialog {
                             spacing: 2
                             Layout.fillWidth: true
                             Controls.Label {
-                                text: filePath
+                                readonly property string home: Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation)
+                                text: filePath.startsWith(home) ? "~" + filePath.slice(home.length) : filePath
                                 elide: Text.ElideMiddle
                                 Layout.fillWidth: true
+                                Controls.ToolTip.text: filePath
+                                Controls.ToolTip.visible: hovered
+                                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                             }
                             Controls.Label {
                                 text: dialog.backend ? dialog.backend.formatBytes(fileSize) : ""
@@ -127,7 +154,12 @@ Kirigami.Dialog {
             RowLayout {
                 Layout.fillWidth: true
                 Layout.topMargin: Kirigami.Units.largeSpacing
-                Item { Layout.fillWidth: true }
+
+                Controls.Label {
+                    text: dialog.backend ? i18n("Total: %1", dialog.backend.formattedSize) : ""
+                    font.bold: true
+                    Layout.fillWidth: true
+                }
                 Controls.Button {
                     text: i18n("Close")
                     onClicked: dialog.close()

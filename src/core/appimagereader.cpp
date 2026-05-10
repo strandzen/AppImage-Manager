@@ -128,17 +128,39 @@ AppImageInfo AppImageReader::readWithLibappimage()
         return info;
     }
 
-    // Find .desktop file by listing the AppImage contents
-    const QString desktopInner = findDesktopFile();
+    char **files = appimage_list_files(pathBytes.constData());
+    if (!files) {
+        qCWarning(AIM_LOG) << "Failed to list files in" << m_path;
+        return info;
+    }
+
+    QStringList fileList;
+    for (int i = 0; files[i] != nullptr; ++i)
+        fileList << QString::fromUtf8(files[i]);
+    appimage_string_list_free(files);
+
+    // Find .desktop file
+    QString desktopInner;
+    for (const QString &f : fileList) {
+        if (f.endsWith(QLatin1String(".desktop")) && !f.contains(QLatin1Char('/'))) {
+            desktopInner = f;
+            break;
+        }
+        if (f.startsWith(QLatin1String("./")) && f.endsWith(QLatin1String(".desktop"))
+                && f.count(QLatin1Char('/')) == 1) {
+            desktopInner = f;
+            break;
+        }
+    }
+
     if (desktopInner.isEmpty()) {
         qCWarning(AIM_LOG) << "No .desktop file found in" << m_path;
-        info.isValid = true; // still valid, just no metadata
+        info.isValid = true;
         return info;
     }
 
     // Read .desktop file into a temporary file for KDesktopFile parsing
-    QString desktopExt;
-    const QByteArray desktopData = readFileFromAppImage(desktopInner, desktopExt);
+    const QByteArray desktopData = readFileFromAppImage(desktopInner);
     if (!desktopData.isEmpty()) {
         QTemporaryDir tmp;
         if (tmp.isValid()) {
@@ -183,17 +205,61 @@ AppImageInfo AppImageReader::readWithLibappimage()
 
                 // Find and read icon
                 const QString iconName = entry.readEntry(QStringLiteral("Icon"));
-                const QString iconInner = findIconFile(iconName);
-                if (!iconInner.isEmpty()) {
-                    QString iconExt;
-                    info.iconData = readFileFromAppImage(iconInner, iconExt);
-                    info.iconExt = iconExt;
+                QString iconInner;
+                
+                QStringList candidates;
+                if (!iconName.isEmpty()) {
+                    candidates << iconName + QLatin1String(".png");
+                    candidates << iconName + QLatin1String(".svg");
+                    candidates << QLatin1String("./") + iconName + QLatin1String(".png");
+                    candidates << QLatin1String("./") + iconName + QLatin1String(".svg");
+                    candidates << QStringLiteral("usr/share/icons/hicolor/256x256/apps/") + iconName + QLatin1String(".png");
+                    candidates << QStringLiteral("usr/share/icons/hicolor/scalable/apps/")  + iconName + QLatin1String(".svg");
                 }
+                candidates << QStringLiteral(".DirIcon");
+
+                QSet<QString> listedSet(fileList.begin(), fileList.end());
+                for (const QString &c : candidates) {
+                    if (listedSet.contains(c)) {
+                        iconInner = c;
+                        break;
+                    }
+                    const QString alt = c.startsWith(QLatin1String("./")) ? c.mid(2) : (QLatin1String("./") + c);
+                    if (listedSet.contains(alt)) {
+                        iconInner = alt;
+                        break;
+                    }
+                }
+                
+                if (iconInner.isEmpty()) {
+                    for (const QString &f : fileList) {
+                        const QString stripped = f.startsWith(QLatin1String("./")) ? f.mid(2) : f;
+                        if (!stripped.contains(QLatin1Char('/')) && (f.endsWith(QLatin1String(".png")) || f.endsWith(QLatin1String(".svg")))) {
+                            iconInner = f;
+                            break;
+                        }
+                    }
+                }
+
+                if (!iconInner.isEmpty()) {
+                    info.iconData = readFileFromAppImage(iconInner, &info.iconExt);
+                }
+
                 // Find and read AppStream XML
-                const QString appStreamInner = findAppStreamFile();
+                QString appStreamInner;
+                for (const QString &f : fileList) {
+                    QString stripped = f;
+                    if (stripped.startsWith(QLatin1String("./"))) stripped = stripped.mid(2);
+                    if ((stripped.startsWith(QLatin1String("usr/share/metainfo/")) || 
+                         stripped.startsWith(QLatin1String("usr/share/appdata/"))) &&
+                        (stripped.endsWith(QLatin1String(".appdata.xml")) || stripped.endsWith(QLatin1String(".metainfo.xml")))) {
+                        appStreamInner = f;
+                        break;
+                    }
+                }
+
                 if (!appStreamInner.isEmpty()) {
-                    QString ext;
-                    const QByteArray appStreamData = readFileFromAppImage(appStreamInner, ext);
+                    const QByteArray appStreamData = readFileFromAppImage(appStreamInner);
                     if (!appStreamData.isEmpty())
                         extractMetadataFromXml(appStreamData, info);
                 }
@@ -208,78 +274,8 @@ AppImageInfo AppImageReader::readWithLibappimage()
     return info;
 }
 
-QString AppImageReader::findDesktopFile()
-{
-    const QByteArray pathBytes = m_path.toUtf8();
-    char **files = appimage_list_files(pathBytes.constData());
-    if (!files)
-        return {};
 
-    QString found;
-    for (int i = 0; files[i] != nullptr; ++i) {
-        const QString f = QString::fromUtf8(files[i]);
-        // Root-level .desktop files only (no subdirectories)
-        if (f.endsWith(QLatin1String(".desktop")) && !f.contains(QLatin1Char('/'))) {
-            found = f;
-            break;
-        }
-        // Accept ./ prefix (some AppImages prefix root entries)
-        if (f.startsWith(QLatin1String("./")) && f.endsWith(QLatin1String(".desktop"))
-                && f.count(QLatin1Char('/')) == 1) {
-            found = f;
-            break;
-        }
-    }
-    appimage_string_list_free(files);
-    return found;
-}
-
-QString AppImageReader::findIconFile(const QString &iconName)
-{
-    const QByteArray pathBytes = m_path.toUtf8();
-    char **files = appimage_list_files(pathBytes.constData());
-    if (!files)
-        return {};
-
-    // Build priority candidate list (same order as Python logic)
-    QStringList candidates;
-    if (!iconName.isEmpty()) {
-        candidates << iconName + QLatin1String(".png");
-        candidates << iconName + QLatin1String(".svg");
-        candidates << QLatin1String("./") + iconName + QLatin1String(".png");
-        candidates << QLatin1String("./") + iconName + QLatin1String(".svg");
-        candidates << QStringLiteral("usr/share/icons/hicolor/256x256/apps/") + iconName + QLatin1String(".png");
-        candidates << QStringLiteral("usr/share/icons/hicolor/scalable/apps/")  + iconName + QLatin1String(".svg");
-    }
-    candidates << QStringLiteral(".DirIcon");
-
-    // Build a set of all listed paths for O(1) lookup
-    QSet<QString> listed;
-    for (int i = 0; files[i] != nullptr; ++i)
-        listed.insert(QString::fromUtf8(files[i]));
-    appimage_string_list_free(files);
-
-    for (const QString &c : std::as_const(candidates)) {
-        if (listed.contains(c))
-            return c;
-        // Try with and without leading "./"
-        const QString alt = c.startsWith(QLatin1String("./")) ? c.mid(2) : (QLatin1String("./") + c);
-        if (listed.contains(alt))
-            return alt;
-    }
-
-    // Last resort: first .png or .svg at root level
-    for (const QString &f : std::as_const(listed)) {
-        const QString stripped = f.startsWith(QLatin1String("./")) ? f.mid(2) : f;
-        const bool isRoot = !stripped.contains(QLatin1Char('/'));
-        if (isRoot && (f.endsWith(QLatin1String(".png")) || f.endsWith(QLatin1String(".svg"))))
-            return f;
-    }
-
-    return {};
-}
-
-QByteArray AppImageReader::readFileFromAppImage(const QString &innerPath, QString &outExt)
+QByteArray AppImageReader::readFileFromAppImage(const QString &innerPath, QString *outExt)
 {
     const QByteArray pathBytes = m_path.toUtf8();
     const QByteArray innerBytes = innerPath.toUtf8();
@@ -291,45 +287,22 @@ QByteArray AppImageReader::readFileFromAppImage(const QString &innerPath, QStrin
         pathBytes.constData(), innerBytes.constData(), &buf, &bufSize);
 
     if (!ok || buf == nullptr || bufSize == 0) {
-        if (buf) free(buf);
+        if (buf) std::free(buf);
         return {};
     }
 
-    QByteArray result(buf, static_cast<int>(bufSize));
-    free(buf);
+    QByteArray result(buf, static_cast<qsizetype>(bufSize));
+    std::free(buf);
 
-    outExt = QLatin1Char('.') + QFileInfo(innerPath).suffix();
-    if (outExt == QLatin1String(".")) // .DirIcon has no extension
-        outExt = QStringLiteral(".png");
+    if (outExt) {
+        *outExt = QLatin1Char('.') + QFileInfo(innerPath).suffix();
+        if (*outExt == QLatin1String(".")) // .DirIcon has no extension
+            *outExt = QStringLiteral(".png");
+    }
 
     return result;
 }
 
-QString AppImageReader::findAppStreamFile()
-{
-    const QByteArray pathBytes = m_path.toUtf8();
-    char **files = appimage_list_files(pathBytes.constData());
-    if (!files)
-        return {};
-
-    QString found;
-    for (int i = 0; files[i] != nullptr; ++i) {
-        QString f = QString::fromUtf8(files[i]);
-        QString stripped = f;
-        if (stripped.startsWith(QLatin1String("./"))) {
-            stripped = stripped.mid(2);
-        }
-        
-        if ((stripped.startsWith(QLatin1String("usr/share/metainfo/")) || 
-             stripped.startsWith(QLatin1String("usr/share/appdata/"))) &&
-            (stripped.endsWith(QLatin1String(".appdata.xml")) || stripped.endsWith(QLatin1String(".metainfo.xml")))) {
-            found = f; // Return original f for readFileFromAppImage
-            break;
-        }
-    }
-    appimage_string_list_free(files);
-    return found;
-}
 
 void AppImageReader::extractMetadataFromXml(const QByteArray &xmlData, AppImageInfo &info)
 {

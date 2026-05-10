@@ -76,6 +76,8 @@ qt_add_qml_module(appimagemanager_qml
     SOURCES
         core/appsettings.h
         core/appsettings.cpp
+        core/githubreleasechecker.h
+        core/githubreleasechecker.cpp
         gui/appimagebackend.h
         gui/appimagebackend.cpp
         gui/appimageiconprovider.h

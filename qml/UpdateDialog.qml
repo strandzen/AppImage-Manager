@@ -15,7 +15,7 @@ Kirigami.Dialog {
 
     signal downloadRequested()
 
-    title: i18n("Update Available")
+    title: dialog.appName ? i18n("Update — %1", dialog.appName) : i18n("Update Available")
     padding: Kirigami.Units.largeSpacing
     standardButtons: Kirigami.Dialog.NoButton
     preferredWidth: Kirigami.Units.gridUnit * 22

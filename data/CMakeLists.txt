@@ -12,7 +12,7 @@ install(FILES servicemenus/appimagemanager.desktop
     DESTINATION ${KDE_INSTALL_DATADIR}/kio/servicemenus
 )
 
-install(FILES appimagemanager.desktop
+install(FILES io.github.strandzen.AppImageManager.desktop
     DESTINATION ${KDE_INSTALL_APPDIR}
 )
 

@@ -87,6 +87,14 @@ qint64 CorpseModel::checkedSize() const
     return total;
 }
 
+int CorpseModel::checkedCount() const
+{
+    int n = 0;
+    for (const Item &item : m_items)
+        if (item.checked) ++n;
+    return n;
+}
+
 QStringList CorpseModel::checkedPaths() const
 {
     QStringList result;
@@ -94,4 +102,12 @@ QStringList CorpseModel::checkedPaths() const
         if (item.checked)
             result << item.path;
     return result;
+}
+
+void CorpseModel::setAllChecked(bool checked)
+{
+    for (Item &item : m_items)
+        item.checked = checked;
+    if (!m_items.isEmpty())
+        Q_EMIT dataChanged(index(0), index(m_items.size() - 1), {IsCheckedRole});
 }

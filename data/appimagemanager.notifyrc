@@ -1,6 +1,6 @@
 [Global]
 IconName=application-x-executable
-DesktopEntry=appimagemanager
+DesktopEntry=io.github.strandzen.AppImageManager
 Comment=AppImage Manager
 
 [Event/installed]
@@ -17,4 +17,25 @@ Action=Popup
 [Event/downloaded]
 Name=AppImage Downloaded
 Comment=A new AppImage appeared in the Downloads folder
+Action=Popup
+
+[Event/updateAvailable]
+Name=Update Available
+Comment=A newer version of an installed AppImage is available
+Action=Popup
+
+[Event/updateDownloaded]
+Name=Update Downloaded
+Comment=An AppImage update was downloaded successfully
+Action=Sound|Popup
+Sound=outcome-success
+
+[Event/error]
+Name=Error
+Comment=An operation failed
+Action=Popup
+
+[Event/installFailed]
+Name=Installation Failed
+Comment=An AppImage could not be installed
 Action=Popup
