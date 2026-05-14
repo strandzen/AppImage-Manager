@@ -3,6 +3,7 @@
 #include "appimagecache.h"
 
 #include <QCryptographicHash>
+#include <QDebug>
 #include <QDir>
 #include <QMutexLocker>
 #include <QStandardPaths>
@@ -16,7 +17,8 @@ static QString keyFor(const QString &path)
 static QString cacheFilePath()
 {
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QDir().mkpath(dir);
+    if (!QDir().mkpath(dir))
+        qWarning() << "AppImageCache: failed to create cache directory:" << dir;
     return dir + QStringLiteral("/cache.ini");
 }
 
@@ -31,6 +33,13 @@ AppImageCache::AppImageCache()
 {
 }
 
+// Bump this when adding, removing, or renaming any persisted AppImageInfo field.
+// A version mismatch causes the entire entry to be silently discarded and re-read from disk
+// (intentional — avoids migration complexity at the cost of one cold read per app).
+// Version history:
+//   1 — initial fields
+//   2 — added `comment` and `description`
+//   3 — added `developerName` and `homepage`
 static constexpr int kCacheVersion = 3;
 
 AppImageInfo AppImageCache::load(const QString &path, qint64 mtime)
@@ -39,6 +48,7 @@ AppImageInfo AppImageCache::load(const QString &path, qint64 mtime)
     const QString key = keyFor(path);
     m_settings.beginGroup(key);
     const int ver = m_settings.value(QStringLiteral("cacheVersion"), 0).toInt();
+    // mtime check catches in-place replacements where the path doesn't change
     const qint64 cachedMtime = m_settings.value(QStringLiteral("mtime"), -1LL).toLongLong();
     if (ver != kCacheVersion || cachedMtime != mtime) {
         m_settings.endGroup();

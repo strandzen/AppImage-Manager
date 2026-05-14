@@ -7,8 +7,14 @@
 #include <QString>
 
 // Blocking metadata extractor for AppImage files.
-// Requires libappimage for in-process SquashFS extraction.
-// Always call from a worker thread via QtConcurrent::run.
+// Always call from a worker thread via QtConcurrent::run — never on the main thread.
+//
+// Two read paths, selected at build time:
+//   HAVE_LIBAPPIMAGE — in-process SquashFS via libappimage (preferred; faster, no subprocess).
+//   fallback         — mounts via squashfuse subprocess, parses, then unmounts with fusermount3.
+//
+// Both paths populate the same AppImageInfo fields; the libappimage path additionally
+// extracts AppStream XML (description, developerName, homepage) from the embedded metainfo file.
 class AppImageReader
 {
 public:

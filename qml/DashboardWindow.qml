@@ -18,7 +18,9 @@ Kirigami.ApplicationWindow {
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
 
-    // ── Role constants (AppImageListModel::Roles, starting at Qt::UserRole) ───
+    // ── Role constants ────────────────────────────────────────────────────────
+    // Mirror of AppImageListModel::Roles enum (Qt::UserRole + offset).
+    // If the enum order changes in appimagelistmodel.h these offsets must be updated.
     readonly property int roleFilePath:       Qt.UserRole + 0
     readonly property int roleVersion:        Qt.UserRole + 3
     readonly property int roleIconSource:     Qt.UserRole + 4
@@ -74,11 +76,13 @@ Kirigami.ApplicationWindow {
     // ── Update check result ───────────────────────────────────────────────────
     Connections {
         target: listModel
-        function onUpdateCheckFinished(updatesFound) {
-            if (updatesFound === 0)
-                noUpdatesDialog.open()
-            else if (updatesFound < 0)
+        function onUpdateCheckFinished(updatesFound, networkFailures) {
+            if (updatesFound < 0)
                 checkTimedOutDialog.open()
+            else if (networkFailures > 0 && updatesFound === 0)
+                networkErrorDialog.open()
+            else if (updatesFound === 0)
+                noUpdatesDialog.open()
         }
     }
 
@@ -95,6 +99,15 @@ Kirigami.ApplicationWindow {
         id: checkTimedOutDialog
         title: i18n("Update Check Failed")
         subtitle: i18n("The update check timed out. Check your network connection and try again.")
+        standardButtons: Kirigami.Dialog.Ok
+        Kirigami.Theme.colorSet: Kirigami.Theme.Window
+        Kirigami.Theme.inherit: false
+    }
+
+    Kirigami.PromptDialog {
+        id: networkErrorDialog
+        title: i18n("Network Error")
+        subtitle: i18n("Could not check for updates. Verify your network connection and try again.")
         standardButtons: Kirigami.Dialog.Ok
         Kirigami.Theme.colorSet: Kirigami.Theme.Window
         Kirigami.Theme.inherit: false

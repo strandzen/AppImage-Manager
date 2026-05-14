@@ -25,6 +25,7 @@
 #include <KStatusNotifierItem>
 #endif
 
+// freq values: 0 = Never, 1 = Daily, 2 = Weekly, 3 = Monthly, 4 = Custom (customDays)
 static std::chrono::hours intervalForFrequency(int freq, int customDays)
 {
     switch (freq) {
@@ -145,6 +146,8 @@ void UpdateDaemon::checkUpdates()
             return;
         }
 
+        // Note: this duplicates some GitHubReleaseChecker logic because the daemon
+        // needs to fire one KNotification per app rather than per emitted signal.
         for (const AppImageInfo &info : infos) {
             if (!info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|")))
                 continue;

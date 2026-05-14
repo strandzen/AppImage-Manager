@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(AppImageManager VERSION 1.2.0 LANGUAGES CXX)
+project(AppImageManager VERSION 1.2.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,23 +23,23 @@ ecm_setup_version(${PROJECT_VERSION}
 
 find_package(Qt6 6.6 REQUIRED COMPONENTS
     Core
-    DBus
+    DBus        # session bus: daemon service registration, download dedup check
     Gui
     Quick
     Qml
-    Concurrent
-    Network
+    Concurrent  # QtConcurrent::run for blocking AppImageReader/findCorpses calls
+    Network     # update checks via QNetworkAccessManager
 )
 
 find_package(KF6 6.0 REQUIRED COMPONENTS
-    CoreAddons
-    I18n
-    Config
-    KIO
-    IconThemes
-    Notifications
-    Crash
-    DBusAddons
+    CoreAddons  # KAboutData, kcoreaddons_add_plugin
+    I18n        # i18n() / ki18n_install
+    Config      # KSharedConfig for persistent settings
+    KIO         # file install (CopyJob), trash (trash()), restore (RestoreJob)
+    IconThemes  # QIcon::fromTheme / hasThemeIcon
+    Notifications # KNotification for install/update/download events
+    Crash       # KCrash::initialize → DrKonqi integration
+    DBusAddons  # KDBusService for multi-instance launch control
 )
 
 find_package(KF6StatusNotifierItem QUIET)

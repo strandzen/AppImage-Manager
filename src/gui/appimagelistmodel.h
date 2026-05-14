@@ -100,14 +100,14 @@ public:
 Q_SIGNALS:
     void scanningChanged();
     void checkingUpdatesChanged();
-    void updateCheckFinished(int updatesFound);
+    void updateCheckFinished(int updatesFound, int networkFailures);
     void selectionModeChanged();
     void selectionChanged();
     void openUninstallWindow(const QString &filePath);
 
 private:
     void loadMetadataForRow(int row);
-    void finishOneUpdateCheck(bool foundUpdate);
+    void finishOneUpdateCheck(bool foundUpdate, bool networkFailed = false);
     void checkZsyncUpdate(int row);
     void updateDownloadWatcher();
     void checkNewDownloads();
@@ -124,6 +124,7 @@ private:
     int                    m_pendingLoads         = 0;
     int                    m_pendingUpdateChecks  = 0;
     int                    m_updatesFoundInCheck  = 0;
+    int                    m_networkFailedChecks  = 0;
     int                    m_generation    = 0;
     bool                   m_selectionMode = false;
     QSet<QString>          m_selected;
