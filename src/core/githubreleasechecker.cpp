@@ -29,6 +29,7 @@ void GitHubReleaseChecker::check(const QString &updateInfo, const QString &curre
 
     QNetworkRequest request((QUrl(url)));
     request.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
+    request.setTransferTimeout(10'000);
 
     const QString localVer = normalizeVersion(currentVersion);
 
@@ -37,7 +38,7 @@ void GitHubReleaseChecker::check(const QString &updateInfo, const QString &curre
         reply->deleteLater();
 
         if (reply->error() != QNetworkReply::NoError) {
-            Q_EMIT failed();
+            Q_EMIT networkFailed();
             return;
         }
 

@@ -12,6 +12,8 @@
 
 class AppImageIconProvider;
 
+// Owns all state and async operations for a single open AppImage.
+// One instance per AppImageWindow; also used by DashboardWindow for uninstall/storage operations.
 class AppImageBackend : public QObject
 {
     Q_OBJECT

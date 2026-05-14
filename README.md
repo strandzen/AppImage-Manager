@@ -1,4 +1,4 @@
-# AppImage Manager
+# ![Alt text](data/sc-apps-appimagemanager.svg)AppImage Manager
 
 A lightweight, native AppImage manager for KDE Plasma 6.
 
@@ -8,13 +8,11 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 [![License](https://img.shields.io/badge/License-GPL--2.0--or--later-blue)](LICENSES/GPL-2.0-or-later.txt)
 [![Linux](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.kernel.org/)
 
-> **Disclaimer:** This project is built with AI assistance.
-
-## 📸 Preview
+> **Disclaimer:** This project is vibecoded.
+---
+![Previews](https://img.shields.io/badge/previews-visuals-blue?style=for-the-badge&logo=kde)
 
 ![Dashboard](assets/dashboard.png)
-
-## ✨ Features
 
 - **Native Dashboard:** Browse, search, and sort installed AppImages by name, size, category, or date.
 - **Rich Metadata:** Shows app icon, version, size, category, and AppStream description extracted directly from the AppImage.
@@ -26,7 +24,8 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 - **AppImage Updates:** Checks for newer versions via GitHub Releases and downloads updates using `zsync` delta-patching.
 - **Plasma Integration:** Uses native Plasma progress bars, Kirigami styling, and KDE notifications.
 
-## ⚙️ Requirements
+---
+![Requirements](https://img.shields.io/badge/requirements-systems-455a64?style=for-the-badge&logo=linux)
 
 To build this project from source, you need:
 
@@ -37,7 +36,7 @@ To build this project from source, you need:
 
 ---
 
-## 📦 Dependency Installation
+![Dependencies](https://img.shields.io/badge/dependencies-libraries-5c6bc0?style=for-the-badge&logo=package)
 
 <details>
 <summary><strong>Arch Linux</strong></summary>
@@ -90,7 +89,7 @@ sudo zypper in gcc-c++ cmake extra-cmake-modules ninja \
 
 ---
 
-## 🚀 Build & Install
+![Build & Install](https://img.shields.io/badge/build%2Finstall-compilation-2e7d32?style=for-the-badge&logo=cmake)
 
 Once your dependencies are installed, you can build and install the manager globally.
 
@@ -109,7 +108,8 @@ To reload the Dolphin context menu without logging out:
 kquitapp6 dolphin && dolphin &
 ```
 
-## 📖 Usage
+---
+![Usage](https://img.shields.io/badge/usage-guide-f57c00?style=for-the-badge&logo=readthedocs)
 
 Run the utility from your terminal or application launcher:
 
@@ -121,6 +121,7 @@ Run the utility from your terminal or application launcher:
 
 **Dolphin Integration:** Simply right-click any `.AppImage` file and select **Manage AppImage**.
 
-## 📄 License
+---
+![License](https://img.shields.io/badge/license-MIT-d32f2f?style=for-the-badge&logo=opensourceinitiative)
 
 Licensed under the **GPL-2.0-or-later**. See [LICENSES/GPL-2.0-or-later.txt](LICENSES/GPL-2.0-or-later.txt) for details.

@@ -414,19 +414,27 @@ void AppImageListModel::sendError(QObject *parent, const QString &title, const Q
     n->sendEvent();
 }
 
-void AppImageListModel::finishOneUpdateCheck(bool foundUpdate)
+// Three counters track the batch:
+//   m_pendingUpdateChecks  — decremented by every checker result (including failures)
+//   m_updatesFoundInCheck  — incremented when a newer version is confirmed
+//   m_networkFailedChecks  — incremented when the network request itself fails
+// When m_pendingUpdateChecks reaches zero the batch is complete.
+void AppImageListModel::finishOneUpdateCheck(bool foundUpdate, bool networkFailed)
 {
-    if (foundUpdate)
-        ++m_updatesFoundInCheck;
+    if (foundUpdate) ++m_updatesFoundInCheck;
+    if (networkFailed) ++m_networkFailedChecks;
     if (--m_pendingUpdateChecks == 0) {
         m_updateCheckTimer.stop();
         Q_EMIT checkingUpdatesChanged();
-        Q_EMIT updateCheckFinished(m_updatesFoundInCheck);
+        Q_EMIT updateCheckFinished(m_updatesFoundInCheck, m_networkFailedChecks);
     }
 }
 
 void AppImageListModel::checkForUpdates()
 {
+    if (m_pendingUpdateChecks > 0)
+        return; // already in progress — ignore re-entrant call
+
     int checkable = 0;
     for (const Item &item : std::as_const(m_items)) {
         if (item.info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|")) ||
@@ -434,20 +442,22 @@ void AppImageListModel::checkForUpdates()
             ++checkable;
     }
     if (checkable == 0) {
-        Q_EMIT updateCheckFinished(0);
+        Q_EMIT updateCheckFinished(0, 0);
         return;
     }
 
     m_pendingUpdateChecks = checkable;
     m_updatesFoundInCheck = 0;
+    m_networkFailedChecks = 0;
     Q_EMIT checkingUpdatesChanged();
 
     m_updateCheckTimer.setSingleShot(true);
     m_updateCheckTimer.setInterval(30'000);
     connect(&m_updateCheckTimer, &QTimer::timeout, this, [this]() {
+        if (m_pendingUpdateChecks == 0) return; // already completed normally
         m_pendingUpdateChecks = 0;
         Q_EMIT checkingUpdatesChanged();
-        Q_EMIT updateCheckFinished(-1);
+        Q_EMIT updateCheckFinished(-1, 0);
     }, Qt::SingleShotConnection);
     m_updateCheckTimer.start();
 
@@ -472,6 +482,10 @@ void AppImageListModel::checkForUpdates()
             connect(checker, &GitHubReleaseChecker::upToDate, this, [this, checker]() {
                 checker->deleteLater();
                 finishOneUpdateCheck(false);
+            });
+            connect(checker, &GitHubReleaseChecker::networkFailed, this, [this, checker]() {
+                checker->deleteLater();
+                finishOneUpdateCheck(false, true);
             });
             connect(checker, &GitHubReleaseChecker::failed, this, [this, checker]() {
                 checker->deleteLater();
@@ -500,15 +514,18 @@ void AppImageListModel::checkZsyncUpdate(int row)
         const int row = findRowByPath(filePath);
         if (row < 0) { finishOneUpdateCheck(false); return; }
 
+        if (reply->error() != QNetworkReply::NoError) {
+            finishOneUpdateCheck(false, true);
+            return;
+        }
+
         QString remoteSha1;
-        if (reply->error() == QNetworkReply::NoError) {
-            const QByteArray data = reply->readAll();
-            for (const QByteArray &line : data.split('\n')) {
-                const QByteArray trimmed = line.trimmed();
-                if (trimmed.isEmpty()) break;
-                if (trimmed.startsWith("SHA-1: "))
-                    remoteSha1 = QString::fromLatin1(trimmed.mid(7)).trimmed();
-            }
+        const QByteArray data = reply->readAll();
+        for (const QByteArray &line : data.split('\n')) {
+            const QByteArray trimmed = line.trimmed();
+            if (trimmed.isEmpty()) break;
+            if (trimmed.startsWith("SHA-1: "))
+                remoteSha1 = QString::fromLatin1(trimmed.mid(7)).trimmed();
         }
 
         if (!remoteSha1.isEmpty()) {

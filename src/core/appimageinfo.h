@@ -8,6 +8,9 @@
 #include <QString>
 #include <QStringList>
 
+// Metadata extracted from a single AppImage file.
+// `description` holds AppStream XML prose (from usr/share/metainfo/*.appdata.xml).
+// Falls back to the .desktop `Comment=` field (stored in `comment`) when no XML is present.
 struct AppImageInfo {
     QString originalName;
     QString cleanName;
@@ -38,6 +41,8 @@ inline QString normalizeVersion(const QString &v)
     return v;
 }
 
+// Returns true only when remote is *strictly* newer than local.
+// Equal versions return false. Only the first 3 dot-separated components are compared.
 inline bool isNewerVersion(const QString &remote, const QString &local)
 {
     if (remote == local)
