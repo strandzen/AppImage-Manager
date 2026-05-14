@@ -1,4 +1,4 @@
-# ![Alt text](data/sc-apps-appimagemanager.svg)AppImage Manager
+# <img src="data/sc-apps-appimagemanager.svg" width="256" height="256" align="center" alt="Logo"> AppImage Manager
 
 A lightweight, native AppImage manager for KDE Plasma 6.
 
@@ -7,10 +7,12 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)](https://en.cppreference.com/w/cpp/20)
 [![License](https://img.shields.io/badge/License-GPL--2.0--or--later-blue)](LICENSES/GPL-2.0-or-later.txt)
 [![Linux](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.kernel.org/)
+[![Vibecoded](https://img.shields.io/badge/Vibecoded-AI--Usage-8a2be2?logo=visualstudiocode&logoColor=white)](https://github.com/strandzen/AppImage-Manager)
 
 > **Disclaimer:** This project is vibecoded.
 
-## 📸 Preview
+---
+![Previews](https://img.shields.io/badge/previews-visuals-427070?style=for-the-badge&logo=kde&logoColor=white)
 
 ![Dashboard](assets/dashboard.png)
 
@@ -25,7 +27,7 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 - **Plasma Integration:** Uses native Plasma progress bars, Kirigami styling, and KDE notifications.
 
 ---
-![Requirements](https://img.shields.io/badge/requirements-systems-455a64?style=for-the-badge&logo=linux)
+![Requirements](https://img.shields.io/badge/requirements-systems-4B6B8A?style=for-the-badge&logo=linux&logoColor=white)
 
 To build this project from source, you need:
 
@@ -36,7 +38,7 @@ To build this project from source, you need:
 
 ---
 
-![Dependencies](https://img.shields.io/badge/dependencies-libraries-5c6bc0?style=for-the-badge&logo=package)
+![Dependencies](https://img.shields.io/badge/dependencies-libraries-50659C?style=for-the-badge&logo=qt&logoColor=white)
 
 <details>
 <summary><strong>Arch Linux</strong></summary>
@@ -89,7 +91,7 @@ sudo zypper in gcc-c++ cmake extra-cmake-modules ninja \
 
 ---
 
-![Build & Install](https://img.shields.io/badge/build%2Finstall-compilation-2e7d32?style=for-the-badge&logo=cmake)
+![Build & Install](https://img.shields.io/badge/build%2Finstall-compilation-5D5299?style=for-the-badge&logo=cmake&logoColor=white)
 
 Once your dependencies are installed, you can build and install the manager globally.
 
@@ -109,7 +111,7 @@ kquitapp6 dolphin && dolphin &
 ```
 
 ---
-![Usage](https://img.shields.io/badge/usage-guide-f57c00?style=for-the-badge&logo=readthedocs)
+![Usage](https://img.shields.io/badge/usage-guide-6E488B?style=for-the-badge&logo=readthedocs&logoColor=white)
 
 Run the utility from your terminal or application launcher:
 
@@ -122,6 +124,6 @@ Run the utility from your terminal or application launcher:
 **Dolphin Integration:** Simply right-click any `.AppImage` file and select **Manage AppImage**.
 
 ---
-![License](https://img.shields.io/badge/license-MIT-d32f2f?style=for-the-badge&logo=opensourceinitiative)
+![License](https://img.shields.io/badge/license-MIT-7E4071?style=for-the-badge&logo=opensourceinitiative&logoColor=white)
 
 Licensed under the **GPL-2.0-or-later**. See [LICENSES/GPL-2.0-or-later.txt](LICENSES/GPL-2.0-or-later.txt) for details.
