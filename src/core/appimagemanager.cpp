@@ -45,7 +45,17 @@ KIO::CopyJob *installAppImage(const QUrl &source, const QString &applicationsDir
     const QUrl dest = QUrl::fromLocalFile(
         applicationsDir + QLatin1Char('/') + source.fileName());
 
-    auto *job = KIO::move(source, dest);
+    // Policy: only consume the source when it sits under the user's
+    // Downloads folder (the expected throwaway location). Anywhere else —
+    // USB sticks, project directories, network mounts — we copy so the
+    // user's original file stays where they put it.
+    const QString downloads = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    const QString srcPath = source.toLocalFile();
+    const bool fromDownloads =
+        !downloads.isEmpty() && !srcPath.isEmpty()
+        && (srcPath == downloads || srcPath.startsWith(downloads + QLatin1Char('/')));
+
+    auto *job = fromDownloads ? KIO::move(source, dest) : KIO::copy(source, dest);
     QObject::connect(job, &KJob::result, [dest](KJob *j) {
         if (j->error()) {
             qCWarning(AIM_LOG) << "Install failed:" << j->errorString();
