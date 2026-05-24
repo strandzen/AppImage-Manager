@@ -242,7 +242,10 @@ Kirigami.ApplicationWindow {
                 Item {
                     id: leftPane
                     Layout.minimumWidth: Kirigami.Units.gridUnit * 15
-                    Layout.maximumWidth: Kirigami.Units.gridUnit * 24
+                    // No selection → drop the upper cap so the master list
+                    // can fill the whole window instead of leaving the
+                    // (invisible) detail pane's space blank.
+                    Layout.maximumWidth: listView.currentIndex < 0 ? -1 : Kirigami.Units.gridUnit * 24
                     Layout.preferredWidth: Kirigami.Units.gridUnit * 18
                     Layout.fillWidth: listView.currentIndex < 0
                     Layout.fillHeight: true
