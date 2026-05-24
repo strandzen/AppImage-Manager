@@ -1,4 +1,4 @@
-find_package(Qt6 REQUIRED COMPONENTS Test)
+find_package(Qt6 REQUIRED COMPONENTS Test Quick)
 include(ECMAddTests)
 
 # ── tst_appimageinfo ──────────────────────────────────────────────────────────
@@ -27,3 +27,18 @@ ecm_add_test(tst_appimagecache.cpp
     NAME_PREFIX "appimagemanager-"
 )
 target_include_directories(tst_appimagecache PRIVATE ${CMAKE_SOURCE_DIR})
+
+# ── tst_appimagelistmodel ─────────────────────────────────────────────────────
+# Drives a real AppImageListModel + AppImageSortFilterModel against a tempdir
+# of zero-byte stubs. Covers scanning state, row insert/remove, sort/filter,
+# and the itemData bulk-fetch helper.
+ecm_add_test(tst_appimagelistmodel.cpp
+    TEST_NAME tst_appimagelistmodel
+    LINK_LIBRARIES Qt6::Test Qt6::Quick appimagemanager_qml
+    NAME_PREFIX "appimagemanager-"
+    GUI
+)
+target_include_directories(tst_appimagelistmodel PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}/src
+)

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../core/appimageinfo.h"
+#include "appimagemanager_qml_export.h"
 
 #include <KDirWatch>
 
@@ -16,7 +17,7 @@ class AppImageUpdateManager;
 class DownloadWatcher;
 class QNetworkAccessManager;
 
-class AppImageListModel : public QAbstractListModel
+class APPIMAGEMANAGER_EXPORT AppImageListModel : public QAbstractListModel
 {
     Q_OBJECT
     QML_ELEMENT

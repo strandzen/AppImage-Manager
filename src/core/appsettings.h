@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #pragma once
 
+#include "appimagemanager_qml_export.h"
+
 #include <QObject>
 #include <QWindow>  // Qt 6.11 moc needs the full type for Q_INVOKABLE pointer args
 #include <QtQml/qqmlregistration.h>
@@ -11,7 +13,7 @@
 class QQmlEngine;
 class QJSEngine;
 
-class AppSettings : public QObject
+class APPIMAGEMANAGER_EXPORT AppSettings : public QObject
 {
     Q_OBJECT
     QML_ELEMENT

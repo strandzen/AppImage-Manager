@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #pragma once
 
+#include "appimagemanager_qml_export.h"
+
 #include <QByteArray>
 #include <QCache>
 #include <QPixmap>
@@ -17,7 +19,7 @@
 // Supports multiple icons keyed by an arbitrary string id.
 // The single-file manage window uses the "icon" key via the convenience overload.
 // The dashboard registers per-file icons using iconIdForPath() keys.
-class AppImageIconProvider : public QQuickImageProvider
+class APPIMAGEMANAGER_EXPORT AppImageIconProvider : public QQuickImageProvider
 {
 public:
     AppImageIconProvider();

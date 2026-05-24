@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #pragma once
 
+#include "appimagemanager_qml_export.h"
+
 #include <QSortFilterProxyModel>
 #include <QtQml/qqmlregistration.h>
 
-class AppImageSortFilterModel : public QSortFilterProxyModel
+class APPIMAGEMANAGER_EXPORT AppImageSortFilterModel : public QSortFilterProxyModel
 {
     Q_OBJECT
     QML_ELEMENT
