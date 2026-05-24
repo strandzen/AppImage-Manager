@@ -17,6 +17,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QAction>
+#include <QMenu>
 #include <QStandardPaths>
 #include <KLocalizedString>
 #include <KNotification>
@@ -66,6 +68,38 @@ UpdateDaemon::UpdateDaemon(QObject *parent)
 void UpdateDaemon::start()
 {
     QDBusConnection::sessionBus().registerService(QStringLiteral("io.github.appimagemanager.Daemon"));
+
+    // Persistent tray entry — Passive when idle so the user can still trigger
+    // a manual check or open the dashboard at any time. Status flips to Active
+    // when updateTrayStatus sees a pending update.
+    m_trayIcon = new KStatusNotifierItem(QStringLiteral("appimagemanager-updates"), this);
+    m_trayIcon->setCategory(KStatusNotifierItem::ApplicationStatus);
+    m_trayIcon->setIconByName(QStringLiteral("application-x-executable"));
+    m_trayIcon->setTitle(i18n("AppImage Manager"));
+    m_trayIcon->setToolTip(QStringLiteral("application-x-executable"),
+                           i18n("AppImage Manager"),
+                           i18n("No pending updates"));
+    m_trayIcon->setStatus(KStatusNotifierItem::Passive);
+
+    connect(m_trayIcon, &KStatusNotifierItem::activateRequested,
+            this, [](bool, const QPoint &) {
+        QProcess::startDetached(QStringLiteral("appimagemanager"),
+                                {QStringLiteral("--dashboard")});
+    });
+
+    if (QMenu *menu = m_trayIcon->contextMenu()) {
+        auto *checkAction = menu->addAction(QIcon::fromTheme(QStringLiteral("view-refresh")),
+                                            i18n("Check for Updates Now"));
+        connect(checkAction, &QAction::triggered, this, &UpdateDaemon::checkUpdates);
+
+        auto *openAction = menu->addAction(QIcon::fromTheme(QStringLiteral("system-software-install")),
+                                           i18n("Open Dashboard"));
+        connect(openAction, &QAction::triggered, this, []() {
+            QProcess::startDetached(QStringLiteral("appimagemanager"),
+                                    {QStringLiteral("--dashboard")});
+        });
+    }
+
     const int freq = AppSettings::instance()->updateFrequency();
     m_timer->setInterval(intervalForFrequency(freq, AppSettings::instance()->customUpdateDays()));
     checkUpdates();
@@ -163,23 +197,21 @@ void UpdateDaemon::checkUpdates()
 
 void UpdateDaemon::updateTrayStatus()
 {
+    if (!m_trayIcon)
+        return;  // start() not called yet
+
     if (m_updateCount > 0) {
-        if (!m_trayIcon) {
-            m_trayIcon = new KStatusNotifierItem(QStringLiteral("appimagemanager-updates"), this);
-            m_trayIcon->setCategory(KStatusNotifierItem::ApplicationStatus);
-            m_trayIcon->setIconByName(QStringLiteral("software-update-available"));
-            connect(m_trayIcon, &KStatusNotifierItem::activateRequested,
-                    this, [](bool, const QPoint &) {
-                QProcess::startDetached(QStringLiteral("appimagemanager"),
-                                        {QStringLiteral("--dashboard")});
-            });
-        }
+        m_trayIcon->setIconByName(QStringLiteral("software-update-available"));
         m_trayIcon->setStatus(KStatusNotifierItem::Active);
         m_trayIcon->setToolTip(
             QStringLiteral("software-update-available"),
             i18n("AppImage Updates"),
             i18np("%1 update available", "%1 updates available", m_updateCount));
-    } else if (m_trayIcon) {
+    } else {
+        m_trayIcon->setIconByName(QStringLiteral("application-x-executable"));
         m_trayIcon->setStatus(KStatusNotifierItem::Passive);
+        m_trayIcon->setToolTip(QStringLiteral("application-x-executable"),
+                               i18n("AppImage Manager"),
+                               i18n("No pending updates"));
     }
 }
