@@ -5,10 +5,11 @@
 #include "appsettings.h"
 #include "appimagereader.h"
 #include "githubreleasechecker.h"
+#include "../gui/downloadwatcher.h"
+
 #include <QDBusConnection>
 #include <QDir>
 #include <QFileInfo>
-#include <QFileSystemWatcher>
 #include <QFutureWatcher>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
@@ -41,6 +42,7 @@ UpdateDaemon::UpdateDaemon(QObject *parent)
     : QObject(parent)
     , m_timer(new QTimer(this))
     , m_networkManager(new QNetworkAccessManager(this))
+    , m_downloadWatcher(new DownloadWatcher(this))
 {
     connect(m_timer, &QTimer::timeout, this, &UpdateDaemon::checkUpdates);
     connect(AppSettings::instance(), &AppSettings::updateFrequencyChanged, this, [this]() {
@@ -49,7 +51,16 @@ UpdateDaemon::UpdateDaemon(QObject *parent)
         if (m_timer->isActive())
             m_timer->start();
     });
-    watchDownloads();
+
+    // Single source of truth for download detection. Mirror the user's
+    // watchDownloads pref into the watcher; the dashboard's own watcher
+    // skips notification when the daemon's D-Bus name is registered.
+    m_downloadWatcher->setEnabled(AppSettings::instance()->watchDownloads());
+    connect(AppSettings::instance(), &AppSettings::watchDownloadsChanged, this, [this]() {
+        m_downloadWatcher->setEnabled(AppSettings::instance()->watchDownloads());
+    });
+    connect(m_downloadWatcher, &DownloadWatcher::appImageFound,
+            this, &UpdateDaemon::onDownloadAppeared);
 }
 
 void UpdateDaemon::start()
@@ -61,58 +72,16 @@ void UpdateDaemon::start()
     m_timer->start();
 }
 
-void UpdateDaemon::watchDownloads()
+void UpdateDaemon::onDownloadAppeared(const QString &path, const QString &displayName)
 {
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
-    if (dir.isEmpty())
-        return;
-
-    const QStringList &filters = kAppImageFilters();
-    for (const QFileInfo &fi : QDir(dir).entryInfoList(filters, QDir::Files))
-        m_knownDownloads.insert(fi.absoluteFilePath());
-
-    m_downloadWatcher = new QFileSystemWatcher(this);
-    m_downloadWatcher->addPath(dir);
-    connect(m_downloadWatcher, &QFileSystemWatcher::directoryChanged,
-            this, &UpdateDaemon::onDownloadDirChanged);
-}
-
-void UpdateDaemon::onDownloadDirChanged()
-{
-    if (!AppSettings::instance()->watchDownloads())
-        return;
-
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
-    const QStringList &filters = kAppImageFilters();
-    const QFileInfoList entries = QDir(dir).entryInfoList(filters, QDir::Files);
-
-    for (const QFileInfo &fi : entries) {
-        const QString path = fi.absoluteFilePath();
-        if (m_knownDownloads.contains(path))
-            continue;
-        m_knownDownloads.insert(path);
-
-        QString displayName = AppImageReader::cleanName(fi.fileName());
-        if (displayName.endsWith(QLatin1String(".AppImage"), Qt::CaseInsensitive))
-            displayName.chop(9);
-        // Strip trailing version number (e.g. "Krita 5.3.1" → "Krita")
-        displayName.remove(QRegularExpression(QStringLiteral(R"(\s+\d[\d.]*$)")));
-        displayName = displayName.trimmed();
-
-        auto *n = new KNotification(QStringLiteral("downloaded"), KNotification::Persistent, this);
-        n->setTitle(i18n("%1 downloaded", displayName));
-        n->setIconName(QStringLiteral("application-x-executable"));
-        auto *action = n->addAction(i18n("Manage"));
-        connect(action, &KNotificationAction::activated, this, [path]() {
-            QProcess::startDetached(QStringLiteral("appimagemanager"), { path });
-        });
-        n->sendEvent();
-    }
-
-    QSet<QString> current;
-    for (const QFileInfo &fi : entries)
-        current.insert(fi.absoluteFilePath());
-    m_knownDownloads.intersect(current);
+    auto *n = new KNotification(QStringLiteral("downloaded"), KNotification::Persistent, this);
+    n->setTitle(i18n("%1 downloaded", displayName));
+    n->setIconName(QStringLiteral("application-x-executable"));
+    auto *action = n->addAction(i18n("Manage"));
+    connect(action, &KNotificationAction::activated, this, [path]() {
+        QProcess::startDetached(QStringLiteral("appimagemanager"), { path });
+    });
+    n->sendEvent();
 }
 
 void UpdateDaemon::checkUpdates()

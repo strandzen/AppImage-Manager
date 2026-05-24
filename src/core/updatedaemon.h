@@ -2,13 +2,12 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #pragma once
 #include <QObject>
-#include <QSet>
 #include <QTimer>
 #include "appimagemanager_qml_export.h"
 
-class QFileSystemWatcher;
 class QNetworkAccessManager;
 class KStatusNotifierItem;
+class DownloadWatcher;
 
 class APPIMAGEMANAGER_EXPORT UpdateDaemon : public QObject
 {
@@ -19,14 +18,12 @@ public:
 
 private:
     void checkUpdates();
-    void watchDownloads();
-    void onDownloadDirChanged();
+    void onDownloadAppeared(const QString &path, const QString &displayName);
     void updateTrayStatus();
 
     QTimer               *m_timer;
     QNetworkAccessManager *m_networkManager;
-    QFileSystemWatcher   *m_downloadWatcher = nullptr;
-    QSet<QString>         m_knownDownloads;
+    DownloadWatcher      *m_downloadWatcher;
 
     int m_updateCount   = 0;
     int m_pendingChecks = 0;
