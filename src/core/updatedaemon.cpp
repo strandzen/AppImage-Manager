@@ -126,15 +126,15 @@ void UpdateDaemon::checkUpdates()
     if (files.isEmpty())
         return;
 
-    auto *watcher = new QFutureWatcher<QList<AppImageInfo>>(this);
-    connect(watcher, &QFutureWatcher<QList<AppImageInfo>>::finished, this, [this, watcher]() {
+    auto *watcher = new QFutureWatcher<AppImageInfo>(this);
+    connect(watcher, &QFutureWatcher<AppImageInfo>::finished, this, [this, watcher]() {
         watcher->deleteLater();
 
         // Reset counters for this check cycle
         m_updateCount = 0;
         m_pendingChecks = 0;
 
-        const QList<AppImageInfo> infos = watcher->result();
+        const QList<AppImageInfo> infos = watcher->future().results();
         for (const AppImageInfo &info : infos) {
             if (info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|")))
                 ++m_pendingChecks;
@@ -187,12 +187,8 @@ void UpdateDaemon::checkUpdates()
         }
     });
 
-    watcher->setFuture(QtConcurrent::run([files]() {
-        QList<AppImageInfo> results;
-        results.reserve(files.size());
-        for (const QFileInfo &fi : files)
-            results.append(AppImageReader(fi.absoluteFilePath()).read());
-        return results;
+    watcher->setFuture(QtConcurrent::mapped(files, [](const QFileInfo &fi) {
+        return AppImageReader(fi.absoluteFilePath()).read();
     }));
 }
 
