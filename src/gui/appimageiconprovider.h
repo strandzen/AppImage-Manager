@@ -3,6 +3,8 @@
 #pragma once
 
 #include <QByteArray>
+#include <QCache>
+#include <QPixmap>
 #include <QQuickImageProvider>
 #include <QReadWriteLock>
 #include <QString>
@@ -33,5 +35,8 @@ public:
 private:
     struct IconEntry { QByteArray data; QString ext; };
     QHash<QString, IconEntry> m_icons;
+    // Rendered pixmaps keyed by "id:WxH"; capped at ~32 MB so it cannot grow
+    // unbounded with hundreds of dashboard delegates requesting many sizes.
+    QCache<QString, QPixmap> m_renderCache { 32 * 1024 * 1024 };
     mutable QReadWriteLock m_lock;
 };
