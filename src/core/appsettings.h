@@ -3,6 +3,7 @@
 #pragma once
 
 #include <QObject>
+#include <QWindow>  // Qt 6.11 moc needs the full type for Q_INVOKABLE pointer args
 #include <QtQml/qqmlregistration.h>
 
 #include <KSharedConfig>
@@ -54,7 +55,7 @@ public:
     bool showInstallBox() const;
     void setShowInstallBox(bool enabled);
 
-    Q_INVOKABLE void openFolderPicker();
+    Q_INVOKABLE void openFolderPicker(QWindow *parent = nullptr);
 
 Q_SIGNALS:
     void applicationsPathChanged();

@@ -20,12 +20,12 @@ void AppImageSortFilterModel::setFilterText(const QString &text)
     invalidateFilter();
 }
 
-void AppImageSortFilterModel::setSortRole(int role)
+void AppImageSortFilterModel::setSortField(int field)
 {
-    if (m_sortRole == role)
+    if (m_sortField == field)
         return;
-    m_sortRole = role;
-    Q_EMIT sortRoleChanged();
+    m_sortField = field;
+    Q_EMIT sortFieldChanged();
     invalidate();
 }
 
@@ -52,7 +52,7 @@ bool AppImageSortFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex 
 
 bool AppImageSortFilterModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
-    switch (m_sortRole) {
+    switch (m_sortField) {
     case SortBySize: {
         const qint64 a = left.data(AppImageListModel::AppSizeRole).toLongLong();
         const qint64 b = right.data(AppImageListModel::AppSizeRole).toLongLong();

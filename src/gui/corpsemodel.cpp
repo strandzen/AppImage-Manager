@@ -111,3 +111,29 @@ void CorpseModel::setAllChecked(bool checked)
     if (!m_items.isEmpty())
         Q_EMIT dataChanged(index(0), index(m_items.size() - 1), {IsCheckedRole});
 }
+
+void CorpseModel::setHighConfidenceChecked(bool checked)
+{
+    for (int i = 0; i < m_items.size(); ++i) {
+        if (m_items.at(i).confidence == AppImageManager::CorpseConfidence::High) {
+            m_items[i].checked = checked;
+            Q_EMIT dataChanged(index(i), index(i), {IsCheckedRole});
+        }
+    }
+}
+
+int CorpseModel::highConfidenceCount() const
+{
+    int n = 0;
+    for (const Item &item : m_items)
+        if (item.confidence == AppImageManager::CorpseConfidence::High) ++n;
+    return n;
+}
+
+int CorpseModel::lowConfidenceCount() const
+{
+    int n = 0;
+    for (const Item &item : m_items)
+        if (item.confidence == AppImageManager::CorpseConfidence::Low) ++n;
+    return n;
+}

@@ -41,14 +41,20 @@ public:
     void setCorpses(const QList<AppImageManager::CorpseEntry> &corpses);
     void clear();
 
-    // Convenience: total size of all checked items
+    // Convenience: total size / count of all checked items
     Q_INVOKABLE qint64 checkedSize() const;
     Q_INVOKABLE int checkedCount() const;
+
+    // Counts by confidence level — used by QML to decide section rendering.
+    Q_INVOKABLE int highConfidenceCount() const;
+    Q_INVOKABLE int lowConfidenceCount() const;
 
     // Returns the file paths of all checked items
     Q_INVOKABLE QStringList checkedPaths() const;
 
     Q_INVOKABLE void setAllChecked(bool checked);
+    // Check/uncheck only High-confidence items; used by "Select All" in UI.
+    Q_INVOKABLE void setHighConfidenceChecked(bool checked);
 
 private:
     struct Item {

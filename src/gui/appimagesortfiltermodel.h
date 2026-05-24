@@ -12,21 +12,21 @@ class AppImageSortFilterModel : public QSortFilterProxyModel
     QML_UNCREATABLE("Use the 'proxyModel' context property")
 
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
-    Q_PROPERTY(int sortRole READ sortRole WRITE setSortRole NOTIFY sortRoleChanged)
+    Q_PROPERTY(int sortField READ sortField WRITE setSortField NOTIFY sortFieldChanged)
     Q_PROPERTY(Qt::SortOrder sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
 
 public:
-    enum SortRole { SortByName = 0, SortBySize = 1, SortByCategory = 5, SortByDate = 9 };
-    Q_ENUM(SortRole)
+    enum SortField { SortByName = 0, SortBySize = 1, SortByCategory = 5, SortByDate = 9 };
+    Q_ENUM(SortField)
 
     explicit AppImageSortFilterModel(QObject *parent = nullptr);
 
     QString filterText() const { return m_filterText; }
-    int sortRole() const { return m_sortRole; }
+    int sortField() const { return m_sortField; }
     Qt::SortOrder sortOrder() const { return m_sortOrder; }
 
     void setFilterText(const QString &text);
-    void setSortRole(int role);
+    void setSortField(int field);
     void setSortOrder(Qt::SortOrder order);
 
     Q_INVOKABLE void toggleDesktopLink(int proxyRow, bool enable);
@@ -36,7 +36,7 @@ public:
 
 Q_SIGNALS:
     void filterTextChanged();
-    void sortRoleChanged();
+    void sortFieldChanged();
     void sortOrderChanged();
 
 protected:
@@ -47,6 +47,6 @@ private:
     int sourceRowFor(int proxyRow) const;
 
     QString m_filterText;
-    int m_sortRole = SortByName;
+    int m_sortField = SortByName;
     Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
 };

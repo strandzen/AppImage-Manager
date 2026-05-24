@@ -29,6 +29,8 @@ find_package(Qt6 6.6 REQUIRED COMPONENTS
     Qml
     Concurrent  # QtConcurrent::run for blocking AppImageReader/findCorpses calls
     Network     # update checks via QNetworkAccessManager
+    Sql         # SQLite-backed metadata cache (AppImageCache)
+    Svg         # native vector icon rendering for SVGs
 )
 
 find_package(KF6 6.0 REQUIRED COMPONENTS
@@ -63,6 +65,11 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(data)
+
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 
 ki18n_install(po)
 

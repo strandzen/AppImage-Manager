@@ -117,11 +117,10 @@ QList<CorpseEntry> findCorpses(const AppImageInfo &info)
     if (info.appId.isEmpty() && info.appName.isEmpty())
         return {};
 
-    const QString home = QDir::homePath();
     const QStringList baseDirs = {
-        home + QStringLiteral("/.config"),
-        home + QStringLiteral("/.local/share"),
-        home + QStringLiteral("/.cache"),
+        QStandardPaths::writableLocation(QStandardPaths::ConfigLocation),
+        QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation),
+        QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation),
     };
 
     const QString idLower = info.appId.toLower();

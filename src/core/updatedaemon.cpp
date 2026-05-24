@@ -4,6 +4,7 @@
 #include "appimageinfo.h"
 #include "appsettings.h"
 #include "appimagereader.h"
+#include "githubreleasechecker.h"
 #include <QDBusConnection>
 #include <QDir>
 #include <QFileInfo>
@@ -146,54 +147,45 @@ void UpdateDaemon::checkUpdates()
             return;
         }
 
-        // Note: this duplicates some GitHubReleaseChecker logic because the daemon
-        // needs to fire one KNotification per app rather than per emitted signal.
         for (const AppImageInfo &info : infos) {
             if (!info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|")))
                 continue;
-            const QStringList parts = info.updateInfo.split(QLatin1Char('|'));
-            if (parts.size() < 3) {
-                if (--m_pendingChecks == 0) updateTrayStatus();
-                continue;
-            }
-            const QString url = QStringLiteral("https://api.github.com/repos/%1/%2/releases/latest")
-                                    .arg(parts.at(1), parts.at(2));
-            QNetworkRequest request((QUrl(url)));
-            request.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
 
-            QNetworkReply *reply = m_networkManager->get(request);
-            connect(reply, &QNetworkReply::finished, this, [this, reply, info]() mutable {
-                reply->deleteLater();
-                if (reply->error() == QNetworkReply::NoError) {
-                    const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-                    if (doc.isObject()) {
-                        const QString tag = doc.object().value(QLatin1String("tag_name")).toString();
-                        if (!tag.isEmpty()) {
-                            const QString remoteVer = normalizeVersion(tag);
-                            const QString currentVer = normalizeVersion(info.version);
-                            if (isNewerVersion(remoteVer, currentVer)) {
-                                ++m_updateCount;
-                                auto *notification = new KNotification(QStringLiteral("updateAvailable"),
-                                                                       KNotification::Persistent, this);
-                                notification->setTitle(i18n("Update Available"));
-                                notification->setText(i18n("An update is available for %1 (%2 → %3).",
-                                    info.cleanName.isEmpty() ? info.originalName : info.cleanName,
-                                    currentVer, remoteVer));
-                                notification->setIconName(info.appId.isEmpty()
-                                    ? QStringLiteral("application-x-executable") : info.appId);
-                                auto *action = notification->addDefaultAction(i18n("Open Manager"));
-                                connect(action, &KNotificationAction::activated, this, []() {
-                                    QProcess::startDetached(QStringLiteral("appimagemanager"),
-                                                            {QStringLiteral("--dashboard")});
-                                });
-                                notification->sendEvent();
-                            }
-                        }
-                    }
-                }
+            auto *checker = new GitHubReleaseChecker(m_networkManager, this);
+            connect(checker, &GitHubReleaseChecker::updateAvailable, this,
+                    [this, info, checker](const QString &remoteVer, const QString &/*zsyncUrl*/) {
+                checker->deleteLater();
+
+                ++m_updateCount;
+                auto *notification = new KNotification(QStringLiteral("updateAvailable"),
+                                                       KNotification::Persistent, this);
+                notification->setTitle(i18n("Update Available"));
+                notification->setText(i18n("An update is available for %1 (%2 → %3).",
+                    info.cleanName.isEmpty() ? info.originalName : info.cleanName,
+                    normalizeVersion(info.version), remoteVer));
+                notification->setIconName(info.appId.isEmpty()
+                    ? QStringLiteral("application-x-executable") : info.appId);
+                auto *action = notification->addDefaultAction(i18n("Open Manager"));
+                connect(action, &KNotificationAction::activated, this, []() {
+                    QProcess::startDetached(QStringLiteral("appimagemanager"),
+                                            {QStringLiteral("--dashboard")});
+                });
+                notification->sendEvent();
+
                 if (--m_pendingChecks == 0)
                     updateTrayStatus();
             });
+
+            auto handleFailure = [this, checker]() {
+                checker->deleteLater();
+                if (--m_pendingChecks == 0)
+                    updateTrayStatus();
+            };
+            connect(checker, &GitHubReleaseChecker::upToDate, this, handleFailure);
+            connect(checker, &GitHubReleaseChecker::networkFailed, this, handleFailure);
+            connect(checker, &GitHubReleaseChecker::failed, this, handleFailure);
+
+            checker->check(info.updateInfo, info.version);
         }
     });
 

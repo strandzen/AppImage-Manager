@@ -123,12 +123,12 @@ Kirigami.Dialog {
                 Controls.Button {
                     text: i18n("All")
                     visible: dialog.corpseModel && dialog.corpseModel.rowCount() > 0
-                    onClicked: { dialog.corpseModel.setAllChecked(true); }
+                    onClicked: dialog.corpseModel.setAllChecked(true)
                 }
                 Controls.Button {
                     text: i18n("None")
                     visible: dialog.corpseModel && dialog.corpseModel.rowCount() > 0
-                    onClicked: { dialog.corpseModel.setAllChecked(false); }
+                    onClicked: dialog.corpseModel.setAllChecked(false)
                 }
             }
 
@@ -167,20 +167,46 @@ Kirigami.Dialog {
                 }
             }
 
-            // Corpse files
+            // Corpse files — split into High-confidence (pre-selected) and
+            // Low-confidence (unchecked, shown under a warning disclosure).
+            // The model guarantees High items are sorted before Low items.
             ListView {
+                id: corpseList
                 Layout.fillWidth: true
-                implicitHeight: Math.min(contentHeight, Kirigami.Units.gridUnit * 10)
+                implicitHeight: Math.min(contentHeight, Kirigami.Units.gridUnit * 12)
                 clip: true
                 model: dialog.corpseModel
+
+                // Section header: blank for "high", warning banner for "low".
+                section.property: "confidence"
+                section.criteria: ViewSection.FullString
+                section.delegate: Item {
+                    required property string section
+                    width: corpseList.width
+                    height: section === "low" ? lowConfidenceHeader.implicitHeight + Kirigami.Units.smallSpacing * 2 : 0
+                    visible: section === "low"
+
+                    Kirigami.InlineMessage {
+                        id: lowConfidenceHeader
+                        anchors {
+                            left: parent.left; right: parent.right
+                            verticalCenter: parent.verticalCenter
+                        }
+                        type: Kirigami.MessageType.Warning
+                        text: i18n("Possibly related — these directories may not belong to this app. Verify before removing.")
+                        showCloseButton: false
+                    }
+                }
 
                 delegate: RowLayout {
                     required property string filePath
                     required property int fileSize
                     required property bool isChecked
+                    required property string confidence
                     required property int index
                     width: ListView.view.width
                     spacing: Kirigami.Units.smallSpacing
+                    opacity: confidence === "low" ? 0.75 : 1.0
 
                     Controls.CheckBox {
                         checked: isChecked

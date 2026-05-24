@@ -4,24 +4,24 @@
 
 #include "appimageinfo.h"
 
-#include <QMutex>
-#include <QSettings>
-
-// Thread-safe on-disk cache for AppImage metadata.
-// Keyed by (path, mtime) — stale entries are ignored and overwritten.
-// Call from any thread; all access is mutex-guarded.
+// Thread-safe on-disk cache for AppImage metadata backed by SQLite (WAL mode).
+// Each calling thread uses its own database connection to satisfy Qt's
+// "one connection per thread" requirement; SQLite's WAL mode handles
+// file-level concurrency between connections.
+//
+// Keyed by (path, mtime) — stale entries are silently ignored and overwritten.
+// Call from any thread.
 class AppImageCache
 {
 public:
     static AppImageCache &instance();
 
-    // Returns cached info if mtime matches, else invalid AppImageInfo{}.
+    // Returns cached info if mtime matches and cache_version is current, else invalid AppImageInfo{}.
     AppImageInfo load(const QString &path, qint64 mtime);
 
     void store(const QString &path, qint64 mtime, const AppImageInfo &info);
 
 private:
     AppImageCache();
-    QSettings m_settings;
-    QMutex m_mutex;
+    QString m_dbPath;
 };

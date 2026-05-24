@@ -50,7 +50,7 @@ Kirigami.Dialog {
                 }
                 Controls.Button {
                     icon.name: "folder-open"
-                    onClicked: AppSettings.openFolderPicker()
+                    onClicked: AppSettings.openFolderPicker(dialog.Window.window)
                     Controls.ToolTip.text: i18n("Browse…")
                     Controls.ToolTip.visible: hovered
                 }

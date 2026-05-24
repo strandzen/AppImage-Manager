@@ -6,6 +6,7 @@
 
 #include <QDir>
 #include <QFileDialog>
+#include <QWindow>
 #include <KLocalizedString>
 
 AppSettings *AppSettings::instance()
@@ -156,10 +157,26 @@ void AppSettings::setShowInstallBox(bool enabled)
     Q_EMIT showInstallBoxChanged();
 }
 
-void AppSettings::openFolderPicker()
+void AppSettings::openFolderPicker(QWindow *parent)
 {
-    QString dir = QFileDialog::getExistingDirectory(nullptr, i18n("Select Applications Folder"), applicationsPath(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-    if (!dir.isEmpty()) {
-        setApplicationsPath(dir);
+    QFileDialog dialog(nullptr, i18n("Select Applications Folder"), applicationsPath());
+    dialog.setFileMode(QFileDialog::Directory);
+    dialog.setOption(QFileDialog::ShowDirsOnly, true);
+    dialog.setOption(QFileDialog::DontResolveSymlinks, true);
+
+    if (parent) {
+        // winId() forces the native window backing to exist so windowHandle()
+        // returns non-null; QWidget::create() is protected since Qt 6.11.
+        dialog.winId();
+        if (dialog.windowHandle()) {
+            dialog.windowHandle()->setTransientParent(parent);
+        }
+    }
+
+    if (dialog.exec() == QDialog::Accepted) {
+        QString dir = dialog.selectedFiles().first();
+        if (!dir.isEmpty()) {
+            setApplicationsPath(dir);
+        }
     }
 }

@@ -9,10 +9,12 @@
 #include <QFileSystemWatcher>
 #include <QSet>
 #include <QTimer>
-#include <QNetworkAccessManager>
 #include <QtQml/qqmlregistration.h>
 
 class AppImageIconProvider;
+class AppImageUpdateManager;
+class DownloadWatcher;
+class QNetworkAccessManager;
 
 class AppImageListModel : public QAbstractListModel
 {
@@ -63,10 +65,10 @@ private:
         QString updateVersion;
         QString zsyncUrl;
         bool updateAvailable = false;
-        bool isUpdating = false;
-        int updateProgress = 0;
-        bool metadataLoaded = false;
-        bool hasDesktopLink = false;
+        bool isUpdating      = false;
+        int  updateProgress  = 0;
+        bool metadataLoaded  = false;
+        bool hasDesktopLink  = false;
     };
 
 public:
@@ -77,7 +79,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     bool isScanning()        const { return m_scanning; }
-    bool isCheckingUpdates() const { return m_pendingUpdateChecks > 0; }
+    bool isCheckingUpdates() const;
     bool selectionMode()     const { return m_selectionMode; }
     int  selectedCount()     const { return static_cast<int>(m_selected.size()); }
 
@@ -107,11 +109,7 @@ Q_SIGNALS:
 
 private:
     void loadMetadataForRow(int row);
-    void finishOneUpdateCheck(bool foundUpdate, bool networkFailed = false);
-    void checkZsyncUpdate(int row);
-    void updateDownloadWatcher();
-    void checkNewDownloads();
-    int findRowByPath(const QString &path) const;
+    int  findRowByPath(const QString &path) const;
     static void sendError(QObject *parent, const QString &title, const QString &text);
     static QString iconIdForPath(const QString &path);
     static QString formatBytes(qint64 bytes);
@@ -119,19 +117,15 @@ private:
     static QString computeIconSource(const Item &item);
 
     AppImageIconProvider  *m_iconProvider;
+    AppImageUpdateManager *m_updateManager;
+    DownloadWatcher       *m_downloadWatcher;
     QList<Item>            m_items;
-    bool                   m_scanning             = false;
-    int                    m_pendingLoads         = 0;
-    int                    m_pendingUpdateChecks  = 0;
-    int                    m_updatesFoundInCheck  = 0;
-    int                    m_networkFailedChecks  = 0;
-    int                    m_generation    = 0;
+    bool                   m_scanning      = false;
+    int                    m_pendingLoads  = 0;
+    int                    m_generation   = 0;
     bool                   m_selectionMode = false;
     QSet<QString>          m_selected;
 
     QFileSystemWatcher     m_watcher;
     QTimer                 m_refreshTimer;
-    QTimer                 m_updateCheckTimer;
-    QNetworkAccessManager *m_networkManager;
-    QSet<QString>          m_knownDownloads;
 };

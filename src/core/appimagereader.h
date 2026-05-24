@@ -27,6 +27,8 @@ public:
 private:
     static QString extractAppId(const QString &filename);
     static QString versionFromFilename(const QString &filename);
+    void extractMetadataFromXml(const QByteArray &xmlData, AppImageInfo &info);
+    AppImageInfo readWithExtraction();
 
 #ifdef HAVE_LIBAPPIMAGE
     AppImageInfo readWithLibappimage();
@@ -34,7 +36,6 @@ private:
     QString findDesktopFile();
     QString findIconFile(const QString &iconName);
     QString findAppStreamFile();
-    void extractMetadataFromXml(const QByteArray &xmlData, AppImageInfo &info);
 #endif
 
     QString m_path;

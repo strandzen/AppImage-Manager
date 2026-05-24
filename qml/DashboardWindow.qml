@@ -18,27 +18,6 @@ Kirigami.ApplicationWindow {
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
 
-    // ── Role constants ────────────────────────────────────────────────────────
-    // Mirror of AppImageListModel::Roles enum (Qt::UserRole + offset).
-    // If the enum order changes in appimagelistmodel.h these offsets must be updated.
-    readonly property int roleFilePath:       Qt.UserRole + 0
-    readonly property int roleVersion:        Qt.UserRole + 3
-    readonly property int roleIconSource:     Qt.UserRole + 4
-    readonly property int roleMetadataLoaded: Qt.UserRole + 6
-    readonly property int roleFormattedSize:  Qt.UserRole + 8
-    readonly property int roleDisplayName:    Qt.UserRole + 10
-    readonly property int roleHasDesktopLink:  Qt.UserRole + 5
-    readonly property int roleAddedDate:      Qt.UserRole + 9
-    readonly property int roleCategories:     Qt.UserRole + 16
-    readonly property int roleComment:        Qt.UserRole + 17
-    readonly property int roleDescription:    Qt.UserRole + 18
-    readonly property int roleDeveloperName:  Qt.UserRole + 19
-    readonly property int roleHomepage:       Qt.UserRole + 20
-    readonly property int roleUpdateAvailable: Qt.UserRole + 11
-    readonly property int roleUpdateVersion:   Qt.UserRole + 12
-    readonly property int roleIsUpdating:      Qt.UserRole + 13
-    readonly property int roleUpdateProgress:  Qt.UserRole + 14
-
     function handleDrop(drop) {
         for (const url of drop.urls) {
             if (url.toString().toLowerCase().endsWith(".appimage"))
@@ -53,23 +32,23 @@ Kirigami.ApplicationWindow {
         if (idx < 0) { currentItem = {}; return }
         const midx = proxyModel.index(idx, 0)
         currentItem = {
-            filePath:       proxyModel.data(midx, roleFilePath)       ?? "",
-            displayName:    proxyModel.data(midx, roleDisplayName)    ?? "",
-            iconSource:     proxyModel.data(midx, roleIconSource)     ?? "application-x-executable",
-            version:        proxyModel.data(midx, roleVersion)        ?? "",
-            formattedSize:  proxyModel.data(midx, roleFormattedSize)  ?? "",
-            metadataLoaded: proxyModel.data(midx, roleMetadataLoaded) ?? false,
-            comment:        proxyModel.data(midx, roleComment)        ?? "",
-            description:    proxyModel.data(midx, roleDescription)    ?? "",
-            categories:     proxyModel.data(midx, roleCategories)     ?? "",
-            addedDate:      proxyModel.data(midx, roleAddedDate)      ?? null,
-            developerName:  proxyModel.data(midx, roleDeveloperName)  ?? "",
-            homepage:       proxyModel.data(midx, roleHomepage)       ?? "",
-            hasDesktopLink:  proxyModel.data(midx, roleHasDesktopLink)  ?? false,
-            updateAvailable: proxyModel.data(midx, roleUpdateAvailable) ?? false,
-            updateVersion:   proxyModel.data(midx, roleUpdateVersion)   ?? "",
-            isUpdating:      proxyModel.data(midx, roleIsUpdating)      ?? false,
-            updateProgress:  proxyModel.data(midx, roleUpdateProgress)  ?? 0,
+            filePath:        proxyModel.data(midx, AppImageListModel.FilePathRole)        ?? "",
+            displayName:     proxyModel.data(midx, AppImageListModel.DisplayNameRole)     ?? "",
+            iconSource:      proxyModel.data(midx, AppImageListModel.IconSourceRole)      ?? "application-x-executable",
+            version:         proxyModel.data(midx, AppImageListModel.VersionRole)         ?? "",
+            formattedSize:   proxyModel.data(midx, AppImageListModel.FormattedSizeRole)   ?? "",
+            metadataLoaded:  proxyModel.data(midx, AppImageListModel.MetadataLoadedRole)  ?? false,
+            comment:         proxyModel.data(midx, AppImageListModel.CommentRole)         ?? "",
+            description:     proxyModel.data(midx, AppImageListModel.DescriptionRole)     ?? "",
+            categories:      proxyModel.data(midx, AppImageListModel.CategoriesRole)      ?? "",
+            addedDate:       proxyModel.data(midx, AppImageListModel.AddedDateRole)       ?? null,
+            developerName:   proxyModel.data(midx, AppImageListModel.DeveloperNameRole)   ?? "",
+            homepage:        proxyModel.data(midx, AppImageListModel.HomepageRole)        ?? "",
+            hasDesktopLink:  proxyModel.data(midx, AppImageListModel.HasDesktopLinkRole)  ?? false,
+            updateAvailable: proxyModel.data(midx, AppImageListModel.UpdateAvailableRole) ?? false,
+            updateVersion:   proxyModel.data(midx, AppImageListModel.UpdateVersionRole)   ?? "",
+            isUpdating:      proxyModel.data(midx, AppImageListModel.IsUpdatingRole)      ?? false,
+            updateProgress:  proxyModel.data(midx, AppImageListModel.UpdateProgressRole)  ?? 0,
         }
     }
 
@@ -163,26 +142,26 @@ Kirigami.ApplicationWindow {
                     Kirigami.Action {
                         text: i18n("By Name")
                         checkable: true
-                        checked: proxyModel.sortRole === 0
-                        onTriggered: proxyModel.sortRole = 0
+                        checked: proxyModel.sortField === AppImageSortFilterModel.SortByName
+                        onTriggered: proxyModel.sortField = AppImageSortFilterModel.SortByName
                     }
                     Kirigami.Action {
                         text: i18n("By Size")
                         checkable: true
-                        checked: proxyModel.sortRole === 1
-                        onTriggered: proxyModel.sortRole = 1
+                        checked: proxyModel.sortField === AppImageSortFilterModel.SortBySize
+                        onTriggered: proxyModel.sortField = AppImageSortFilterModel.SortBySize
                     }
                     Kirigami.Action {
                         text: i18n("By Category")
                         checkable: true
-                        checked: proxyModel.sortRole === 5
-                        onTriggered: proxyModel.sortRole = 5
+                        checked: proxyModel.sortField === AppImageSortFilterModel.SortByCategory
+                        onTriggered: proxyModel.sortField = AppImageSortFilterModel.SortByCategory
                     }
                     Kirigami.Action {
                         text: i18n("By Date Added")
                         checkable: true
-                        checked: proxyModel.sortRole === 9
-                        onTriggered: proxyModel.sortRole = 9
+                        checked: proxyModel.sortField === AppImageSortFilterModel.SortByDate
+                        onTriggered: proxyModel.sortField = AppImageSortFilterModel.SortByDate
                     }
                 },
                 Kirigami.Action {
@@ -279,7 +258,10 @@ Kirigami.ApplicationWindow {
                 // ── Left pane: master list ────────────────────────────────────
                 Item {
                     id: leftPane
-                    Layout.fillWidth: true
+                    Layout.minimumWidth: Kirigami.Units.gridUnit * 15
+                    Layout.maximumWidth: Kirigami.Units.gridUnit * 24
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 18
+                    Layout.fillWidth: listView.currentIndex < 0
                     Layout.fillHeight: true
 
                     Kirigami.Theme.colorSet: Kirigami.Theme.Window
@@ -391,7 +373,7 @@ Kirigami.ApplicationWindow {
                                                 readonly property string cat: (model.categories ?? "")
                                                     .split(";").filter(s => s.length > 0)[0] ?? ""
                                                 text: cat
-                                                visible: (listView.currentIndex < 0 || proxyModel.sortRole === 5) && model.metadataLoaded && cat !== ""
+                                                visible: (listView.currentIndex < 0 || proxyModel.sortField === AppImageSortFilterModel.SortByCategory) && model.metadataLoaded && cat !== ""
                                                 closable: false
                                                 checkable: false
                                                 Layout.alignment: Qt.AlignVCenter
@@ -407,7 +389,7 @@ Kirigami.ApplicationWindow {
 
                                             Kirigami.Chip {
                                                 text: model.formattedSize
-                                                visible: (listView.currentIndex < 0 || proxyModel.sortRole === 1) && model.metadataLoaded && model.appSize > 0
+                                                visible: (listView.currentIndex < 0 || proxyModel.sortField === AppImageSortFilterModel.SortBySize) && model.metadataLoaded && model.appSize > 0
                                                 closable: false
                                                 checkable: false
                                                 Layout.alignment: Qt.AlignVCenter
@@ -416,7 +398,7 @@ Kirigami.ApplicationWindow {
                                             Kirigami.Chip {
                                                 readonly property var d: model.addedDate
                                                 text: d ? Qt.formatDate(d, "d MMM yyyy") : ""
-                                                visible: proxyModel.sortRole === 9 && model.metadataLoaded && !!d
+                                                visible: proxyModel.sortField === AppImageSortFilterModel.SortByDate && model.metadataLoaded && !!d
                                                 closable: false
                                                 checkable: false
                                                 Layout.alignment: Qt.AlignVCenter

@@ -9,8 +9,10 @@
 #include <KShell>
 
 #include <QDateTime>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QProcess>
 #include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QXmlStreamReader>
@@ -31,18 +33,17 @@ AppImageInfo AppImageReader::read()
         return {};
     }
 
-#ifndef HAVE_LIBAPPIMAGE
-    qCCritical(AIM_LOG) << "libappimage not available — cannot read AppImage metadata for" << m_path
-                        << ". Rebuild with libappimage support.";
-    return {};
-#endif
-
     const qint64 mtime = QFileInfo(m_path).lastModified().toMSecsSinceEpoch();
     const AppImageInfo cached = AppImageCache::instance().load(m_path, mtime);
     if (cached.isValid)
         return cached;
 
+#ifdef HAVE_LIBAPPIMAGE
     const AppImageInfo info = readWithLibappimage();
+#else
+    const AppImageInfo info = readWithExtraction();
+#endif
+
     if (info.isValid)
         AppImageCache::instance().store(m_path, mtime, info);
     return info;
@@ -158,6 +159,8 @@ AppImageInfo AppImageReader::readWithLibappimage()
         info.isValid = true;
         return info;
     }
+
+    info.appId = QFileInfo(desktopInner).baseName();
 
     // Read .desktop file into a temporary file for KDesktopFile parsing
     const QByteArray desktopData = readFileFromAppImage(desktopInner);
@@ -303,6 +306,7 @@ QByteArray AppImageReader::readFileFromAppImage(const QString &innerPath, QStrin
     return result;
 }
 
+#endif // HAVE_LIBAPPIMAGE
 
 void AppImageReader::extractMetadataFromXml(const QByteArray &xmlData, AppImageInfo &info)
 {
@@ -361,4 +365,146 @@ void AppImageReader::extractMetadataFromXml(const QByteArray &xmlData, AppImageI
     info.description = description.trimmed();
 }
 
-#endif // HAVE_LIBAPPIMAGE
+AppImageInfo AppImageReader::readWithExtraction()
+{
+    AppImageInfo info;
+    info.originalName = QFileInfo(m_path).fileName();
+    info.cleanName    = cleanName(info.originalName);
+    info.appId        = extractAppId(info.originalName);
+    info.appName      = info.cleanName;
+    info.appName.remove(QLatin1String(".AppImage"), Qt::CaseInsensitive);
+    info.version      = QStringLiteral("Unknown");
+    info.fileSize     = QFileInfo(m_path).size();
+
+    QTemporaryDir tmp;
+    if (!tmp.isValid()) {
+        qCWarning(AIM_LOG) << "Failed to create temporary directory for self-extraction";
+        return info;
+    }
+
+    auto runExtract = [&](const QString &pattern) {
+        QProcess p;
+        p.setWorkingDirectory(tmp.path());
+        p.setProgram(m_path);
+        p.setArguments({ QStringLiteral("--appimage-extract"), pattern });
+        p.start();
+        return p.waitForFinished(5000) && p.exitCode() == 0;
+    };
+
+    // Extract files
+    runExtract(QStringLiteral("*.desktop"));
+    runExtract(QStringLiteral(".DirIcon"));
+    runExtract(QStringLiteral("usr/share/metainfo/*.appdata.xml"));
+    runExtract(QStringLiteral("usr/share/appdata/*.metainfo.xml"));
+
+    const QString squashRoot = tmp.path() + QStringLiteral("/squashfs-root");
+    QDir rootDir(squashRoot);
+    if (!rootDir.exists()) {
+        qCWarning(AIM_LOG) << "Self-extraction failed: squashfs-root not created";
+        return info;
+    }
+
+    // Find extracted .desktop file
+    QString desktopPath;
+    const QStringList desktops = rootDir.entryList({ QStringLiteral("*.desktop") }, QDir::Files);
+    if (!desktops.isEmpty()) {
+        desktopPath = rootDir.absoluteFilePath(desktops.first());
+        info.appId = QFileInfo(desktopPath).baseName();
+    }
+
+    if (desktopPath.isEmpty()) {
+        qCWarning(AIM_LOG) << "No .desktop file found in extracted AppImage" << m_path;
+        info.isValid = true;
+        return info;
+    }
+
+    // Parse desktop file
+    KDesktopFile df(desktopPath);
+    const KConfigGroup entry = df.desktopGroup();
+
+    info.appName    = entry.readEntry(QStringLiteral("Name"), info.appName);
+    info.categories = entry.readEntry(QStringLiteral("Categories"));
+    info.comment    = entry.readEntry(QStringLiteral("Comment"));
+    info.updateInfo = entry.readEntry(QStringLiteral("X-AppImage-Update-Information"));
+
+    QString ver = entry.readEntry(QStringLiteral("X-AppImage-Version"));
+    if (ver.isEmpty() && !info.updateInfo.isEmpty()) {
+        static const QRegularExpression verInUrl(QStringLiteral(R"([-_](\d+\.\d+[\d.]*))"));
+        const auto m = verInUrl.match(info.updateInfo);
+        if (m.hasMatch())
+            ver = m.captured(1);
+    }
+    if (ver.isEmpty())
+        ver = versionFromFilename(info.originalName);
+    info.version = ver.isEmpty() ? QStringLiteral("Unknown") : ver;
+
+    const QString execFull = entry.readEntry(QStringLiteral("Exec"));
+    const QStringList execParts = KShell::splitArgs(execFull);
+    if (execParts.size() > 1) {
+        QStringList args;
+        for (int i = 1; i < execParts.size(); ++i)
+            if (!execParts.at(i).startsWith(QLatin1Char('%')))
+                args << KShell::quoteArg(execParts.at(i));
+        info.execArgs = args.join(QLatin1Char(' '));
+    }
+
+    // Find and read icon
+    const QString iconName = entry.readEntry(QStringLiteral("Icon"));
+    QString iconFile;
+
+    if (!iconName.isEmpty()) {
+        QStringList iconCandidates = {
+            iconName + QStringLiteral(".png"),
+            iconName + QStringLiteral(".svg")
+        };
+        for (const QString &cand : iconCandidates) {
+            if (!rootDir.exists(cand))
+                runExtract(cand);
+            if (rootDir.exists(cand)) {
+                iconFile = rootDir.absoluteFilePath(cand);
+                break;
+            }
+        }
+    }
+
+    if (iconFile.isEmpty() && rootDir.exists(QStringLiteral(".DirIcon"))) {
+        iconFile = rootDir.absoluteFilePath(QStringLiteral(".DirIcon"));
+    }
+
+    if (!iconFile.isEmpty()) {
+        QFile f(iconFile);
+        if (f.open(QIODevice::ReadOnly)) {
+            info.iconData = f.readAll();
+            info.iconExt = QLatin1Char('.') + QFileInfo(iconFile).suffix();
+            if (info.iconExt == QLatin1String("."))
+                info.iconExt = QStringLiteral(".png");
+        }
+    }
+
+    // Read AppStream XML
+    QString appStreamFile;
+    auto scanXml = [&](const QString &subPath) {
+        QDir xmlDir(squashRoot + subPath);
+        if (xmlDir.exists()) {
+            const QStringList xmls = xmlDir.entryList({ QStringLiteral("*.appdata.xml"), QStringLiteral("*.metainfo.xml") }, QDir::Files);
+            if (!xmls.isEmpty())
+                appStreamFile = xmlDir.absoluteFilePath(xmls.first());
+        }
+    };
+    scanXml(QStringLiteral("/usr/share/metainfo"));
+    if (appStreamFile.isEmpty())
+        scanXml(QStringLiteral("/usr/share/appdata"));
+
+    if (!appStreamFile.isEmpty()) {
+        QFile f(appStreamFile);
+        if (f.open(QIODevice::ReadOnly)) {
+            extractMetadataFromXml(f.readAll(), info);
+        }
+    }
+
+    if (info.description.isEmpty())
+        info.description = info.comment;
+
+    info.isValid = true;
+    return info;
+}

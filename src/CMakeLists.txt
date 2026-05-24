@@ -24,6 +24,7 @@ target_include_directories(appimagemanager_core PUBLIC
 target_link_libraries(appimagemanager_core PUBLIC
     Qt6::Core
     Qt6::Network
+    Qt6::Sql
     KF6::CoreAddons
     KF6::I18n
     KF6::ConfigCore
@@ -84,6 +85,10 @@ qt_add_qml_module(appimagemanager_qml
         gui/appimageiconprovider.cpp
         gui/appimagelistmodel.h
         gui/appimagelistmodel.cpp
+        gui/appimageupdate.h
+        gui/appimageupdate.cpp
+        gui/downloadwatcher.h
+        gui/downloadwatcher.cpp
         gui/appimagesortfiltermodel.h
         gui/appimagesortfiltermodel.cpp
         gui/corpsemodel.h
@@ -117,6 +122,7 @@ target_link_libraries(appimagemanager_qml PUBLIC
     Qt6::Qml
     Qt6::Concurrent
     Qt6::Widgets
+    Qt6::Svg
     KF6::I18nQml
     KF6::IconThemes
     KF6::Notifications
