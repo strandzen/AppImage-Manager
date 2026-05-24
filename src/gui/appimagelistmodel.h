@@ -85,6 +85,12 @@ public:
 
     void setSelectionMode(bool mode);
 
+    // Direct typed accessors used by AppImageSortFilterModel::lessThan to skip
+    // the QVariant/role dispatch in data(). `field` matches SortField in
+    // AppImageSortFilterModel (0 Name, 1 Size, 2 Category, 3 Date).
+    QVariant sortKey(int row, int field) const;
+    QString  displayNameForRow(int row)  const;
+
     Q_INVOKABLE void scan();
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void toggleDesktopLink(int row, bool enable);

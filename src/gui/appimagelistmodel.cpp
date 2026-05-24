@@ -515,6 +515,30 @@ QString AppImageListModel::computeDisplayName(const Item &item)
            : item.info.cleanName;
 }
 
+QVariant AppImageListModel::sortKey(int row, int field) const
+{
+    if (row < 0 || row >= m_items.size())
+        return {};
+    const Item &item = m_items.at(row);
+    // Field values mirror AppImageSortFilterModel::SortField. Kept as ints to
+    // avoid pulling the sort-filter header into the model.
+    enum { Name = 0, Size = 1, Category = 2, Date = 3 };
+    switch (field) {
+    case Size:     return item.info.fileSize;
+    case Category: return item.info.categories;
+    case Date:     return item.addedDate;
+    case Name:
+    default:       return item.cachedDisplayName;
+    }
+}
+
+QString AppImageListModel::displayNameForRow(int row) const
+{
+    if (row < 0 || row >= m_items.size())
+        return {};
+    return m_items.at(row).cachedDisplayName;
+}
+
 // static
 QString AppImageListModel::computeIconSource(const Item &item)
 {

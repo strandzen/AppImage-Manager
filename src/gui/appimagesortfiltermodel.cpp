@@ -52,33 +52,42 @@ bool AppImageSortFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex 
 
 bool AppImageSortFilterModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
-    switch (m_sortField) {
-    case SortBySize: {
-        const qint64 a = left.data(AppImageListModel::AppSizeRole).toLongLong();
-        const qint64 b = right.data(AppImageListModel::AppSizeRole).toLongLong();
-        if (a != b) return a < b;
-        break;
-    }
-    case SortByCategory: {
-        const QString a = left.data(AppImageListModel::CategoriesRole).toString();
-        const QString b = right.data(AppImageListModel::CategoriesRole).toString();
-        const int cmp = a.compare(b, Qt::CaseInsensitive);
-        if (cmp != 0) return cmp < 0;
-        break;
-    }
-    case SortByDate: {
-        const QDateTime a = left.data(AppImageListModel::AddedDateRole).toDateTime();
-        const QDateTime b = right.data(AppImageListModel::AddedDateRole).toDateTime();
-        if (a != b) return a > b; // newest first
-        break;
-    }
-    default:
-        break;
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    if (!src)
+        return false;
+
+    const int lrow = left.row();
+    const int rrow = right.row();
+
+    // Skip the role dispatch in data() — pull primary keys directly off the Item.
+    if (m_sortField != SortByName) {
+        const QVariant a = src->sortKey(lrow, m_sortField);
+        const QVariant b = src->sortKey(rrow, m_sortField);
+        switch (m_sortField) {
+        case SortBySize: {
+            const qint64 aa = a.toLongLong();
+            const qint64 bb = b.toLongLong();
+            if (aa != bb) return aa < bb;
+            break;
+        }
+        case SortByCategory: {
+            const int cmp = a.toString().compare(b.toString(), Qt::CaseInsensitive);
+            if (cmp != 0) return cmp < 0;
+            break;
+        }
+        case SortByDate: {
+            const QDateTime aa = a.toDateTime();
+            const QDateTime bb = b.toDateTime();
+            if (aa != bb) return aa > bb; // newest first
+            break;
+        }
+        default:
+            break;
+        }
     }
 
-    const QString aName = left.data(AppImageListModel::DisplayNameRole).toString();
-    const QString bName = right.data(AppImageListModel::DisplayNameRole).toString();
-    return aName.compare(bName, Qt::CaseInsensitive) < 0;
+    return src->displayNameForRow(lrow)
+              .compare(src->displayNameForRow(rrow), Qt::CaseInsensitive) < 0;
 }
 
 int AppImageSortFilterModel::sourceRowFor(int proxyRow) const
