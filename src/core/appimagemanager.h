@@ -40,4 +40,8 @@ namespace AppImageManager {
 
     QString desktopFilePath(const AppImageInfo &info);
     QString iconFilePath(const AppImageInfo &info);
+
+    // Fire-and-forget rebuild of Plasma's service cache so a newly written or
+    // removed .desktop file shows up in the launcher within ~1 s.
+    void rebuildSycoca();
 }

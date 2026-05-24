@@ -115,10 +115,16 @@ void AppImageBackend::installAppImage()
 
 void AppImageBackend::toggleDesktopLink(bool enable)
 {
-    if (enable)
-        AppImageManager::createDesktopLink(m_appImagePath, m_info);
-    else
-        AppImageManager::removeDesktopLink(m_appImagePath, m_info);
+    const bool ok = enable
+        ? AppImageManager::createDesktopLink(m_appImagePath, m_info)
+        : AppImageManager::removeDesktopLink(m_appImagePath, m_info);
+
+    if (!ok) {
+        Q_EMIT errorOccurred(enable
+            ? i18n("Could not create launcher entry.")
+            : i18n("Could not remove launcher entry."));
+        return;
+    }
 
     m_hasDesktopLink = enable;
     Q_EMIT desktopLinkChanged();
@@ -196,10 +202,9 @@ void AppImageBackend::onInstallJobFinished(KJob *job)
                    + QLatin1Char('/')
                    + QFileInfo(m_appImagePath).fileName();
     m_isInstalled = true;
-    m_hasDesktopLink = true;
-    AppImageManager::createDesktopLink(m_appImagePath, m_info);
-    QProcess::startDetached(QStringLiteral("kbuildsycoca6"), {});
+    m_hasDesktopLink = AppImageManager::createDesktopLink(m_appImagePath, m_info);
     Q_EMIT installedChanged();
+    Q_EMIT desktopLinkChanged();
 
     if (AppSettings::instance()->showNotifications()) {
 #ifdef HAVE_CANBERRA

@@ -14,6 +14,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QIcon>
+#include <QProcess>
 #include <QSet>
 #include <QStandardPaths>
 #include <QUrl>
@@ -64,13 +65,25 @@ bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
     const QString desktopPath = desktopFilePath(info);
     const QString iconPath = iconFilePath(info);
 
-    QDir().mkpath(QFileInfo(desktopPath).absolutePath());
-    QDir().mkpath(QFileInfo(iconPath).absolutePath());
+    if (!QDir().mkpath(QFileInfo(desktopPath).absolutePath())) {
+        qCWarning(AIM_LOG) << "createDesktopLink: cannot create .desktop directory" << QFileInfo(desktopPath).absolutePath();
+        return false;
+    }
+    if (!QDir().mkpath(QFileInfo(iconPath).absolutePath())) {
+        qCWarning(AIM_LOG) << "createDesktopLink: cannot create icon directory" << QFileInfo(iconPath).absolutePath();
+        return false;
+    }
 
     if (!info.iconData.isEmpty()) {
         QFile iconFile(iconPath);
-        if (iconFile.open(QIODevice::WriteOnly))
-            iconFile.write(info.iconData);
+        if (!iconFile.open(QIODevice::WriteOnly)) {
+            qCWarning(AIM_LOG) << "createDesktopLink: cannot open icon for writing" << iconPath << iconFile.errorString();
+            return false;
+        }
+        if (iconFile.write(info.iconData) != info.iconData.size()) {
+            qCWarning(AIM_LOG) << "createDesktopLink: short write to icon file" << iconPath;
+            return false;
+        }
     }
 
     const QString iconField = QIcon::hasThemeIcon(info.appId) ? info.appId : iconPath;
@@ -91,6 +104,12 @@ bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
     grp.writeEntry(QStringLiteral("Comment"),
                    i18n("Managed by AppImage Manager"));
     df.sync();
+    if (!QFile::exists(desktopPath)) {
+        qCWarning(AIM_LOG) << "createDesktopLink: KDesktopFile::sync did not produce" << desktopPath;
+        return false;
+    }
+
+    rebuildSycoca();
     return true;
 }
 
@@ -98,13 +117,25 @@ bool removeDesktopLink(const QString & /*appImagePath*/, const AppImageInfo &inf
 {
     const QString desktopPath = desktopFilePath(info);
     const QString iconPath = iconFilePath(info);
+    bool ok = true;
 
-    if (QFile::exists(desktopPath))
-        QFile::remove(desktopPath);
-    if (QFile::exists(iconPath))
-        QFile::remove(iconPath);
+    if (QFile::exists(desktopPath) && !QFile::remove(desktopPath)) {
+        qCWarning(AIM_LOG) << "removeDesktopLink: cannot remove" << desktopPath;
+        ok = false;
+    }
+    if (QFile::exists(iconPath) && !QFile::remove(iconPath)) {
+        qCWarning(AIM_LOG) << "removeDesktopLink: cannot remove" << iconPath;
+        ok = false;
+    }
 
-    return true;
+    if (ok)
+        rebuildSycoca();
+    return ok;
+}
+
+void rebuildSycoca()
+{
+    QProcess::startDetached(QStringLiteral("kbuildsycoca6"), {});
 }
 
 bool isDesktopLinkEnabled(const QString & /*appImagePath*/, const AppImageInfo &info)
