@@ -520,9 +520,10 @@ QVariant AppImageListModel::sortKey(int row, int field) const
     if (row < 0 || row >= m_items.size())
         return {};
     const Item &item = m_items.at(row);
-    // Field values mirror AppImageSortFilterModel::SortField. Kept as ints to
-    // avoid pulling the sort-filter header into the model.
-    enum { Name = 0, Size = 1, Category = 2, Date = 3 };
+    // Field values mirror AppImageSortFilterModel::SortField (non-sequential
+    // by historical accident). Kept as ints here so the model does not pull
+    // the sort-filter header.
+    enum { Name = 0, Size = 1, Category = 5, Date = 9 };
     switch (field) {
     case Size:     return item.info.fileSize;
     case Category: return item.info.categories;
@@ -537,6 +538,36 @@ QString AppImageListModel::displayNameForRow(int row) const
     if (row < 0 || row >= m_items.size())
         return {};
     return m_items.at(row).cachedDisplayName;
+}
+
+QVariantMap AppImageListModel::itemData(int row) const
+{
+    if (row < 0 || row >= m_items.size())
+        return {};
+    const Item &item = m_items.at(row);
+    return {
+        { QStringLiteral("filePath"),        item.filePath                                },
+        { QStringLiteral("cleanName"),       item.info.cleanName                          },
+        { QStringLiteral("appName"),         item.info.appName                            },
+        { QStringLiteral("version"),         item.info.version                            },
+        { QStringLiteral("iconSource"),      item.cachedIconSource                        },
+        { QStringLiteral("hasDesktopLink"),  item.hasDesktopLink                          },
+        { QStringLiteral("metadataLoaded"),  item.metadataLoaded                          },
+        { QStringLiteral("appSize"),         item.info.fileSize                           },
+        { QStringLiteral("formattedSize"),   item.cachedFormattedSize                     },
+        { QStringLiteral("addedDate"),       item.addedDate                               },
+        { QStringLiteral("displayName"),     item.cachedDisplayName                       },
+        { QStringLiteral("updateAvailable"), item.updateAvailable                         },
+        { QStringLiteral("updateVersion"),   item.updateVersion                           },
+        { QStringLiteral("isUpdating"),      item.isUpdating                              },
+        { QStringLiteral("updateProgress"),  item.updateProgress                          },
+        { QStringLiteral("isSelected"),      m_selected.contains(item.filePath)           },
+        { QStringLiteral("categories"),      item.info.categories                         },
+        { QStringLiteral("comment"),         item.info.comment                            },
+        { QStringLiteral("description"),     item.cachedDescription                       },
+        { QStringLiteral("developerName"),   item.info.developerName                      },
+        { QStringLiteral("homepage"),        item.info.homepage                           },
+    };
 }
 
 // static

@@ -87,9 +87,14 @@ public:
 
     // Direct typed accessors used by AppImageSortFilterModel::lessThan to skip
     // the QVariant/role dispatch in data(). `field` matches SortField in
-    // AppImageSortFilterModel (0 Name, 1 Size, 2 Category, 3 Date).
+    // AppImageSortFilterModel (0 Name, 1 Size, 5 Category, 9 Date).
     QVariant sortKey(int row, int field) const;
     QString  displayNameForRow(int row)  const;
+
+    // Bulk role fetch for QML: returns every role keyed by its roleName
+    // string in a single trip. Avoids QML's per-role .data() round-trips
+    // when populating the dashboard detail pane.
+    Q_INVOKABLE QVariantMap itemData(int row) const;
 
     Q_INVOKABLE void scan();
     Q_INVOKABLE void refresh();

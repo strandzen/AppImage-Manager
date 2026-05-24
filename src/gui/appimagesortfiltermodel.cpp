@@ -122,3 +122,10 @@ void AppImageSortFilterModel::downloadUpdate(int proxyRow)
     if (src)
         src->downloadUpdate(sourceRowFor(proxyRow));
 }
+
+QVariantMap AppImageSortFilterModel::itemData(int proxyRow) const
+{
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    if (!src) return {};
+    return src->itemData(sourceRowFor(proxyRow));
+}

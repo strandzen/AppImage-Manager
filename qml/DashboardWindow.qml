@@ -30,26 +30,9 @@ Kirigami.ApplicationWindow {
 
     function refreshCurrentItemAt(idx) {
         if (idx < 0) { currentItem = {}; return }
-        const midx = proxyModel.index(idx, 0)
-        currentItem = {
-            filePath:        proxyModel.data(midx, AppImageListModel.FilePathRole)        ?? "",
-            displayName:     proxyModel.data(midx, AppImageListModel.DisplayNameRole)     ?? "",
-            iconSource:      proxyModel.data(midx, AppImageListModel.IconSourceRole)      ?? "application-x-executable",
-            version:         proxyModel.data(midx, AppImageListModel.VersionRole)         ?? "",
-            formattedSize:   proxyModel.data(midx, AppImageListModel.FormattedSizeRole)   ?? "",
-            metadataLoaded:  proxyModel.data(midx, AppImageListModel.MetadataLoadedRole)  ?? false,
-            comment:         proxyModel.data(midx, AppImageListModel.CommentRole)         ?? "",
-            description:     proxyModel.data(midx, AppImageListModel.DescriptionRole)     ?? "",
-            categories:      proxyModel.data(midx, AppImageListModel.CategoriesRole)      ?? "",
-            addedDate:       proxyModel.data(midx, AppImageListModel.AddedDateRole)       ?? null,
-            developerName:   proxyModel.data(midx, AppImageListModel.DeveloperNameRole)   ?? "",
-            homepage:        proxyModel.data(midx, AppImageListModel.HomepageRole)        ?? "",
-            hasDesktopLink:  proxyModel.data(midx, AppImageListModel.HasDesktopLinkRole)  ?? false,
-            updateAvailable: proxyModel.data(midx, AppImageListModel.UpdateAvailableRole) ?? false,
-            updateVersion:   proxyModel.data(midx, AppImageListModel.UpdateVersionRole)   ?? "",
-            isUpdating:      proxyModel.data(midx, AppImageListModel.IsUpdatingRole)      ?? false,
-            updateProgress:  proxyModel.data(midx, AppImageListModel.UpdateProgressRole)  ?? 0,
-        }
+        // One C++ call returns every role keyed by name; the previous form
+        // crossed the QML/C++ boundary 18 times per selection change.
+        currentItem = proxyModel.itemData(idx)
     }
 
     // ── Update check result ───────────────────────────────────────────────────
@@ -314,13 +297,19 @@ Kirigami.ApplicationWindow {
                                     }
                                 }
 
+                                // Animations are noisy during the initial scan (N inserts → N
+                                // simultaneous transitions). Gate add/displaced on !scanning so
+                                // bulk fills snap into place; single user-driven adds still animate
+                                // once scanning settles. Remove stays animated regardless.
                                 add: Transition {
+                                    enabled: !listModel.scanning
                                     NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Kirigami.Units.longDuration }
                                 }
                                 remove: Transition {
                                     NumberAnimation { property: "opacity"; to: 0; duration: Kirigami.Units.shortDuration }
                                 }
                                 displaced: Transition {
+                                    enabled: !listModel.scanning
                                     NumberAnimation { properties: "y"; duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic }
                                 }
 
