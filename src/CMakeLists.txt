@@ -126,16 +126,12 @@ target_link_libraries(appimagemanager_qml PUBLIC
     KF6::I18nQml
     KF6::IconThemes
     KF6::Notifications
+    KF6::StatusNotifierItem
 )
 
 if(Canberra_FOUND)
     target_link_libraries(appimagemanager_qml PRIVATE PkgConfig::Canberra)
     target_compile_definitions(appimagemanager_qml PRIVATE HAVE_CANBERRA)
-endif()
-
-if(KF6StatusNotifierItem_FOUND)
-    target_link_libraries(appimagemanager_qml PUBLIC KF6::StatusNotifierItem)
-    target_compile_definitions(appimagemanager_qml PUBLIC HAVE_KSTATUSNOTIFIERITEM)
 endif()
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -41,7 +41,7 @@ sudo cmake --install build/release
 rm -rf build/ && cmake --preset dev && cmake --build --preset dev
 ```
 
-Build output: `build/<presetName>/`. No test suite — validation is manual (see Testing).
+Build output: `build/<presetName>/`. Unit tests in [tests/](tests/) (run via `ctest --test-dir build/dev --output-on-failure`); the manual checklist below still applies for UI/integration paths.
 
 ---
 
@@ -66,7 +66,7 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 |-------|-------|------|
 | `AppImageInfo` | `appimageinfo.h` | Value struct: `originalName`, `cleanName`, `appId`, `appName`, `version`, `categories`, `comment`, `description`, `execArgs`, `fileSize`, `iconData`, `iconExt`, `updateInfo`, `isValid`. `description` = AppStream XML content; falls back to `comment` (`.desktop Comment=`) if XML absent |
 | `AppImageReader` | `appimagereader.h/.cpp` | **BLOCKING** extractor. Requires `libappimage` (in-process SquashFS, no FUSE/subprocess). Reads `.desktop` via `KDesktopFile`, then AppStream XML from `usr/share/metainfo/*.appdata.xml` or `usr/share/appdata/*.metainfo.xml` via `QXmlStreamReader`. **Always call via `QtConcurrent::run`** |
-| `AppImageCache` | `appimagecache.h/.cpp` | Thread-safe on-disk cache (`QSettings` INI, keyed by MD5(path)+mtime). **Version 2** — serializes `comment` and `description`. Entries with `cacheVersion < 2` auto-invalidate. |
+| `AppImageCache` | `appimagecache.h/.cpp` | Thread-safe on-disk cache (SQLite via `Qt6::Sql`, WAL mode, per-thread connection; DB path `$XDG_DATA_HOME/AppImageManager/cache.db`; one row per AppImage keyed by `MD5(path)`). **`kCacheVersion = 4`** — schema migrated from QSettings INI in v4; adds `developer_name` / `homepage`. Rows with `cache_version != 4` or stale `mtime` are returned as invalid (forces a cold re-read). |
 | `AppImageManager` | `appimagemanager.h/.cpp` | File operations: `installAppImage()` (KIO::CopyJob + chmod +x), `createDesktopLink()`, `removeDesktopLink()`, `isDesktopLinkEnabled()`, `findCorpses()` (blocking), `removeItems()` (KIO::trash). Also `rebuildSycoca()` |
 | `AppSettings` | `appsettings.h/.cpp` | QML singleton (`AppSettings`). KSharedConfig → `appimagemanagerrc`. Properties: `applicationsPath`, `showDisclaimer`, `showNotifications`, `updateFrequency`, `customUpdateDays`, `manageIconSize`, `watchDownloads` (controls both daemon + dashboard download detection), `showInstallBox`. Setter validates path via `QDir::mkpath()`, emits `applicationsPathError(msg)` on failure |
 | `GitHubReleaseChecker` | `githubreleasechecker.h/.cpp` | Parses `gh-releases-zsync\|owner\|repo\|...` update info, hits GitHub Releases API, emits `updateAvailable(newVersion, zsyncUrl)`, `upToDate()`, or `failed()`. Used by both `UpdateDaemon` and `AppImageListModel` — single source of truth for GitHub update logic |
@@ -219,10 +219,10 @@ The daemon registers `io.github.appimagemanager.Daemon` on the session bus when 
 | **`anchors.fill` + `drag.target`** | Anchors override x/y set by drag system. Items that are drag targets must use explicit `width`/`height`, not `anchors.fill` |
 | **`AnchorChanges` in States** | Does not support `anchors.fill` shorthand. Only individual sides: `anchors.left`, `anchors.top`, etc. |
 | **`clip: true` on rounded Rectangle** | Clips to bounding rect, ignores `radius`. Cannot achieve rounded clip this way |
-| **`beginFilterChange`/`endFilterChange`** | Added in Qt 6.9. Project minimum is Qt 6.6. Use `invalidateFilter()` |
+| **`beginFilterChange`/`endFilterChange`** | Available since Qt 6.9 (now the project minimum). Prefer the new API for filter mutations that need begin/end semantics; `invalidateFilter()` still works for the common case |
 | **`CorpseModel` QML_ELEMENT** | Do not add `QML_ELEMENT` — triggers Qt 6.11 constexpr metaobject `static_assert` |
 | **KDBusService mode** | Uses `Multiple` so Dolphin can open several AppImages simultaneously. Do not change to `Unique` |
-| **`AppImageCache` version** | Cache is versioned (`cacheVersion = 2`). Adding new fields to `AppImageInfo` that must be persisted requires bumping `kCacheVersion` in `appimagecache.cpp` AND adding the field to both `load()` and `store()`. Forgetting either silently returns empty strings for the new field. |
+| **`AppImageCache` version** | Cache is versioned (`kCacheVersion = 4`, SQLite-backed). Adding new fields to `AppImageInfo` that must be persisted requires bumping `kCacheVersion`, adding a column to the `CREATE TABLE metadata` schema, and adding the field to both `load()` and `store()`. Forgetting any of the three silently returns empty strings for the new field. |
 | **`QFileSystemWatcher::directoryChanged` routing** | Signal provides the changed path. `AppImageListModel` uses `[this](const QString &p)` and routes: `p == DownloadLocation` → `checkNewDownloads()`, else → `m_refreshTimer.start()`. Do not revert to a no-arg lambda or downloads will trigger a full refresh instead of a notification. |
 | **`QLatin1String` and multi-byte UTF-8** | `QLatin1String("• ")` misinterprets the bullet (U+2022, 3 UTF-8 bytes) as 3 Latin-1 chars. Always use `QStringLiteral("• ")` for non-ASCII string literals. |
 

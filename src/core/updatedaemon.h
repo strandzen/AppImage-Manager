@@ -8,10 +8,7 @@
 
 class QFileSystemWatcher;
 class QNetworkAccessManager;
-
-#ifdef HAVE_KSTATUSNOTIFIERITEM
 class KStatusNotifierItem;
-#endif
 
 class APPIMAGEMANAGER_EXPORT UpdateDaemon : public QObject
 {
@@ -34,7 +31,5 @@ private:
     int m_updateCount   = 0;
     int m_pendingChecks = 0;
 
-#ifdef HAVE_KSTATUSNOTIFIERITEM
     KStatusNotifierItem *m_trayIcon = nullptr;
-#endif
 };

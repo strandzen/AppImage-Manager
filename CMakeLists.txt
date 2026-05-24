@@ -21,7 +21,7 @@ ecm_setup_version(${PROJECT_VERSION}
     VERSION_HEADER "${CMAKE_CURRENT_BINARY_DIR}/src/version.h"
 )
 
-find_package(Qt6 6.6 REQUIRED COMPONENTS
+find_package(Qt6 6.9 REQUIRED COMPONENTS
     Core
     DBus        # session bus: daemon service registration, download dedup check
     Gui
@@ -33,23 +33,17 @@ find_package(Qt6 6.6 REQUIRED COMPONENTS
     Svg         # native vector icon rendering for SVGs
 )
 
-find_package(KF6 6.0 REQUIRED COMPONENTS
-    CoreAddons  # KAboutData, kcoreaddons_add_plugin
-    I18n        # i18n() / ki18n_install
-    Config      # KSharedConfig for persistent settings
-    KIO         # file install (CopyJob), trash (trash()), restore (RestoreJob)
-    IconThemes  # QIcon::fromTheme / hasThemeIcon
-    Notifications # KNotification for install/update/download events
-    Crash       # KCrash::initialize → DrKonqi integration
-    DBusAddons  # KDBusService for multi-instance launch control
+find_package(KF6 6.7 REQUIRED COMPONENTS
+    CoreAddons         # KAboutData, kcoreaddons_add_plugin
+    I18n               # i18n() / ki18n_install
+    Config             # KSharedConfig for persistent settings
+    KIO                # file install (CopyJob), trash (trash()), restore (RestoreJob)
+    IconThemes         # QIcon::fromTheme / hasThemeIcon
+    Notifications      # KNotification for install/update/download events
+    Crash              # KCrash::initialize → DrKonqi integration
+    DBusAddons         # KDBusService for multi-instance launch control
+    StatusNotifierItem # daemon tray icon for pending updates
 )
-
-find_package(KF6StatusNotifierItem QUIET)
-if(KF6StatusNotifierItem_FOUND)
-    message(STATUS "KStatusNotifierItem found — system tray support enabled")
-else()
-    message(STATUS "KStatusNotifierItem not found — system tray support disabled")
-endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Canberra IMPORTED_TARGET libcanberra)

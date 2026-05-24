@@ -22,9 +22,7 @@
 #include <QProcess>
 #include <QtConcurrent/QtConcurrent>
 
-#ifdef HAVE_KSTATUSNOTIFIERITEM
 #include <KStatusNotifierItem>
-#endif
 
 // freq values: 0 = Never, 1 = Daily, 2 = Weekly, 3 = Monthly, 4 = Custom (customDays)
 static std::chrono::hours intervalForFrequency(int freq, int customDays)
@@ -200,7 +198,6 @@ void UpdateDaemon::checkUpdates()
 
 void UpdateDaemon::updateTrayStatus()
 {
-#ifdef HAVE_KSTATUSNOTIFIERITEM
     if (m_updateCount > 0) {
         if (!m_trayIcon) {
             m_trayIcon = new KStatusNotifierItem(QStringLiteral("appimagemanager-updates"), this);
@@ -220,5 +217,4 @@ void UpdateDaemon::updateTrayStatus()
     } else if (m_trayIcon) {
         m_trayIcon->setStatus(KStatusNotifierItem::Passive);
     }
-#endif
 }
