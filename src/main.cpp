@@ -38,10 +38,6 @@ int main(int argc, char *argv[])
 
     KCrash::initialize();
 
-    // Each invocation manages one file — use Multiple mode so Dolphin can open
-    // several AppImages simultaneously without being blocked by single-instance logic.
-    KDBusService service(KDBusService::Multiple);
-
     QCommandLineParser parser;
     parser.setApplicationDescription(about.shortDescription());
     about.setupCommandLine(&parser);
@@ -54,18 +50,38 @@ int main(int argc, char *argv[])
     parser.process(app);
     about.processCommandLine(&parser);
 
-    if (parser.isSet(QStringLiteral("daemon"))) {
+    const bool isDaemon = parser.isSet(QStringLiteral("daemon"));
+    const QStringList args = parser.positionalArguments();
+    const bool isFileMode = !args.isEmpty();
+    const bool isDashboard = !isDaemon && !isFileMode;
+
+    // Per-mode KDBusService policy:
+    //   file mode  → Multiple so Dolphin can open several manage windows in
+    //                parallel without single-instance lockout.
+    //   daemon     → Multiple; the daemon registers its own well-known
+    //                service name (io.github.appimagemanager.Daemon).
+    //   dashboard  → Unique so a second `appimagemanager --dashboard`
+    //                invocation raises the existing window instead of
+    //                opening a duplicate.
+    KDBusService service(isDashboard ? KDBusService::Unique : KDBusService::Multiple);
+
+    if (isDashboard) {
+        QObject::connect(&service, &KDBusService::activateRequested,
+                         &app, [](const QStringList &, const QString &) {
+            DashboardWindow::open();  // raises the existing instance
+        });
+    }
+
+    if (isDaemon) {
         UpdateDaemon *daemon = new UpdateDaemon(&app);
         daemon->start();
         return app.exec();
     }
 
-    const QStringList args = parser.positionalArguments();
-    if (!args.isEmpty()) {
+    if (isFileMode)
         AppImageWindow::open(args.first());
-    } else {
+    else
         DashboardWindow::open();
-    }
 
     return app.exec();
 }
