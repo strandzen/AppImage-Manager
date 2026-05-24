@@ -109,6 +109,7 @@ Q_SIGNALS:
 
 private:
     void loadMetadataForRow(int row);
+    void applyMetadata(int row, AppImageInfo info);
     int  findRowByPath(const QString &path) const;
     static void sendError(QObject *parent, const QString &title, const QString &text);
     static QString iconIdForPath(const QString &path);
