@@ -57,9 +57,9 @@ void DownloadWatcher::onDirectoryChanged()
             Q_EMIT appImageFound(path, makeDisplayName(QFileInfo(path).fileName()));
     }
 
-    // Keep known in sync so removed-then-re-added files fire again correctly.
-    m_known.intersect(current);
-    m_known.unite(current);
+    // Snapshot the current set: previously-known entries that vanished are
+    // dropped (so a re-add fires again), and freshly-seen entries become known.
+    m_known = current;
 }
 
 // static

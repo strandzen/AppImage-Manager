@@ -79,10 +79,10 @@ public Q_SLOTS:
 private Q_SLOTS:
     void onMetadataReady(const AppImageInfo &info);
     void onInstallJobFinished(KJob *job);
-    void onRemoveJobFinished(KJob *job);
 
 private:
     void startMetadataLoad();
+    void onRemoveJobFinished(KJob *job, const QList<QUrl> &trashedUrls);
 
     QString m_appImagePath;
     AppImageInfo m_info;
@@ -96,6 +96,4 @@ private:
     bool m_hasDesktopLink   = false;
     bool m_isFindingCorpses = false;
     bool m_isRemovingItems  = false;
-
-    QList<QUrl> m_lastTrashedUrls; // trash:/ destinations from last remove job
 };

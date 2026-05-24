@@ -41,7 +41,6 @@ void AppSettings::setApplicationsPath(const QString &path)
     }
     m_config->group(QStringLiteral("General"))
              .writeEntry(QStringLiteral("applicationsPath"), path);
-    m_config->sync();
     Q_EMIT applicationsPathChanged();
 }
 
@@ -57,7 +56,6 @@ void AppSettings::setShowDisclaimer(bool enabled)
         return;
     m_config->group(QStringLiteral("General"))
              .writeEntry(QStringLiteral("showDisclaimer"), enabled);
-    m_config->sync();
     Q_EMIT showDisclaimerChanged();
 }
 
@@ -73,7 +71,6 @@ void AppSettings::setShowNotifications(bool enabled)
         return;
     m_config->group(QStringLiteral("General"))
              .writeEntry(QStringLiteral("showNotifications"), enabled);
-    m_config->sync();
     Q_EMIT showNotificationsChanged();
 }
 
@@ -89,7 +86,6 @@ void AppSettings::setUpdateFrequency(int frequency)
         return;
     m_config->group(QStringLiteral("Updates"))
              .writeEntry(QStringLiteral("updateFrequency"), frequency);
-    m_config->sync();
     Q_EMIT updateFrequencyChanged();
 }
 
@@ -105,7 +101,6 @@ void AppSettings::setCustomUpdateDays(int days)
         return;
     m_config->group(QStringLiteral("Updates"))
              .writeEntry(QStringLiteral("customUpdateDays"), days);
-    m_config->sync();
     Q_EMIT customUpdateDaysChanged();
 }
 
@@ -121,7 +116,6 @@ void AppSettings::setManageIconSize(int size)
         return;
     m_config->group(QStringLiteral("Appearance"))
              .writeEntry(QStringLiteral("manageIconSize"), size);
-    m_config->sync();
     Q_EMIT manageIconSizeChanged();
 }
 
@@ -137,7 +131,6 @@ void AppSettings::setWatchDownloads(bool enabled)
         return;
     m_config->group(QStringLiteral("Behavior"))
              .writeEntry(QStringLiteral("watchDownloads"), enabled);
-    m_config->sync();
     Q_EMIT watchDownloadsChanged();
 }
 
@@ -153,7 +146,6 @@ void AppSettings::setShowInstallBox(bool enabled)
         return;
     m_config->group(QStringLiteral("Appearance"))
              .writeEntry(QStringLiteral("showInstallBox"), enabled);
-    m_config->sync();
     Q_EMIT showInstallBoxChanged();
 }
 

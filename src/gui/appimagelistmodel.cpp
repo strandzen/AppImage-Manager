@@ -441,8 +441,16 @@ void AppImageListModel::trashSelected()
     }
     clearSelection();
     setSelectionMode(false);
-    if (!urls.isEmpty())
-        KIO::trash(urls)->start();
+    if (urls.isEmpty())
+        return;
+
+    auto *job = KIO::trash(urls);
+    connect(job, &KJob::result, this, [this](KJob *j) {
+        if (j->error())
+            sendError(this, i18n("Trash Failed"),
+                      i18n("Could not move items to Trash: %1", j->errorString()));
+    });
+    job->start();
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────

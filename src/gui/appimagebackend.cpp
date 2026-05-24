@@ -164,16 +164,19 @@ void AppImageBackend::removeAppImageAndCorpses(const QStringList &corpsePaths, b
         return;
     }
 
-    // Collect trash:/ destination URLs so the notification can offer "Restore"
-    m_lastTrashedUrls.clear();
+    // Per-job collection of trash:/ destinations so the "Restore" action can
+    // target this remove only; sharing one member across in-flight jobs raced.
+    auto trashedUrls = QSharedPointer<QList<QUrl>>::create();
     if (auto *copyJob = qobject_cast<KIO::CopyJob *>(job)) {
         connect(copyJob, &KIO::CopyJob::copyingDone, this,
-                [this](KIO::Job *, const QUrl &, const QUrl &to, const QDateTime &, bool, bool) {
-                    m_lastTrashedUrls << to;
+                [trashedUrls](KIO::Job *, const QUrl &, const QUrl &to, const QDateTime &, bool, bool) {
+                    *trashedUrls << to;
                 });
     }
 
-    connect(job, &KJob::result, this, &AppImageBackend::onRemoveJobFinished);
+    connect(job, &KJob::result, this, [this, trashedUrls](KJob *j) {
+        onRemoveJobFinished(j, *trashedUrls);
+    });
     job->start();
 }
 
@@ -214,7 +217,7 @@ void AppImageBackend::onInstallJobFinished(KJob *job)
     }
 }
 
-void AppImageBackend::onRemoveJobFinished(KJob *job)
+void AppImageBackend::onRemoveJobFinished(KJob *job, const QList<QUrl> &trashedUrls)
 {
     m_isRemovingItems = false;
     Q_EMIT busyChanged();
@@ -232,11 +235,10 @@ void AppImageBackend::onRemoveJobFinished(KJob *job)
         notification->setText(i18n("%1 was moved to Trash.", m_info.appName));
         notification->setIconName(QStringLiteral("edit-delete"));
 
-        if (!m_lastTrashedUrls.isEmpty()) {
-            const QList<QUrl> urls = m_lastTrashedUrls;
+        if (!trashedUrls.isEmpty()) {
             auto *restoreAction = notification->addAction(i18n("Restore"));
-            connect(restoreAction, &KNotificationAction::activated, this, [urls]() {
-                KIO::restoreFromTrash(urls)->start();
+            connect(restoreAction, &KNotificationAction::activated, this, [trashedUrls]() {
+                KIO::restoreFromTrash(trashedUrls)->start();
             });
         }
 
