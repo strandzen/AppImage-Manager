@@ -30,18 +30,21 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
     , m_updateManager(new AppImageUpdateManager(new QNetworkAccessManager(this), this))
     , m_downloadWatcher(new DownloadWatcher(this))
 {
-    // ── Refresh timer: debounce filesystem watcher signals ────────────────────
-    m_refreshTimer.setSingleShot(true);
-    m_refreshTimer.setInterval(500);
-    connect(&m_refreshTimer, &QTimer::timeout, this, &AppImageListModel::refresh);
-
-    connect(&m_watcher, &QFileSystemWatcher::directoryChanged,
-            this, [this](const QString &) { m_refreshTimer.start(); });
+    // KDirWatch in WatchFiles mode emits per-file created/deleted/dirty events
+    // (de-duplicated internally) so the model can do incremental inserts and
+    // removes instead of debouncing + re-scanning the whole directory.
+    connect(&m_watcher, &KDirWatch::created, this, &AppImageListModel::onFileCreated);
+    connect(&m_watcher, &KDirWatch::deleted, this, &AppImageListModel::onFileDeleted);
+    connect(&m_watcher, &KDirWatch::dirty,   this, &AppImageListModel::onFileDirty);
 
     connect(AppSettings::instance(), &AppSettings::applicationsPathChanged,
             this, [this]() {
-                m_watcher.removePaths(m_watcher.directories());
-                m_refreshTimer.start();
+                // Re-bind the watcher to the new directory and replay every file.
+                if (!m_watchedDir.isEmpty()) {
+                    m_watcher.removeDir(m_watchedDir);
+                    m_watchedDir.clear();
+                }
+                refresh();
             });
 
     // ── Download watcher ──────────────────────────────────────────────────────
@@ -204,8 +207,12 @@ void AppImageListModel::refresh()
     const QString dir = AppSettings::instance()->applicationsPath();
     const QFileInfoList files = QDir(dir).entryInfoList(kAppImageFilters(), QDir::Files);
 
-    if (!m_watcher.directories().contains(dir))
-        m_watcher.addPath(dir);
+    if (m_watchedDir != dir) {
+        if (!m_watchedDir.isEmpty())
+            m_watcher.removeDir(m_watchedDir);
+        m_watcher.addDir(dir, KDirWatch::WatchFiles);
+        m_watchedDir = dir;
+    }
 
     QSet<QString> diskPaths;
     diskPaths.reserve(files.size());
@@ -326,6 +333,65 @@ void AppImageListModel::loadMetadataForRow(int row)
     watcher->setFuture(QtConcurrent::run([path]() {
         return AppImageReader(path).read();
     }));
+}
+
+static bool isAppImageFile(const QString &fileName)
+{
+    return fileName.endsWith(QStringLiteral(".AppImage"), Qt::CaseInsensitive)
+        || fileName.endsWith(QStringLiteral(".appimage"), Qt::CaseInsensitive);
+}
+
+void AppImageListModel::onFileCreated(const QString &path)
+{
+    const QFileInfo fi(path);
+    if (fi.absolutePath() != m_watchedDir || !isAppImageFile(fi.fileName()))
+        return;
+    if (findRowByPath(path) >= 0)
+        return;
+
+    const int row = m_items.size();
+    beginInsertRows({}, row, row);
+    Item item;
+    item.filePath            = path;
+    item.addedDate           = fi.metadataChangeTime();
+    item.info.originalName   = fi.fileName();
+    item.info.cleanName      = fi.fileName();
+    item.info.fileSize       = fi.size();
+    item.cachedFormattedSize = formatBytes(fi.size());
+    item.cachedDisplayName   = fi.fileName();
+    m_items.append(item);
+    endInsertRows();
+
+    ++m_pendingLoads;
+    if (!m_scanning) { m_scanning = true; Q_EMIT scanningChanged(); }
+    loadMetadataForRow(row);
+}
+
+void AppImageListModel::onFileDeleted(const QString &path)
+{
+    const int row = findRowByPath(path);
+    if (row < 0)
+        return;
+    beginRemoveRows({}, row, row);
+    m_items.removeAt(row);
+    endRemoveRows();
+}
+
+void AppImageListModel::onFileDirty(const QString &path)
+{
+    // dirty fires on the watched dir itself too (mtime bump on child add /
+    // remove); ignore that — the per-file created/deleted signals cover it.
+    if (path == m_watchedDir)
+        return;
+    const int row = findRowByPath(path);
+    if (row < 0)
+        return;
+    m_items[row].metadataLoaded = false;
+    Q_EMIT dataChanged(index(row, 0), index(row, 0));
+
+    ++m_pendingLoads;
+    if (!m_scanning) { m_scanning = true; Q_EMIT scanningChanged(); }
+    loadMetadataForRow(row);
 }
 
 void AppImageListModel::applyMetadata(int row, AppImageInfo info)

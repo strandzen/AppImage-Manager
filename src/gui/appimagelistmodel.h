@@ -4,11 +4,11 @@
 
 #include "../core/appimageinfo.h"
 
+#include <KDirWatch>
+
 #include <QAbstractListModel>
 #include <QDateTime>
-#include <QFileSystemWatcher>
 #include <QSet>
-#include <QTimer>
 #include <QtQml/qqmlregistration.h>
 
 class AppImageIconProvider;
@@ -122,6 +122,12 @@ private:
     void loadMetadataForRow(int row);
     void applyMetadata(int row, AppImageInfo info);
     int  findRowByPath(const QString &path) const;
+
+    // Incremental KDirWatch handlers — feed inserts/removes/dirty events
+    // straight into the model without re-scanning the whole directory.
+    void onFileCreated(const QString &path);
+    void onFileDeleted(const QString &path);
+    void onFileDirty(const QString &path);
     static void sendError(QObject *parent, const QString &title, const QString &text);
     static QString iconIdForPath(const QString &path);
     static QString formatBytes(qint64 bytes);
@@ -138,6 +144,6 @@ private:
     bool                   m_selectionMode = false;
     QSet<QString>          m_selected;
 
-    QFileSystemWatcher     m_watcher;
-    QTimer                 m_refreshTimer;
+    KDirWatch              m_watcher;
+    QString                m_watchedDir;   // current applicationsPath registered with m_watcher
 };
