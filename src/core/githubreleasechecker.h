@@ -29,5 +29,9 @@ Q_SIGNALS:
     void failed();
 
 private:
+    void checkAtomFeed();
+
     QNetworkAccessManager *m_nam;
+    QString m_updateInfo;
+    QString m_currentVersion;
 };

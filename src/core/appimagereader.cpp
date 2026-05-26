@@ -12,6 +12,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QLocale>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QTemporaryDir>
@@ -311,7 +312,9 @@ QByteArray AppImageReader::readFileFromAppImage(const QString &innerPath, QStrin
 void AppImageReader::extractMetadataFromXml(const QByteArray &xmlData, AppImageInfo &info)
 {
     QXmlStreamReader xml(xmlData);
-    QString description;
+    QMap<QString, QString> langDescriptions;
+    QString activeLang;
+    QString descLang;
     bool inDescription = false;
     bool inDeveloper   = false;
 
@@ -323,6 +326,8 @@ void AppImageReader::extractMetadataFromXml(const QByteArray &xmlData, AppImageI
 
             if (ename == QLatin1String("description") && !inDescription) {
                 inDescription = true;
+                descLang = xml.attributes().value(QStringLiteral("xml:lang")).toString().toLower();
+                activeLang = descLang;
             } else if (ename == QLatin1String("developer")) {
                 inDeveloper = true;
             } else if (ename == QLatin1String("developer_name") && !inDescription) {
@@ -336,13 +341,21 @@ void AppImageReader::extractMetadataFromXml(const QByteArray &xmlData, AppImageI
                         && info.homepage.isEmpty())
                     info.homepage = xml.readElementText().trimmed();
             } else if (inDescription) {
+                const QString itemLang = xml.attributes().value(QStringLiteral("xml:lang")).toString().toLower();
+                if (!itemLang.isEmpty())
+                    activeLang = itemLang;
+                else
+                    activeLang = descLang;
+
+                QString &descRef = langDescriptions[activeLang];
+
                 if (ename == QLatin1String("p")) {
-                    if (!description.isEmpty() && !description.endsWith(QLatin1String("<br><br>")))
-                        description += QLatin1String("<br><br>");
+                    if (!descRef.isEmpty() && !descRef.endsWith(QLatin1String("<br><br>")))
+                        descRef += QLatin1String("<br><br>");
                 } else if (ename == QLatin1String("li")) {
-                    if (!description.isEmpty() && !description.endsWith(QLatin1String("<br>")))
-                        description += QLatin1String("<br>");
-                    description += QStringLiteral("• ");
+                    if (!descRef.isEmpty() && !descRef.endsWith(QLatin1String("<br>")))
+                        descRef += QLatin1String("<br>");
+                    descRef += QStringLiteral("• ");
                 }
             }
         } else if (token == QXmlStreamReader::EndElement) {
@@ -358,11 +371,39 @@ void AppImageReader::extractMetadataFromXml(const QByteArray &xmlData, AppImageI
                 text.replace(QLatin1Char('&'), QLatin1String("&amp;"));
                 text.replace(QLatin1Char('<'), QLatin1String("&lt;"));
                 text.replace(QLatin1Char('>'), QLatin1String("&gt;"));
-                description += text + QLatin1Char(' ');
+                langDescriptions[activeLang] += text + QLatin1Char(' ');
             }
         }
     }
-    info.description = description.trimmed();
+
+    // Determine user's preferred UI languages (e.g. "de", "fr")
+    QStringList systemLangs;
+    for (const QString &lang : QLocale::system().uiLanguages()) {
+        const QString code = lang.split(QLatin1Char('-')).first().toLower();
+        if (!systemLangs.contains(code))
+            systemLangs.append(code);
+    }
+    if (!systemLangs.contains(QStringLiteral("en")))
+        systemLangs.append(QStringLiteral("en"));
+
+    // Find the best description matching user's locale
+    QString selectedDescription;
+    for (const QString &lang : systemLangs) {
+        if (langDescriptions.contains(lang)) {
+            selectedDescription = langDescriptions.value(lang);
+            break;
+        }
+    }
+    if (selectedDescription.isEmpty()) {
+        // Fallback to default (empty string key)
+        selectedDescription = langDescriptions.value(QString());
+    }
+    if (selectedDescription.isEmpty() && !langDescriptions.isEmpty()) {
+        // Fallback to any available language description
+        selectedDescription = langDescriptions.first();
+    }
+
+    info.description = selectedDescription.trimmed();
 }
 
 AppImageInfo AppImageReader::readWithExtraction()

@@ -52,6 +52,10 @@ Q_SIGNALS:
 private:
     void checkZsyncItem(const CheckItem &item);
     void finishOneCheck(bool foundUpdate, bool networkFailed = false);
+    void startFullHttpDownload(const QString &filePath,
+                               const QString &zsyncUrl,
+                               const QString &displayName,
+                               const QString &appIconId);
 
     QNetworkAccessManager *m_nam;
     int m_pendingChecks    = 0;
