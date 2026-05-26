@@ -3,7 +3,7 @@
 A lightweight, native AppImage manager for KDE Plasma 6.
 
 [![KDE Plasma 6](https://img.shields.io/badge/KDE_Plasma-6-1d99f3?logo=kde&logoColor=white)](https://kde.org/plasma-desktop/)
-[![Qt](https://img.shields.io/badge/Qt-6.6%2B-41CD52?logo=qt&logoColor=white)](https://www.qt.io/)
+[![Qt](https://img.shields.io/badge/Qt-6.9%2B-41CD52?logo=qt&logoColor=white)](https://www.qt.io/)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)](https://en.cppreference.com/w/cpp/20)
 [![License](https://img.shields.io/badge/License-GPL--2.0--or--later-blue)](LICENSES/GPL-2.0-or-later.txt)
 [![Linux](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.kernel.org/)
@@ -17,13 +17,13 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 ![Dashboard](assets/dashboard.png)
 
 - **Native Dashboard:** Browse, search, and sort installed AppImages by name, size, category, or date.
-- **Rich Metadata:** Shows app icon, version, size, category, and AppStream description extracted directly from the AppImage.
+- **Rich Metadata:** Shows app icon, version, size, category, and localized AppStream description extracted directly from the AppImage.
 - **Dolphin Integration:** Right-click any `.AppImage` to open the management window directly.
 - **Drag-and-Drop Install:** Drag an AppImage onto the dashboard to move it to your Applications folder and create desktop shortcuts automatically.
 - **Clean Uninstall:** Scans for leftover configuration and cache directories, moving everything to the KDE Trash instead of leaving orphans behind.
 - **Detailed Storage View:** Quickly see an AppImage's file size and its associated directories.
 - **Download Notifications:** Optionally watches `~/Downloads` and fires a native KDE notification when a new `.AppImage` is detected — click "Manage" to open it immediately.
-- **AppImage Updates:** Checks for newer versions via GitHub Releases and downloads updates using `zsync` delta-patching.
+- **AppImage Updates:** Checks for newer versions asynchronously, failing over to GitHub Releases RSS feeds if rate limits are hit. Downloads updates using `zsync` delta-patching, with a robust HTTP streaming fallback if `zsync2` is missing.
 - **Plasma Integration:** Uses native Plasma progress bars, Kirigami styling, and KDE notifications.
 
 ---
@@ -32,7 +32,7 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 To build this project from source, you need:
 
 - **Build Tools:** CMake 3.22+, Ninja, a C++20 compiler (GCC 12+ or Clang 15+)
-- **Qt 6.6+ Modules:** Core, Gui, Quick, Qml, Concurrent, Network
+- **Qt 6.9+ Modules:** Core, Gui, Quick, Qml, Concurrent, Network, Sql, Svg
 - **KDE Frameworks 6:** CoreAddons, I18n, KIO, IconThemes, Notifications, Crash, DBusAddons, Kirigami
 - **Optional:** `libappimage` for faster, in-process metadata extraction.
 
@@ -45,7 +45,7 @@ To build this project from source, you need:
 
 ```bash
 sudo pacman -S base-devel cmake extra-cmake-modules ninja \
-    qt6-base qt6-declarative qt6-networkauth \
+    qt6-base qt6-declarative \
     kcoreaddons ki18n kio kiconthemes knotifications kcrash kdbusaddons kirigami \
     libappimage
 ```
@@ -57,7 +57,7 @@ sudo pacman -S base-devel cmake extra-cmake-modules ninja \
 
 ```bash
 sudo dnf install gcc-c++ cmake extra-cmake-modules ninja-build \
-    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtnetworkauth-devel \
+    qt6-qtbase-devel qt6-qtdeclarative-devel \
     kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kio-devel kf6-kiconthemes-devel \
     kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kirigami-devel
 ```
@@ -69,7 +69,7 @@ sudo dnf install gcc-c++ cmake extra-cmake-modules ninja-build \
 
 ```bash
 sudo apt install build-essential cmake extra-cmake-modules ninja-build \
-    qt6-base-dev qt6-declarative-dev libqt6networkauth6-dev \
+    qt6-base-dev qt6-declarative-dev \
     libkf6coreaddons-dev libkf6i18n-dev libkf6kio-dev libkf6iconthemes-dev \
     libkf6notifications-dev libkf6crash-dev libkf6dbusaddons-dev \
     qml6-module-org-kde-kirigami
@@ -82,7 +82,7 @@ sudo apt install build-essential cmake extra-cmake-modules ninja-build \
 
 ```bash
 sudo zypper in gcc-c++ cmake extra-cmake-modules ninja \
-    qt6-base-devel qt6-declarative-devel qt6-networkauth-devel \
+    qt6-base-devel qt6-declarative-devel \
     kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kio-devel kf6-kiconthemes-devel \
     kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kirigami-devel
 ```
@@ -124,6 +124,6 @@ Run the utility from your terminal or application launcher:
 **Dolphin Integration:** Simply right-click any `.AppImage` file and select **Manage AppImage**.
 
 ---
-![License](https://img.shields.io/badge/license-MIT-7E4071?style=for-the-badge&logo=opensourceinitiative&logoColor=white)
+![License](https://img.shields.io/badge/License-GPL_v2+-7E4071?style=for-the-badge&logo=gnu)
 
 Licensed under the **GPL-2.0-or-later**. See [LICENSES/GPL-2.0-or-later.txt](LICENSES/GPL-2.0-or-later.txt) for details.
