@@ -10,7 +10,7 @@ This file is the authoritative reference for working on AppImage Manager.
 
 **Distribution target:** KDE Store and AUR.  
 **Philosophy:** Simplicity and efficiency. No unnecessary abstractions. Every feature must justify its existence.  
-**Stack:** C++20, Qt 6.9, KDE Frameworks 6.7, Kirigami (Plasma 6 era), QML. Project version `1.3.0`.  
+**Stack:** C++20, Qt 6.9, KDE Frameworks 6.7, Kirigami (Plasma 6 era), QML. Project version `1.4.0`.  
 **License:** GPL-2.0-or-later.
 
 ### Roadmap (planned, not yet implemented)
@@ -43,6 +43,8 @@ rm -rf build/ && cmake --preset dev && cmake --build --preset dev
 # Run unit tests
 ctest --test-dir build/dev --output-on-failure
 ```
+
+**When releasing:** bump `VERSION` in the top-level `CMakeLists.txt` (`project(AppImageManager VERSION X.Y.Z ...)`). This is the single source of truth — `version.h` is generated from it and `AppSettings::appVersion()` reads it at runtime. Also update the version string in this file and `GEMINI.md`. Forgetting any of these causes the About dialog to display the wrong version.
 
 Build output: `build/<presetName>/`. Unit tests in [tests/](tests/) cover `appimageinfo` helpers, `AppImageReader` cleanName, `AppImageCache` round-trip, and `AppImageListModel` watcher behavior. The manual checklist below still applies for UI/integration paths.
 
