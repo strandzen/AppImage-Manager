@@ -9,12 +9,7 @@
 // Blocking metadata extractor for AppImage files.
 // Always call from a worker thread via QtConcurrent::run — never on the main thread.
 //
-// Two read paths, selected at build time:
-//   HAVE_LIBAPPIMAGE — in-process SquashFS via libappimage (preferred; faster, no subprocess).
-//   fallback         — mounts via squashfuse subprocess, parses, then unmounts with fusermount3.
-//
-// Both paths populate the same AppImageInfo fields; the libappimage path additionally
-// extracts AppStream XML (description, developerName, homepage) from the embedded metainfo file.
+// Requires libappimage for in-process SquashFS metadata extraction.
 class AppImageReader
 {
 public:
@@ -28,15 +23,12 @@ private:
     static QString extractAppId(const QString &filename);
     static QString versionFromFilename(const QString &filename);
     void extractMetadataFromXml(const QByteArray &xmlData, AppImageInfo &info);
-    AppImageInfo readWithExtraction();
 
-#ifdef HAVE_LIBAPPIMAGE
-    AppImageInfo readWithLibappimage();
+    AppImageInfo readInternal();
     QByteArray readFileFromAppImage(const QString &innerPath, QString *outExt = nullptr);
     QString findDesktopFile();
     QString findIconFile(const QString &iconName);
     QString findAppStreamFile();
-#endif
 
     QString m_path;
 };

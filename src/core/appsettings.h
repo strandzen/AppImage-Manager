@@ -27,11 +27,23 @@ class APPIMAGEMANAGER_EXPORT AppSettings : public QObject
     Q_PROPERTY(int     manageIconSize    READ manageIconSize    WRITE setManageIconSize    NOTIFY manageIconSizeChanged)
     Q_PROPERTY(bool    watchDownloads    READ watchDownloads    WRITE setWatchDownloads    NOTIFY watchDownloadsChanged)
     Q_PROPERTY(bool    showInstallBox    READ showInstallBox    WRITE setShowInstallBox    NOTIFY showInstallBoxChanged)
+    Q_PROPERTY(bool    accentBorders     READ accentBorders     WRITE setAccentBorders     NOTIFY accentBordersChanged)
+    Q_PROPERTY(QString qtVersion READ qtVersion CONSTANT)
+    Q_PROPERTY(QString kdeFrameworksVersion READ kdeFrameworksVersion CONSTANT)
+    Q_PROPERTY(QString libappimageVersion READ libappimageVersion CONSTANT)
+    Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
 
 public:
     // QML singleton factory — always returns the same C++ instance across all engines.
     static AppSettings *create(QQmlEngine *, QJSEngine *) { return instance(); }
     static AppSettings *instance();
+
+    QString qtVersion() const;
+    QString kdeFrameworksVersion() const;
+    QString libappimageVersion() const;
+    QString appVersion() const;
+
+    Q_INVOKABLE void copyToClipboard(const QString &text);
 
     QString applicationsPath() const;
     void setApplicationsPath(const QString &path);
@@ -57,7 +69,11 @@ public:
     bool showInstallBox() const;
     void setShowInstallBox(bool enabled);
 
+    bool accentBorders() const;
+    void setAccentBorders(bool enabled);
+
     Q_INVOKABLE void openFolderPicker(QWindow *parent = nullptr);
+    Q_INVOKABLE void resetToDefaults();
 
 Q_SIGNALS:
     void applicationsPathChanged();
@@ -68,6 +84,7 @@ Q_SIGNALS:
     void manageIconSizeChanged();
     void watchDownloadsChanged();
     void showInstallBoxChanged();
+    void accentBordersChanged();
     void applicationsPathError(const QString &message);
 
 private:

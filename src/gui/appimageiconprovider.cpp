@@ -18,15 +18,19 @@ void AppImageIconProvider::setIconData(const QByteArray &data, const QString &ex
 
 void AppImageIconProvider::setIconData(const QString &id, const QByteArray &data, const QString &ext)
 {
-    QWriteLocker locker(&m_lock);
-    m_icons.insert(id, {data, ext});
-
+    {
+        QWriteLocker locker(&m_iconsLock);
+        m_icons.insert(id, {data, ext});
+    }
     // Drop any rendered pixmaps for this id — the underlying bytes just changed.
-    const QString prefix = id + QLatin1Char(':');
-    const auto keys = m_renderCache.keys();
-    for (const QString &k : keys) {
-        if (k.startsWith(prefix))
-            m_renderCache.remove(k);
+    {
+        QMutexLocker cacheLocker(&m_cacheMutex);
+        const QString prefix = id + QLatin1Char(':');
+        const auto keys = m_renderCache.keys();
+        for (const QString &k : keys) {
+            if (k.startsWith(prefix))
+                m_renderCache.remove(k);
+        }
     }
 }
 
@@ -40,15 +44,23 @@ QPixmap AppImageIconProvider::requestPixmap(const QString &id,
                                              QSize *size,
                                              const QSize &requestedSize)
 {
-    QWriteLocker locker(&m_lock); // QCache::object mutates LRU
-
-    const auto it = m_icons.constFind(id);
-    if (it == m_icons.constEnd() || it->data.isEmpty()) {
-        if (size) *size = QSize(0, 0);
-        return {};
+    // Read icon bytes under a shared (read) lock — concurrent requestPixmap calls
+    // don't block each other here. setIconData uses a write lock when mutating.
+    IconEntry entry;
+    {
+        QReadLocker iconsLocker(&m_iconsLock);
+        const auto it = m_icons.constFind(id);
+        if (it == m_icons.constEnd() || it->data.isEmpty()) {
+            if (size) *size = QSize(0, 0);
+            return {};
+        }
+        entry = *it;
     }
 
-    auto finishWithCached = [&](const QSize &actual) -> QPixmap {
+    // Check render cache before doing any rendering work.
+    // QMutex needed: QCache::object() mutates LRU even on read.
+    auto checkCache = [&](const QSize &actual) -> QPixmap {
+        QMutexLocker cacheLocker(&m_cacheMutex);
         const QString key = cacheKey(id, actual);
         if (QPixmap *p = m_renderCache.object(key)) {
             if (size) *size = p->size();
@@ -57,11 +69,17 @@ QPixmap AppImageIconProvider::requestPixmap(const QString &id,
         return {};
     };
 
-    QPixmap pixmap;
-    if (it->ext.compare(QStringLiteral(".svg"), Qt::CaseInsensitive) == 0 ||
-        it->ext.compare(QStringLiteral(".svgz"), Qt::CaseInsensitive) == 0) {
+    auto insertCache = [&](const QSize &actual, const QPixmap &px) {
+        QMutexLocker cacheLocker(&m_cacheMutex);
+        const int cost = std::max(1, px.width() * px.height() * px.depth() / 8);
+        m_renderCache.insert(cacheKey(id, actual), new QPixmap(px), cost);
+    };
 
-        QSvgRenderer renderer(it->data);
+    QPixmap pixmap;
+    if (entry.ext.compare(QStringLiteral(".svg"), Qt::CaseInsensitive) == 0 ||
+        entry.ext.compare(QStringLiteral(".svgz"), Qt::CaseInsensitive) == 0) {
+
+        QSvgRenderer renderer(entry.data);
         if (!renderer.isValid()) {
             if (size) *size = QSize(0, 0);
             return {};
@@ -71,7 +89,7 @@ QPixmap AppImageIconProvider::requestPixmap(const QString &id,
                            ? requestedSize
                            : renderer.defaultSize();
 
-        if (QPixmap cached = finishWithCached(target); !cached.isNull())
+        if (QPixmap cached = checkCache(target); !cached.isNull())
             return cached;
 
         pixmap = QPixmap(target);
@@ -80,12 +98,11 @@ QPixmap AppImageIconProvider::requestPixmap(const QString &id,
         renderer.render(&painter);
 
         if (size) *size = target;
-        const int cost = std::max(1, pixmap.width() * pixmap.height() * pixmap.depth() / 8);
-        m_renderCache.insert(cacheKey(id, target), new QPixmap(pixmap), cost);
+        insertCache(target, pixmap);
         return pixmap;
     }
 
-    pixmap.loadFromData(it->data);
+    pixmap.loadFromData(entry.data);
     if (pixmap.isNull()) {
         if (size) *size = QSize(0, 0);
         return pixmap;
@@ -98,16 +115,14 @@ QPixmap AppImageIconProvider::requestPixmap(const QString &id,
     if (size) *size = pixmap.size();
 
     if (pixmap.size() == target) {
-        const int cost = std::max(1, pixmap.width() * pixmap.height() * pixmap.depth() / 8);
-        m_renderCache.insert(cacheKey(id, target), new QPixmap(pixmap), cost);
+        insertCache(target, pixmap);
         return pixmap;
     }
 
-    if (QPixmap cached = finishWithCached(target); !cached.isNull())
+    if (QPixmap cached = checkCache(target); !cached.isNull())
         return cached;
 
     QPixmap scaled = pixmap.scaled(target, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    const int cost = std::max(1, scaled.width() * scaled.height() * scaled.depth() / 8);
-    m_renderCache.insert(cacheKey(id, target), new QPixmap(scaled), cost);
+    insertCache(target, scaled);
     return scaled;
 }

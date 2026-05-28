@@ -10,6 +10,7 @@
 #include <QAbstractListModel>
 #include <QDateTime>
 #include <QSet>
+#include <QThreadPool>
 #include <QtQml/qqmlregistration.h>
 
 class AppImageIconProvider;
@@ -24,9 +25,11 @@ class APPIMAGEMANAGER_EXPORT AppImageListModel : public QAbstractListModel
     QML_UNCREATABLE("Use the 'listModel' context property")
 
     Q_PROPERTY(bool scanning        READ isScanning       NOTIFY scanningChanged)
+    Q_PROPERTY(int  pendingLoads   READ pendingLoads     NOTIFY pendingLoadsChanged)
     Q_PROPERTY(bool checkingUpdates READ isCheckingUpdates NOTIFY checkingUpdatesChanged)
     Q_PROPERTY(bool selectionMode  READ selectionMode    WRITE setSelectionMode  NOTIFY selectionModeChanged)
     Q_PROPERTY(int  selectedCount  READ selectedCount    NOTIFY selectionChanged)
+    Q_PROPERTY(bool downloadWatcherSandboxed READ isDownloadWatcherSandboxed CONSTANT)
 
 public:
     enum Roles {
@@ -79,10 +82,12 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    bool isScanning()        const { return m_scanning; }
-    bool isCheckingUpdates() const;
-    bool selectionMode()     const { return m_selectionMode; }
-    int  selectedCount()     const { return static_cast<int>(m_selected.size()); }
+    bool isScanning()                  const { return m_scanning; }
+    int  pendingLoads()                const { return m_pendingLoads; }
+    bool isCheckingUpdates()           const;
+    bool selectionMode()               const { return m_selectionMode; }
+    int  selectedCount()               const { return static_cast<int>(m_selected.size()); }
+    bool isDownloadWatcherSandboxed()  const;
 
     void setSelectionMode(bool mode);
 
@@ -113,6 +118,7 @@ public:
 
 Q_SIGNALS:
     void scanningChanged();
+    void pendingLoadsChanged();
     void checkingUpdatesChanged();
     void updateCheckFinished(int updatesFound, int networkFailures);
     void selectionModeChanged();
@@ -145,6 +151,7 @@ private:
     bool                   m_selectionMode = false;
     QSet<QString>          m_selected;
 
+    QThreadPool            m_readerPool;
     KDirWatch              m_watcher;
     QString                m_watchedDir;   // current applicationsPath registered with m_watcher
 };

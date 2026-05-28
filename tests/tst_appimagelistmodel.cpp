@@ -141,7 +141,7 @@ private Q_SLOTS:
         QVERIFY(name(1) < name(2));
     }
 
-    void sort_bySize_ascending()
+    void sort_bySize_largestFirst()
     {
         writeStub(m_tmp.path(), QStringLiteral("Small.AppImage"),  50);
         writeStub(m_tmp.path(), QStringLiteral("Medium.AppImage"), 150);
@@ -153,9 +153,9 @@ private Q_SLOTS:
         const auto size = [&](int r) {
             return m_proxy->data(m_proxy->index(r, 0), AppImageListModel::AppSizeRole).toLongLong();
         };
-        QCOMPARE(size(0), 50LL);
+        QCOMPARE(size(0), 300LL);
         QCOMPARE(size(1), 150LL);
-        QCOMPARE(size(2), 300LL);
+        QCOMPARE(size(2), 50LL);
     }
 
     void sort_tieBreakByName()

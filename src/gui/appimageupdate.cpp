@@ -198,12 +198,18 @@ void AppImageUpdateManager::downloadUpdate(const QString &filePath,
         process->deleteLater();
 
         if (exitCode == 0 && QFile::exists(newFile)) {
-            if (!QFile::remove(filePath) || !QFile::rename(newFile, filePath)) {
+            // Rename old → .bak before swap so it can be recovered if the
+            // process is killed between the two renames.
+            const QString bakFile = filePath + QStringLiteral(".bak");
+            QFile::remove(bakFile); // remove stale bak from a previous crashed update
+            if (!QFile::rename(filePath, bakFile) || !QFile::rename(newFile, filePath)) {
+                QFile::rename(bakFile, filePath); // restore original if possible
                 QFile::remove(newFile);
                 qCWarning(AIM_LOG) << "Failed to swap updated AppImage:" << filePath;
                 Q_EMIT downloadFinished(filePath, false);
                 return;
             }
+            QFile::remove(bakFile);
             QFile file(filePath);
             file.setPermissions(file.permissions()
                 | QFileDevice::ExeUser | QFileDevice::ExeGroup | QFileDevice::ExeOther);
@@ -309,13 +315,18 @@ void AppImageUpdateManager::startFullHttpDownload(const QString &filePath,
                 return;
             }
 
-            // Successfully downloaded, let's swap and set permissions
-            if (!QFile::remove(filePath) || !QFile::rename(newFile, filePath)) {
+            // Successfully downloaded — rename old → .bak before swap so it
+            // can be recovered if the process is killed between the two renames.
+            const QString bakFile = filePath + QStringLiteral(".bak");
+            QFile::remove(bakFile); // remove stale bak from a previous crashed update
+            if (!QFile::rename(filePath, bakFile) || !QFile::rename(newFile, filePath)) {
+                QFile::rename(bakFile, filePath); // restore original if possible
                 QFile::remove(newFile);
                 qCWarning(AIM_LOG) << "Fallback: Failed to swap updated AppImage:" << filePath;
                 Q_EMIT downloadFinished(filePath, false);
                 return;
             }
+            QFile::remove(bakFile);
 
             QFile fileObj(filePath);
             fileObj.setPermissions(fileObj.permissions()

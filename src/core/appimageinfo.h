@@ -58,3 +58,10 @@ inline const QStringList &kAppImageFilters()
     static const QStringList filters = { QStringLiteral("*.AppImage"), QStringLiteral("*.appimage") };
     return filters;
 }
+
+inline bool isRunningInSandbox()
+{
+    static const bool s = !qgetenv("FLATPAK_ID").isEmpty()
+                       || !qgetenv("SNAP").isEmpty();
+    return s;
+}

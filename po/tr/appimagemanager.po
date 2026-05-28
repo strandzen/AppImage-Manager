@@ -1,0 +1,200 @@
+# Turkish translation for AppImage Manager.
+# Copyright (C) 2024 AppImage Manager Contributors
+# This file is distributed under the same license as the appimagemanager package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: appimagemanager 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/strandzen/AppImage-Manager/issues\n"
+"POT-Creation-Date: 2026-04-24 00:00+0000\n"
+"PO-Revision-Date: 2026-05-28 00:00+0000\n"
+"Last-Translator: AppImage Manager Contributors\n"
+"Language-Team: Turkish\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: src/main.cpp:21
+#: qml/ManageWindow.qml:40
+msgid "AppImage Manager"
+msgstr "AppImage Yöneticisi"
+
+#: src/main.cpp:23
+msgid "Manage AppImage files in KDE Plasma"
+msgstr "KDE Plasma'da AppImage dosyalarını yönetin"
+
+#: src/main.cpp:25
+#: qml/ManageWindow.qml:59
+msgid "© 2024 AppImage Manager Contributors"
+msgstr "© 2024 AppImage Yöneticisi Katkıda Bulunanları"
+
+#: src/main.cpp:47
+msgid "Path to the AppImage file to manage."
+msgstr "Yönetilecek AppImage dosyasının yolu."
+
+#: src/core/appimagemanager.cpp:86
+msgid "Managed by AppImage Manager"
+msgstr "AppImage Yöneticisi tarafından yönetiliyor"
+
+#: src/gui/appimagebackend.cpp:187
+msgid "AppImage installed"
+msgstr "AppImage kuruldu"
+
+#: src/gui/appimagebackend.cpp:188
+#, kde-format
+msgid "%1 was moved to Applications."
+msgstr "%1, Uygulamalar klasörüne taşındı."
+
+#: src/gui/appimagebackend.cpp:205
+msgid "AppImage removed"
+msgstr "AppImage kaldırıldı"
+
+#: src/gui/appimagebackend.cpp:206
+#, kde-format
+msgid "%1 was moved to Trash."
+msgstr "%1, Çöp Kutusu'na taşındı."
+
+#: src/plugin/appimageactionplugin.cpp:46
+#: qml/ManageWindow.qml:18
+msgid "Manage AppImage"
+msgstr "AppImage'ı Yönet"
+
+#: qml/ManageWindow.qml:27
+msgid "About AppImage Manager"
+msgstr "AppImage Yöneticisi Hakkında"
+
+#: qml/ManageWindow.qml:46
+msgid "Version 0.1.0"
+msgstr "Sürüm 0.1.0"
+
+#: qml/ManageWindow.qml:52
+msgid "A lightweight AppImage manager for KDE Plasma 6."
+msgstr "KDE Plasma 6 için hafif bir AppImage yöneticisi."
+
+#: qml/ManageWindow.qml:71
+msgid "License: GNU General Public License v2 or later"
+msgstr "Lisens: GNU Genel Kamu Lisansı v2 veya daha yeni"
+
+#: qml/ManageWindow.qml:87
+msgid "About"
+msgstr "Hakkında"
+
+#: qml/ManageWindow.qml:126
+#, kde-format
+msgid "Version: %1  •  Size: %2"
+msgstr "Sürüm: %1  •  Boyut: %2"
+
+#: qml/ManageWindow.qml:209
+#, kde-format
+msgid "Launch %1"
+msgstr "%1 Uygulamasını Başlat"
+
+#: qml/ManageWindow.qml:250
+msgid "Applications"
+msgstr "Uygulamalar"
+
+#: qml/ManageWindow.qml:267
+msgid "AppImages are unverified executables. Only install from sources you trust."
+msgstr "AppImages doğrulanmamış çalıştırılabilir dosyalardır. Yalnızca güvendiğiniz kaynaklardan yükleyin."
+
+#: qml/ManageWindow.qml:285
+msgid "Create Shortcut"
+msgstr "Kısayol Oluştur"
+
+#: qml/ManageWindow.qml:295
+#: qml/UninstallWindow.qml:179
+msgid "Remove"
+msgstr "Kaldır"
+
+#: qml/UninstallWindow.qml:13
+#, kde-format
+msgid "Uninstall %1"
+msgstr "%1 Uygulamasını Kaldır"
+
+#: qml/UninstallWindow.qml:26
+msgid "Move to Trash?"
+msgstr "Çöp Kutusu'na taşınsın mı?"
+
+#: qml/UninstallWindow.qml:27
+msgid "The selected items will be moved to the Trash. You can restore them from there if needed."
+msgstr "Seçilen ögeler Çöp Kutusu'na taşınacak. Gerekirse oradan geri yükleyebilirsiniz."
+
+#: qml/UninstallWindow.qml:55
+#, kde-format
+msgid "Selected for removal: %1"
+msgstr "Kaldırılmak üzere seçildi: %1"
+
+#: qml/UninstallWindow.qml:75
+msgid "Select items to remove:"
+msgstr "Kaldırılacak ögeleri seçin:"
+
+#: qml/UninstallWindow.qml:105
+msgid " (AppImage)"
+msgstr " (AppImage)"
+
+#: qml/UninstallWindow.qml:174
+msgid "Cancel"
+msgstr "İptal"
+
+#: src/main.cpp:47
+msgid "AppImage file to manage. If omitted, opens the dashboard."
+msgstr "Yönetilecek AppImage dosyası. Belirtilmezse pano açılır."
+
+#: qml/DashboardWindow.qml:28
+msgid "Installed AppImages"
+msgstr "Kurulu AppImages"
+
+#: qml/DashboardWindow.qml:31
+msgid "Refresh"
+msgstr "Yenile"
+
+#: qml/DashboardWindow.qml:37
+#: qml/DashboardWindow.qml
+msgid "Settings"
+msgstr "Ayarlar"
+
+#: qml/DashboardWindow.qml:45
+msgid "No AppImages installed"
+msgstr "Kurulu AppImage yok"
+
+#: qml/DashboardWindow.qml:47
+msgid "Right-click an AppImage file and choose \"Manage AppImage\" to install it."
+msgstr "Bir AppImage dosyasına sağ tıklayın ve yüklemek için \"AppImage'ı Yönet\" seçeneğini seçin."
+
+#: qml/DashboardWindow.qml:107
+msgid "Shortcut"
+msgstr "Kısayol"
+
+#: qml/DashboardWindow.qml:114
+msgid "Update"
+msgstr "Güncelle"
+
+#: qml/DashboardWindow.qml:117
+msgid "Update checking is not yet implemented"
+msgstr "Güncelleme kontrolü henüz uygulanmadı"
+
+#: qml/DashboardWindow.qml
+msgid "Applications folder:"
+msgstr "Uygulamalar klasörü:"
+
+#: qml/DashboardWindow.qml
+msgid "Show security disclaimer"
+msgstr "Güvenlik sorumluluk reddini göster"
+
+#: qml/DashboardWindow.qml
+msgid "Sort"
+msgstr "Sırala"
+
+#: qml/DashboardWindow.qml
+msgid "By name"
+msgstr "Adına göre"
+
+#: qml/DashboardWindow.qml
+msgid "By size"
+msgstr "Boyutuna göre"
+
+#: qml/DashboardWindow.qml
+msgid "By date added"
+msgstr "Ekleme tarihine göre"

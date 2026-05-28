@@ -31,10 +31,7 @@ target_link_libraries(appimagemanager_core PUBLIC
     KF6::KIOCore
     KF6::KIOWidgets
 )
-if(libappimage_FOUND)
-    target_link_libraries(appimagemanager_core PUBLIC libappimage)
-    target_compile_definitions(appimagemanager_core PUBLIC HAVE_LIBAPPIMAGE)
-endif()
+target_link_libraries(appimagemanager_core PUBLIC libappimage)
 
 include(GenerateExportHeader)
 
@@ -49,6 +46,7 @@ set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/StorageDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
+    ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
     PROPERTIES QT_RESOURCE_ALIAS ""
 )
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
@@ -63,6 +61,8 @@ set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/StorageDialog.qml
     PROPERTY QT_RESOURCE_ALIAS StorageDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
     PROPERTY QT_RESOURCE_ALIAS UpdateDialog.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
+    PROPERTY QT_RESOURCE_ALIAS AboutDialog.qml)
 
 qt_add_qml_module(appimagemanager_qml
     URI "appimagemanager"
@@ -74,6 +74,7 @@ qt_add_qml_module(appimagemanager_qml
         ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/StorageDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
+        ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
     SOURCES
         core/appsettings.h
         core/appsettings.cpp

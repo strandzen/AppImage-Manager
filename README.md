@@ -34,7 +34,7 @@ To build this project from source, you need:
 - **Build Tools:** CMake 3.22+, Ninja, a C++20 compiler (GCC 12+ or Clang 15+)
 - **Qt 6.9+ Modules:** Core, Gui, Quick, Qml, Concurrent, Network, Sql, Svg
 - **KDE Frameworks 6:** CoreAddons, I18n, KIO, IconThemes, Notifications, Crash, DBusAddons, Kirigami
-- **Optional:** `libappimage` for faster, in-process metadata extraction.
+- **Required Libraries:** `libappimage` for in-process SquashFS metadata extraction.
 
 ---
 
@@ -59,7 +59,8 @@ sudo pacman -S base-devel cmake extra-cmake-modules ninja \
 sudo dnf install gcc-c++ cmake extra-cmake-modules ninja-build \
     qt6-qtbase-devel qt6-qtdeclarative-devel \
     kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kio-devel kf6-kiconthemes-devel \
-    kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kirigami-devel
+    kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kirigami-devel \
+    libappimage-devel
 ```
 
 </details>
@@ -72,7 +73,7 @@ sudo apt install build-essential cmake extra-cmake-modules ninja-build \
     qt6-base-dev qt6-declarative-dev \
     libkf6coreaddons-dev libkf6i18n-dev libkf6kio-dev libkf6iconthemes-dev \
     libkf6notifications-dev libkf6crash-dev libkf6dbusaddons-dev \
-    qml6-module-org-kde-kirigami
+    qml6-module-org-kde-kirigami libappimage-dev
 ```
 
 </details>
@@ -84,7 +85,8 @@ sudo apt install build-essential cmake extra-cmake-modules ninja-build \
 sudo zypper in gcc-c++ cmake extra-cmake-modules ninja \
     qt6-base-devel qt6-declarative-devel \
     kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kio-devel kf6-kiconthemes-devel \
-    kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kirigami-devel
+    kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kirigami-devel \
+    libappimage-devel
 ```
 
 </details>

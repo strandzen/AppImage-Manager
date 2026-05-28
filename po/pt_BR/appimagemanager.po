@@ -1,0 +1,200 @@
+# Brazilian Portuguese translation for AppImage Manager.
+# Copyright (C) 2024 AppImage Manager Contributors
+# This file is distributed under the same license as the appimagemanager package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: appimagemanager 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/strandzen/AppImage-Manager/issues\n"
+"POT-Creation-Date: 2026-04-24 00:00+0000\n"
+"PO-Revision-Date: 2026-05-28 00:00+0000\n"
+"Last-Translator: AppImage Manager Contributors\n"
+"Language-Team: Portuguese (Brazil)\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: src/main.cpp:21
+#: qml/ManageWindow.qml:40
+msgid "AppImage Manager"
+msgstr "Gerenciador de AppImages"
+
+#: src/main.cpp:23
+msgid "Manage AppImage files in KDE Plasma"
+msgstr "Gerenciar arquivos AppImage no KDE Plasma"
+
+#: src/main.cpp:25
+#: qml/ManageWindow.qml:59
+msgid "© 2024 AppImage Manager Contributors"
+msgstr "© 2024 Colaboradores do AppImage Manager"
+
+#: src/main.cpp:47
+msgid "Path to the AppImage file to manage."
+msgstr "Caminho para o arquivo AppImage a ser gerenciado."
+
+#: src/core/appimagemanager.cpp:86
+msgid "Managed by AppImage Manager"
+msgstr "Gerenciado pelo Gerenciador de AppImages"
+
+#: src/gui/appimagebackend.cpp:187
+msgid "AppImage installed"
+msgstr "AppImage instalado"
+
+#: src/gui/appimagebackend.cpp:188
+#, kde-format
+msgid "%1 was moved to Applications."
+msgstr "%1 foi movido para Aplicativos."
+
+#: src/gui/appimagebackend.cpp:205
+msgid "AppImage removed"
+msgstr "AppImage removido"
+
+#: src/gui/appimagebackend.cpp:206
+#, kde-format
+msgid "%1 was moved to Trash."
+msgstr "%1 foi movido para a Lixeira."
+
+#: src/plugin/appimageactionplugin.cpp:46
+#: qml/ManageWindow.qml:18
+msgid "Manage AppImage"
+msgstr "Gerenciar AppImage"
+
+#: qml/ManageWindow.qml:27
+msgid "About AppImage Manager"
+msgstr "Sobre o Gerenciador de AppImages"
+
+#: qml/ManageWindow.qml:46
+msgid "Version 0.1.0"
+msgstr "Versão 0.1.0"
+
+#: qml/ManageWindow.qml:52
+msgid "A lightweight AppImage manager for KDE Plasma 6."
+msgstr "Um gerenciador de AppImages leve para o KDE Plasma 6."
+
+#: qml/ManageWindow.qml:71
+msgid "License: GNU General Public License v2 or later"
+msgstr "Licença: GNU General Public License v2 ou posterior"
+
+#: qml/ManageWindow.qml:87
+msgid "About"
+msgstr "Sobre"
+
+#: qml/ManageWindow.qml:126
+#, kde-format
+msgid "Version: %1  •  Size: %2"
+msgstr "Versão: %1  •  Tamanho: %2"
+
+#: qml/ManageWindow.qml:209
+#, kde-format
+msgid "Launch %1"
+msgstr "Iniciar %1"
+
+#: qml/ManageWindow.qml:250
+msgid "Applications"
+msgstr "Aplicativos"
+
+#: qml/ManageWindow.qml:267
+msgid "AppImages are unverified executables. Only install from sources you trust."
+msgstr "Os AppImages são executáveis não verificados. Instale apenas de fontes confiáveis."
+
+#: qml/ManageWindow.qml:285
+msgid "Create Shortcut"
+msgstr "Criar atalho"
+
+#: qml/ManageWindow.qml:295
+#: qml/UninstallWindow.qml:179
+msgid "Remove"
+msgstr "Remover"
+
+#: qml/UninstallWindow.qml:13
+#, kde-format
+msgid "Uninstall %1"
+msgstr "Desinstalar %1"
+
+#: qml/UninstallWindow.qml:26
+msgid "Move to Trash?"
+msgstr "Mover para a lixeira?"
+
+#: qml/UninstallWindow.qml:27
+msgid "The selected items will be moved to the Trash. You can restore them from there if needed."
+msgstr "Os itens selecionados serão movidos para a lixeira. Você pode restaurá-los de lá, se necessário."
+
+#: qml/UninstallWindow.qml:55
+#, kde-format
+msgid "Selected for removal: %1"
+msgstr "Selecionado para remoção: %1"
+
+#: qml/UninstallWindow.qml:75
+msgid "Select items to remove:"
+msgstr "Selecione os itens a serem removidos:"
+
+#: qml/UninstallWindow.qml:105
+msgid " (AppImage)"
+msgstr " (AppImage)"
+
+#: qml/UninstallWindow.qml:174
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: src/main.cpp:47
+msgid "AppImage file to manage. If omitted, opens the dashboard."
+msgstr "Arquivo AppImage a ser gerenciado. Se omitido, abre o painel."
+
+#: qml/DashboardWindow.qml:28
+msgid "Installed AppImages"
+msgstr "AppImages instalados"
+
+#: qml/DashboardWindow.qml:31
+msgid "Refresh"
+msgstr "Atualizar"
+
+#: qml/DashboardWindow.qml:37
+#: qml/DashboardWindow.qml
+msgid "Settings"
+msgstr "Configurações"
+
+#: qml/DashboardWindow.qml:45
+msgid "No AppImages installed"
+msgstr "Nenhum AppImage instalado"
+
+#: qml/DashboardWindow.qml:47
+msgid "Right-click an AppImage file and choose \"Manage AppImage\" to install it."
+msgstr "Clique com o botão direito em um arquivo AppImage e escolha \"Gerenciar AppImage\" para instalá-lo."
+
+#: qml/DashboardWindow.qml:107
+msgid "Shortcut"
+msgstr "Atalho"
+
+#: qml/DashboardWindow.qml:114
+msgid "Update"
+msgstr "Atualizar"
+
+#: qml/DashboardWindow.qml:117
+msgid "Update checking is not yet implemented"
+msgstr "A verificação de atualizações ainda não está implementada"
+
+#: qml/DashboardWindow.qml
+msgid "Applications folder:"
+msgstr "Pasta de aplicativos:"
+
+#: qml/DashboardWindow.qml
+msgid "Show security disclaimer"
+msgstr "Mostrar aviso de segurança"
+
+#: qml/DashboardWindow.qml
+msgid "Sort"
+msgstr "Ordenar"
+
+#: qml/DashboardWindow.qml
+msgid "By name"
+msgstr "Por nome"
+
+#: qml/DashboardWindow.qml
+msgid "By size"
+msgstr "Por tamanho"
+
+#: qml/DashboardWindow.qml
+msgid "By date added"
+msgstr "Por data de adição"

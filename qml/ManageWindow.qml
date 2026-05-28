@@ -28,46 +28,16 @@ ApplicationWindow {
         Kirigami.Units.iconSizes.enormous
     ][AppSettings.manageIconSize]
 
+    readonly property color cardBorderColor: AppSettings.accentBorders 
+        ? root.Kirigami.Theme.focusColor 
+        : (root.Kirigami.Theme.textColor && root.Kirigami.Theme.textColor.r !== undefined
+            ? Qt.rgba(root.Kirigami.Theme.textColor.r, root.Kirigami.Theme.textColor.g, root.Kirigami.Theme.textColor.b, 0.15)
+            : Qt.rgba(0.5, 0.5, 0.5, 0.15))
+
     UninstallDialog { id: uninstallDialog }
 
     // ── About dialog ─────────────────────────────────────────────────────────
-    Kirigami.Dialog {
-        id: aboutDialog
-        title: i18n("About")
-        padding: Kirigami.Units.largeSpacing
-        standardButtons: Kirigami.Dialog.Close
-
-        ColumnLayout {
-            spacing: Kirigami.Units.largeSpacing
-            implicitWidth: Kirigami.Units.gridUnit * 18
-
-            Kirigami.Icon {
-                source: "application-x-executable"
-                implicitWidth: Kirigami.Units.iconSizes.huge
-                implicitHeight: Kirigami.Units.iconSizes.huge
-                Layout.alignment: Qt.AlignHCenter
-            }
-            Kirigami.Heading {
-                text: i18n("AppImage Manager"); level: 1; Layout.alignment: Qt.AlignHCenter
-            }
-            Label { text: i18n("Version %1", Qt.application.version); opacity: 0.6; Layout.alignment: Qt.AlignHCenter }
-            Label {
-                text: i18n("A lightweight AppImage manager for KDE Plasma 6.")
-                wrapMode: Text.WordWrap; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter
-            }
-            Kirigami.Separator { Layout.fillWidth: true }
-            Label {
-                text: i18n("© 2024 AppImage Manager Contributors")
-                opacity: 0.6; font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                Layout.alignment: Qt.AlignHCenter
-            }
-            Label {
-                text: "<a href=\"https://github.com/strandzen/AppImage-Manager\">github.com/strandzen/AppImage-Manager</a>"
-                onLinkActivated: Qt.openUrlExternally(link)
-                Layout.alignment: Qt.AlignHCenter
-            }
-        }
-    }
+    AboutDialog { id: aboutDialog }
 
     BusyIndicator {
         anchors.centerIn: parent
@@ -130,7 +100,7 @@ ApplicationWindow {
             Layout.fillHeight: true
             color: Kirigami.Theme.alternateBackgroundColor
             radius: Kirigami.Units.smallSpacing * 2
-            border.color: Kirigami.Theme.focusColor
+            border.color: root.cardBorderColor
             border.width: folderDropArea.containsDrag ? 2 : 1
             opacity: folderDropArea.containsDrag ? 1.0 : 0.8
 

@@ -23,6 +23,7 @@ bool isAppImagePath(const QString &path)
 
 DownloadWatcher::DownloadWatcher(QObject *parent)
     : QObject(parent)
+    , m_sandboxed(isRunningInSandbox())
 {
     connect(&m_watcher, &KDirWatch::created, this, &DownloadWatcher::onCreated);
     connect(&m_watcher, &KDirWatch::deleted, this, &DownloadWatcher::onDeleted);
@@ -36,6 +37,12 @@ void DownloadWatcher::setEnabled(bool enabled)
     if (m_enabled == enabled)
         return;
     m_enabled = enabled;
+
+    // In sandboxed environments (Flatpak/Snap) the Downloads directory may not
+    // be accessible to KDirWatch. Skip silently — callers can check isSandboxed()
+    // to show an informational message in the UI.
+    if (m_sandboxed)
+        return;
 
     const QString dlDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
     if (dlDir.isEmpty())

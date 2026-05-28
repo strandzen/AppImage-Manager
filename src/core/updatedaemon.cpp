@@ -49,9 +49,12 @@ UpdateDaemon::UpdateDaemon(QObject *parent)
     connect(m_timer, &QTimer::timeout, this, &UpdateDaemon::checkUpdates);
     connect(AppSettings::instance(), &AppSettings::updateFrequencyChanged, this, [this]() {
         const int freq = AppSettings::instance()->updateFrequency();
-        m_timer->setInterval(intervalForFrequency(freq, AppSettings::instance()->customUpdateDays()));
-        if (m_timer->isActive())
+        if (freq == 0) {
+            m_timer->stop();
+        } else {
+            m_timer->setInterval(intervalForFrequency(freq, AppSettings::instance()->customUpdateDays()));
             m_timer->start();
+        }
     });
 
     // Single source of truth for download detection. Mirror the user's
@@ -103,7 +106,8 @@ void UpdateDaemon::start()
     const int freq = AppSettings::instance()->updateFrequency();
     m_timer->setInterval(intervalForFrequency(freq, AppSettings::instance()->customUpdateDays()));
     checkUpdates();
-    m_timer->start();
+    if (freq != 0)
+        m_timer->start();
 }
 
 void UpdateDaemon::onDownloadAppeared(const QString &path, const QString &displayName)

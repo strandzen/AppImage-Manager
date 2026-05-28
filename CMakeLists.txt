@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(AppImageManager VERSION 1.3.0 LANGUAGES CXX)
+project(AppImageManager VERSION 1.4.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,14 +48,8 @@ find_package(KF6 6.7 REQUIRED COMPONENTS
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Canberra IMPORTED_TARGET libcanberra)
 
-# Optional: libappimage for in-process SquashFS metadata extraction.
-# Falls back to squashfuse subprocess if not found.
-find_package(libappimage QUIET)
-if(libappimage_FOUND)
-    message(STATUS "libappimage found — using in-process AppImage metadata extraction")
-else()
-    message(WARNING "libappimage not found — AppImage metadata extraction will not work. Install libappimage to enable it.")
-endif()
+# libappimage for in-process SquashFS metadata extraction.
+find_package(libappimage REQUIRED)
 
 add_subdirectory(src)
 add_subdirectory(data)

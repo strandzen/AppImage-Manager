@@ -24,7 +24,8 @@ public:
     explicit DownloadWatcher(QObject *parent = nullptr);
 
     void setEnabled(bool enabled);
-    bool isEnabled() const { return m_enabled; }
+    bool isEnabled()    const { return m_enabled; }
+    bool isSandboxed()  const { return m_sandboxed; }
 
 Q_SIGNALS:
     // Emitted once per new file once it has stopped growing. displayName is
@@ -48,5 +49,6 @@ private:
     QString                  m_watchedDir;
     QHash<QString, PendingFile> m_pending;
     QTimer                   m_settleTimer;
-    bool                     m_enabled = false;
+    bool                     m_enabled   = false;
+    bool                     m_sandboxed = false;
 };

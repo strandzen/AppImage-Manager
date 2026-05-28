@@ -1,0 +1,200 @@
+# Ukrainian translation for AppImage Manager.
+# Copyright (C) 2024 AppImage Manager Contributors
+# This file is distributed under the same license as the appimagemanager package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: appimagemanager 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/strandzen/AppImage-Manager/issues\n"
+"POT-Creation-Date: 2026-04-24 00:00+0000\n"
+"PO-Revision-Date: 2026-05-28 00:00+0000\n"
+"Last-Translator: AppImage Manager Contributors\n"
+"Language-Team: Ukrainian\n"
+"Language: uk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: src/main.cpp:21
+#: qml/ManageWindow.qml:40
+msgid "AppImage Manager"
+msgstr "Менеджер AppImage"
+
+#: src/main.cpp:23
+msgid "Manage AppImage files in KDE Plasma"
+msgstr "Керування файлами AppImage у KDE Plasma"
+
+#: src/main.cpp:25
+#: qml/ManageWindow.qml:59
+msgid "© 2024 AppImage Manager Contributors"
+msgstr "© 2024 Учасники розробки AppImage Manager"
+
+#: src/main.cpp:47
+msgid "Path to the AppImage file to manage."
+msgstr "Шлях до файла AppImage для керування."
+
+#: src/core/appimagemanager.cpp:86
+msgid "Managed by AppImage Manager"
+msgstr "Керується Менеджером AppImage"
+
+#: src/gui/appimagebackend.cpp:187
+msgid "AppImage installed"
+msgstr "AppImage встановлено"
+
+#: src/gui/appimagebackend.cpp:188
+#, kde-format
+msgid "%1 was moved to Applications."
+msgstr "%1 було переміщено до програми «Програми»."
+
+#: src/gui/appimagebackend.cpp:205
+msgid "AppImage removed"
+msgstr "AppImage вилучено"
+
+#: src/gui/appimagebackend.cpp:206
+#, kde-format
+msgid "%1 was moved to Trash."
+msgstr "%1 було переміщено до смітника."
+
+#: src/plugin/appimageactionplugin.cpp:46
+#: qml/ManageWindow.qml:18
+msgid "Manage AppImage"
+msgstr "Керування AppImage"
+
+#: qml/ManageWindow.qml:27
+msgid "About AppImage Manager"
+msgstr "Про Менеджер AppImage"
+
+#: qml/ManageWindow.qml:46
+msgid "Version 0.1.0"
+msgstr "Версія 0.1.0"
+
+#: qml/ManageWindow.qml:52
+msgid "A lightweight AppImage manager for KDE Plasma 6."
+msgstr "Легкий менеджер AppImage для KDE Plasma 6."
+
+#: qml/ManageWindow.qml:71
+msgid "License: GNU General Public License v2 or later"
+msgstr "Ліцензія: GNU General Public License версії 2 або новішої"
+
+#: qml/ManageWindow.qml:87
+msgid "About"
+msgstr "Про програму"
+
+#: qml/ManageWindow.qml:126
+#, kde-format
+msgid "Version: %1  •  Size: %2"
+msgstr "Версія: %1  •  Розмір: %2"
+
+#: qml/ManageWindow.qml:209
+#, kde-format
+msgid "Launch %1"
+msgstr "Запустити %1"
+
+#: qml/ManageWindow.qml:250
+msgid "Applications"
+msgstr "Програми"
+
+#: qml/ManageWindow.qml:267
+msgid "AppImages are unverified executables. Only install from sources you trust."
+msgstr "Файли AppImage є неперевіреними виконуваними файлами. Встановлюйте їх лише з джерел, яким ви довіряєте."
+
+#: qml/ManageWindow.qml:285
+msgid "Create Shortcut"
+msgstr "Створити ярлик"
+
+#: qml/ManageWindow.qml:295
+#: qml/UninstallWindow.qml:179
+msgid "Remove"
+msgstr "Вилучити"
+
+#: qml/UninstallWindow.qml:13
+#, kde-format
+msgid "Uninstall %1"
+msgstr "Вилучити %1"
+
+#: qml/UninstallWindow.qml:26
+msgid "Move to Trash?"
+msgstr "Перемістити до смітника?"
+
+#: qml/UninstallWindow.qml:27
+msgid "The selected items will be moved to the Trash. You can restore them from there if needed."
+msgstr "Вибрані елементи буде переміщено до смітника. За потреби ви зможете відновити їх звідти."
+
+#: qml/UninstallWindow.qml:55
+#, kde-format
+msgid "Selected for removal: %1"
+msgstr "Вибрано для вилучення: %1"
+
+#: qml/UninstallWindow.qml:75
+msgid "Select items to remove:"
+msgstr "Виберіть елементи для вилучення:"
+
+#: qml/UninstallWindow.qml:105
+msgid " (AppImage)"
+msgstr " (AppImage)"
+
+#: qml/UninstallWindow.qml:174
+msgid "Cancel"
+msgstr "Скасувати"
+
+#: src/main.cpp:47
+msgid "AppImage file to manage. If omitted, opens the dashboard."
+msgstr "Файл AppImage для керування. Якщо опущено, відкриває панель приладів."
+
+#: qml/DashboardWindow.qml:28
+msgid "Installed AppImages"
+msgstr "Встановлені AppImage"
+
+#: qml/DashboardWindow.qml:31
+msgid "Refresh"
+msgstr "Оновити"
+
+#: qml/DashboardWindow.qml:37
+#: qml/DashboardWindow.qml
+msgid "Settings"
+msgstr "Параметри"
+
+#: qml/DashboardWindow.qml:45
+msgid "No AppImages installed"
+msgstr "Не встановлено жодного AppImage"
+
+#: qml/DashboardWindow.qml:47
+msgid "Right-click an AppImage file and choose \"Manage AppImage\" to install it."
+msgstr "Клацніть правою кнопкою миші файл AppImage і виберіть «Керування AppImage», щоб встановити його."
+
+#: qml/DashboardWindow.qml:107
+msgid "Shortcut"
+msgstr "Ярлик"
+
+#: qml/DashboardWindow.qml:114
+msgid "Update"
+msgstr "Оновити"
+
+#: qml/DashboardWindow.qml:117
+msgid "Update checking is not yet implemented"
+msgstr "Перевірку оновлень ще не реалізовано"
+
+#: qml/DashboardWindow.qml
+msgid "Applications folder:"
+msgstr "Тека програм:"
+
+#: qml/DashboardWindow.qml
+msgid "Show security disclaimer"
+msgstr "Показувати попередження щодо безпеки"
+
+#: qml/DashboardWindow.qml
+msgid "Sort"
+msgstr "Сортування"
+
+#: qml/DashboardWindow.qml
+msgid "By name"
+msgstr "За назвою"
+
+#: qml/DashboardWindow.qml
+msgid "By size"
+msgstr "За розміром"
+
+#: qml/DashboardWindow.qml
+msgid "By date added"
+msgstr "За датою додавання"

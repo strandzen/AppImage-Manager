@@ -67,7 +67,7 @@ bool AppImageSortFilterModel::lessThan(const QModelIndex &left, const QModelInde
         case SortBySize: {
             const qint64 aa = a.toLongLong();
             const qint64 bb = b.toLongLong();
-            if (aa != bb) return aa < bb;
+            if (aa != bb) return aa > bb; // largest first
             break;
         }
         case SortByCategory: {

@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "appsettings.h"
+#include "version.h"
 
 #include <KConfigGroup>
+#include <KCoreAddons>
 
 #include <QDir>
 #include <QFileDialog>
 #include <QWindow>
+#include <QGuiApplication>
+#include <QClipboard>
 #include <KLocalizedString>
 
 AppSettings *AppSettings::instance()
@@ -166,9 +170,68 @@ void AppSettings::openFolderPicker(QWindow *parent)
     }
 
     if (dialog.exec() == QDialog::Accepted) {
-        QString dir = dialog.selectedFiles().first();
-        if (!dir.isEmpty()) {
+        const QStringList selected = dialog.selectedFiles();
+        if (selected.isEmpty())
+            return;
+        const QString dir = selected.first();
+        if (!dir.isEmpty())
             setApplicationsPath(dir);
-        }
     }
+}
+
+QString AppSettings::qtVersion() const
+{
+    return QString::fromUtf8(qVersion());
+}
+
+QString AppSettings::kdeFrameworksVersion() const
+{
+    return KCoreAddons::versionString();
+}
+
+QString AppSettings::libappimageVersion() const
+{
+    return QStringLiteral("libappimage");
+}
+
+QString AppSettings::appVersion() const
+{
+    return QStringLiteral(APPIMAGEMANAGER_VERSION_STRING);
+}
+
+void AppSettings::copyToClipboard(const QString &text)
+{
+    QGuiApplication::clipboard()->setText(text);
+}
+
+bool AppSettings::accentBorders() const
+{
+    return m_config->group(QStringLiteral("Appearance"))
+               .readEntry(QStringLiteral("accentBorders"), true);
+}
+
+void AppSettings::setAccentBorders(bool enabled)
+{
+    if (accentBorders() == enabled)
+        return;
+    m_config->group(QStringLiteral("Appearance"))
+             .writeEntry(QStringLiteral("accentBorders"), enabled);
+    m_config->sync();
+    Q_EMIT accentBordersChanged();
+}
+
+void AppSettings::resetToDefaults()
+{
+    QString defaultPath(QDir::homePath());
+    defaultPath += QStringLiteral("/Applications");
+
+    setApplicationsPath(defaultPath);
+    setShowDisclaimer(true);
+    setShowNotifications(true);
+    setUpdateFrequency(1);
+    setCustomUpdateDays(7);
+    setManageIconSize(2);
+    setWatchDownloads(true);
+    setShowInstallBox(true);
+    setAccentBorders(true);
 }

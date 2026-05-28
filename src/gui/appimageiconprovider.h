@@ -6,6 +6,7 @@
 
 #include <QByteArray>
 #include <QCache>
+#include <QMutex>
 #include <QPixmap>
 #include <QQuickImageProvider>
 #include <QReadWriteLock>
@@ -40,5 +41,9 @@ private:
     // Rendered pixmaps keyed by "id:WxH"; capped at ~32 MB so it cannot grow
     // unbounded with hundreds of dashboard delegates requesting many sizes.
     QCache<QString, QPixmap> m_renderCache { 32 * 1024 * 1024 };
-    mutable QReadWriteLock m_lock;
+
+    // Two separate locks: m_icons is read-heavy (concurrent requestPixmap calls),
+    // m_renderCache always needs exclusive access (QCache::object mutates LRU).
+    mutable QReadWriteLock m_iconsLock;
+    mutable QMutex         m_cacheMutex;
 };

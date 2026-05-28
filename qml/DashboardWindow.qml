@@ -18,6 +18,12 @@ Kirigami.ApplicationWindow {
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
 
+    readonly property color cardBorderColor: AppSettings.accentBorders 
+        ? root.Kirigami.Theme.focusColor 
+        : (root.Kirigami.Theme.textColor && root.Kirigami.Theme.textColor.r !== undefined
+            ? Qt.rgba(root.Kirigami.Theme.textColor.r, root.Kirigami.Theme.textColor.g, root.Kirigami.Theme.textColor.b, 0.15)
+            : Qt.rgba(0.5, 0.5, 0.5, 0.15))
+
     function handleDrop(drop) {
         for (const url of drop.urls) {
             if (url.toString().toLowerCase().endsWith(".appimage"))
@@ -85,6 +91,7 @@ Kirigami.ApplicationWindow {
 
     UninstallDialog { id: uninstallDialog }
     SettingsDialog  { id: settingsDialog  }
+    AboutDialog     { id: aboutDialog     }
 
     StorageDialog {
         id: storageDialog
@@ -159,6 +166,12 @@ Kirigami.ApplicationWindow {
                     text: i18n("Settings")
                     displayHint: Kirigami.DisplayHint.IconOnly
                     onTriggered: settingsDialog.open()
+                },
+                Kirigami.Action {
+                    icon.name: "help-about"
+                    text: i18n("About")
+                    displayHint: Kirigami.DisplayHint.IconOnly
+                    onTriggered: aboutDialog.open()
                 }
             ]
 
@@ -200,7 +213,7 @@ Kirigami.ApplicationWindow {
                         anchors.fill: parent
                         color:  Kirigami.Theme.alternateBackgroundColor
                         radius: Kirigami.Units.smallSpacing * 2
-                        border.color: Kirigami.Theme.focusColor
+                        border.color: root.cardBorderColor
                         border.width: globalDropArea.containsDrag ? 2 : 1
                         Behavior on border.width { NumberAnimation { duration: Kirigami.Units.shortDuration } }
 
@@ -238,6 +251,10 @@ Kirigami.ApplicationWindow {
                 spacing: 0
                 visible: listView.count > 0 || proxyModel.filterText !== ""
 
+                // Cached to avoid re-evaluating listView.currentIndex < 0 in
+                // multiple Layout bindings on every selection change.
+                readonly property bool hasSelection: listView.currentIndex >= 0
+
                 // ── Left pane: master list ────────────────────────────────────
                 Item {
                     id: leftPane
@@ -245,9 +262,9 @@ Kirigami.ApplicationWindow {
                     // No selection → drop the upper cap so the master list
                     // can fill the whole window instead of leaving the
                     // (invisible) detail pane's space blank.
-                    Layout.maximumWidth: listView.currentIndex < 0 ? -1 : Kirigami.Units.gridUnit * 24
+                    Layout.maximumWidth: parent.hasSelection ? Kirigami.Units.gridUnit * 24 : -1
                     Layout.preferredWidth: Kirigami.Units.gridUnit * 18
-                    Layout.fillWidth: listView.currentIndex < 0
+                    Layout.fillWidth: !parent.hasSelection
                     Layout.fillHeight: true
 
                     Kirigami.Theme.colorSet: Kirigami.Theme.Window
@@ -274,6 +291,16 @@ Kirigami.ApplicationWindow {
                             indeterminate: true
                             visible: listModel.scanning
                             padding: 0
+                        }
+
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            Layout.rightMargin: Kirigami.Units.smallSpacing
+                            visible: listModel.pendingLoads > 0
+                            text: i18n("Loading %1…", listModel.pendingLoads)
+                            font: Kirigami.Theme.smallFont
+                            horizontalAlignment: Text.AlignRight
+                            color: Kirigami.Theme.disabledTextColor
                         }
 
 
@@ -451,7 +478,7 @@ Kirigami.ApplicationWindow {
                                             visible: AppSettings.showInstallBox
                                             color: Kirigami.Theme.alternateBackgroundColor
                                             radius: Kirigami.Units.smallSpacing * 2
-                                            border.color: Kirigami.Theme.focusColor
+                                            border.color: root.cardBorderColor
                                             border.width: globalDropArea.containsDrag ? 2 : 1
                                             opacity: globalDropArea.containsDrag ? 1.0 : 0.5
                                             Behavior on border.width { NumberAnimation { duration: Kirigami.Units.shortDuration } }

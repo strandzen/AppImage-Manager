@@ -22,6 +22,7 @@
 #include <QNetworkAccessManager>
 #include <QProcess>
 #include <QCryptographicHash>
+#include <QThread>
 #include <QtConcurrent/QtConcurrent>
 
 AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject *parent)
@@ -30,6 +31,7 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
     , m_updateManager(new AppImageUpdateManager(new QNetworkAccessManager(this), this))
     , m_downloadWatcher(new DownloadWatcher(this))
 {
+    m_readerPool.setMaxThreadCount(qBound(1, QThread::idealThreadCount() / 2, 4));
     // KDirWatch in WatchFiles mode emits per-file created/deleted/dirty events
     // (de-duplicated internally) so the model can do incremental inserts and
     // removes instead of debouncing + re-scanning the whole directory.
@@ -192,6 +194,11 @@ bool AppImageListModel::isCheckingUpdates() const
     return m_updateManager->isChecking();
 }
 
+bool AppImageListModel::isDownloadWatcherSandboxed() const
+{
+    return m_downloadWatcher->isSandboxed();
+}
+
 // ── Scanning ──────────────────────────────────────────────────────────────────
 
 void AppImageListModel::scan()
@@ -281,6 +288,7 @@ void AppImageListModel::refresh()
     //   toAdd.size() — new futures for newly inserted items
     // Re-triggered items produce 2 decrements each (stale + new), hence staleFutures + reTriggers.
     m_pendingLoads = staleFutures + reTriggers + static_cast<int>(toAdd.size());
+    Q_EMIT pendingLoadsChanged();
 
     if (m_pendingLoads > 0) {
         if (!m_scanning) { m_scanning = true; Q_EMIT scanningChanged(); }
@@ -302,7 +310,9 @@ void AppImageListModel::loadMetadataForRow(int row)
     const AppImageInfo cached = AppImageCache::instance().load(path, mtime);
     if (cached.isValid) {
         applyMetadata(row, cached);
-        if (--m_pendingLoads == 0 && m_scanning) {
+        --m_pendingLoads;
+        Q_EMIT pendingLoadsChanged();
+        if (m_pendingLoads == 0 && m_scanning) {
             m_scanning = false;
             Q_EMIT scanningChanged();
         }
@@ -314,7 +324,9 @@ void AppImageListModel::loadMetadataForRow(int row)
         watcher->deleteLater();
 
         auto finalize = [this]() {
-            if (--m_pendingLoads == 0 && m_scanning) {
+            --m_pendingLoads;
+            Q_EMIT pendingLoadsChanged();
+            if (m_pendingLoads == 0 && m_scanning) {
                 m_scanning = false;
                 Q_EMIT scanningChanged();
             }
@@ -330,7 +342,7 @@ void AppImageListModel::loadMetadataForRow(int row)
         finalize();
     });
 
-    watcher->setFuture(QtConcurrent::run([path]() {
+    watcher->setFuture(QtConcurrent::run(&m_readerPool, [path]() {
         return AppImageReader(path).read();
     }));
 }
@@ -363,6 +375,7 @@ void AppImageListModel::onFileCreated(const QString &path)
     endInsertRows();
 
     ++m_pendingLoads;
+    Q_EMIT pendingLoadsChanged();
     if (!m_scanning) { m_scanning = true; Q_EMIT scanningChanged(); }
     loadMetadataForRow(row);
 }
@@ -390,6 +403,7 @@ void AppImageListModel::onFileDirty(const QString &path)
     Q_EMIT dataChanged(index(row, 0), index(row, 0));
 
     ++m_pendingLoads;
+    Q_EMIT pendingLoadsChanged();
     if (!m_scanning) { m_scanning = true; Q_EMIT scanningChanged(); }
     loadMetadataForRow(row);
 }
