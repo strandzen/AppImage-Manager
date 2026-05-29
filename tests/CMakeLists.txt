@@ -42,6 +42,9 @@ target_include_directories(tst_appimagelistmodel PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/src
 )
+set_tests_properties(appimagemanager-tst_appimagelistmodel PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
 
 # ── tst_appimageiconprovider ──────────────────────────────────────────────────
 # Concurrent requestPixmap / setIconData stress test.
@@ -56,6 +59,9 @@ ecm_add_test(tst_appimageiconprovider.cpp
 target_include_directories(tst_appimageiconprovider PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/src
+)
+set_tests_properties(appimagemanager-tst_appimageiconprovider PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
 # ── tst_appsettings ───────────────────────────────────────────────────────────

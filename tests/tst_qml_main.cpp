@@ -15,6 +15,10 @@ public:
 public Q_SLOTS:
     void qmlEngineAvailable(QQmlEngine *engine)
     {
+        // The appimagemanager QML module is embedded as resources at qrc:/appimagemanager/.
+        // Qt doesn't add qrc:/ to the import path by default — add it so the engine
+        // can resolve "import appimagemanager" via qrc:/appimagemanager/qmldir.
+        engine->addImportPath(QStringLiteral("qrc:/"));
         KLocalization::setupLocalizedContext(engine);
     }
 };
