@@ -44,7 +44,7 @@ rm -rf build/ && cmake --preset dev && cmake --build --preset dev
 ctest --test-dir build/dev --output-on-failure
 ```
 
-**When releasing:** bump `VERSION` in the top-level `CMakeLists.txt` (`project(AppImageManager VERSION X.Y.Z ...)`). This is the single source of truth — `version.h` is generated from it and `AppSettings::appVersion()` reads it at runtime. Also update the version string in this file and `GEMINI.md`. Forgetting any of these causes the About dialog to display the wrong version.
+**When releasing:** bump `VERSION` in the top-level `CMakeLists.txt` (`project(AppImageManager VERSION X.Y.Z ...)`). This is the single source of truth — `version.h` is generated from it and `AppSettings::appVersion()` reads it at runtime. Also update the version string in this file and `GEMINI.md`, and add a `<release>` entry to `data/appimagemanager.metainfo.xml`. Forgetting any of these causes the About dialog to display the wrong version or the KDE Store validator to reject the submission.
 
 Build output: `build/<presetName>/`. Unit tests in [tests/](tests/) cover `appimageinfo` helpers, `AppImageReader` cleanName, `AppImageCache` round-trip, and `AppImageListModel` watcher behavior. The manual checklist below still applies for UI/integration paths.
 

@@ -52,6 +52,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.4.0" date="2025-05-28">
+      <description>
+        <p>Settings redesigned with card-based layout. New About dialog with contributor list and library versions. Accent border toggle. Sandbox detection for Flatpak/Snap environments. Nine new translations (cs, ja, pl, pt_BR, ru, sk, tr, uk, zh_CN). Atomic update swap with crash recovery. Concurrent icon rendering with split read/write locks. Background update timer now correctly skips when frequency is set to Never.</p>
+      </description>
+    </release>
+    <release version="1.3.0" date="2025-05-24">
+      <description>
+        <p>Async file hashing for update checks. HTTP fallback when zsync2 is absent. Localized AppImage descriptions. Releases atom feed failover.</p>
+      </description>
+    </release>
     <release version="1.2.0" date="2025-05-10">
       <description>
         <p>AppImage update system via zsync delta-patching. Code cleanup and stability improvements.</p>
