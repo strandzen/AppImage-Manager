@@ -16,8 +16,10 @@ public:
     explicit UpdateDaemon(QObject *parent = nullptr);
     void start();
 
-private:
+private Q_SLOTS:
     void checkUpdates();
+
+private:
     void onDownloadAppeared(const QString &path, const QString &displayName);
     void updateTrayStatus();
 
