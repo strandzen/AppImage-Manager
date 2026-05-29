@@ -1,4 +1,4 @@
-name: Build
+name: CI
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
@@ -17,20 +18,23 @@ jobs:
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm \
-            git base-devel cmake extra-cmake-modules ninja \
-            qt6-base qt6-declarative qt6-tools \
-            kcoreaddons ki18n kio kiconthemes knotifications kcrash kdbusaddons kirigami \
-            kstatusnotifieritem libappimage libcanberra
+            git base-devel cmake ninja extra-cmake-modules \
+            qt6-base qt6-declarative qt6-svg qt6-tools \
+            kcoreaddons ki18n kio knotifications kdbusaddons \
+            kstatusnotifieritem kirigami \
+            libappimage libcanberra appstream dbus
 
       - uses: actions/checkout@v4
 
-      - name: Configure
-        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
-
-      - name: Build
-        run: cmake --build build --parallel
+      - name: Build & test
+        run: |
+          # Provide a session bus so D-Bus calls don't abort in the container.
+          # Provide a home dir for KSharedConfig and XDG_RUNTIME_DIR for Qt.
+          export HOME=/root
+          export XDG_RUNTIME_DIR=/tmp/runtime-root
+          mkdir -p "$XDG_RUNTIME_DIR"
+          chmod 0700 "$XDG_RUNTIME_DIR"
+          dbus-run-session -- bash data/ci/test.sh
 
       - name: Validate metainfo
-        run: |
-          pacman -S --noconfirm appstream
-          appstreamcli validate --pedantic data/appimagemanager.metainfo.xml
+        run: appstreamcli validate --pedantic data/appimagemanager.metainfo.xml
