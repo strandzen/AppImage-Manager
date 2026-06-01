@@ -110,6 +110,7 @@ Kirigami.Dialog {
 
     Controls.ScrollView {
         id: scrollView
+        implicitHeight: Kirigami.Units.gridUnit * 28
         Layout.fillWidth: true
         Layout.fillHeight: true
         clip: true
