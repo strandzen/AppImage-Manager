@@ -1,0 +1,7 @@
+- [x] Declare `resetToDefaults()` in `src/core/appsettings.h` and implement it in `src/core/appsettings.cpp`
+- [x] Redesign `qml/SettingsDialog.qml` with rounded cards, subtitles, Dolphin folder browse buttons, and a "Restore Defaults" button
+- [x] Fix card border color binding TypeError breaks in SettingsDialog, AboutDialog, ManageWindow, and DashboardWindow by defining a robust root-level cardBorderColor property
+- [x] Align ComboBoxes and SpinBox in settings rows to the right with fixed premium preferred widths to eliminate clipping and visual overlaps with card borders
+- [x] Move the "Restore Defaults" button to the bottom-left of the dialog footer next to the "Close" button
+- [x] Compile the updated build via `cmake --build --preset dev`
+- [x] Run test suite with `ctest --test-dir build/dev --output-on-failure`

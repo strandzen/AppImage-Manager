@@ -1,0 +1,41 @@
+# Home Screen Storage Overview
+
+- [x] **Data Fetching (SystemHealth Model)**
+  - [x] Add properties to `SystemHealth` for `appsSize`, `mediaSize`, `gamesSize`, and `systemSize`.
+  - [x] Implement a worker thread or async method to calculate directory sizes without blocking the UI.
+    - [x] `appsSize`: Calculate size of `/usr` (excluding `share/games`), `/var/lib/pacman`, and `/var/lib/flatpak`. *(Note: A simpler approximation is often needed since exact package calculation is slow.)* 
+    - [x] `mediaSize`: Calculate size of `~/Videos` and `~/Pictures`.
+    - [x] `gamesSize`: Calculate size of `~/.steam/common/steamapps` and `~/Games`.
+    - [x] `systemSize`: Total used size minus Apps, Media, and Games.
+- [x] **QML UI Component**
+  - [x] Create `StorageOverviewBar.qml` in `qml/components`.
+  - [x] Design a horizontal stacked bar using standardized colors for each category.
+  - [x] Add a legend underneath mapping colors to category names.
+- [x] **Integration**
+  - [x] Embed `StorageOverviewBar.qml` into `LandingPage.qml`.
+  - [x] Bind component values to the properties exposed in `SystemHealth`.
+
+- [x] **AppImage Manager Fixes**
+  - [x] **Icon Fetching:** 
+    - [x] Implement GitHub avatar fallback in `appimage_hub.py` for 404s.
+    - [x] Implement local icon discovery for installed AppImages in `appimage_manager.py` (checking `~/.local/share/icons`).
+  - [x] **Layout Stability:** Fix binding loops for `ToolButton` and `OverlaySheet`.
+  - [x] **Search/Filter:** Ensure smooth integration of custom entries.
+
+- [x] **Storage Overview Refinements**
+  - [x] Rename "Apps" to "Packages".
+  - [x] Use `Kirigami.Theme` colors for segments.
+  - [x] Add `ToolTip` to each bar segment showing total size.
+  - [x] Add granular categories: Downloads, Virtual Machines, Cache & Trash.
+  - [x] Improve Kirigami-style presentation (margins, spacing, card-like feel).
+- [x] **System Stability & Cleanliness**
+  - [x] Fix conflicting anchors in `main.qml` (left/right vs horizontalCenter).
+  - [x] Resolve ToolButton binding loops in `AppImageManagerPane.qml`, `SystemMonitorPage.qml`, and `CorpseCleanerPane.qml`.
+  - [x] Optimize `AppImageManager.scan()` to avoid blocking main thread (potential startup lag).
+  - [x] Resolve `ToolTip` contentWidth loop in `StorageOverviewBar.qml`.
+- [x] **Binary Distribution & Version Control**
+  - [x] Update `.gitignore` to exclude `dist/`, `build/`, and `*.spec`.
+  - [x] Refactor `main.py` with `resource_path` for bundled asset resolution.
+  - [x] Create `build_binary.sh` for PyInstaller automation.
+  - [x] Execute build and verify binary functionality.
+  - [x] Push source changes (excluding binary) to GitHub.

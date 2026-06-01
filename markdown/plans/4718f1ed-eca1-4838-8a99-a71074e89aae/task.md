@@ -1,0 +1,16 @@
+- [x] Update C++ backend roles and properties
+    - [x] Add `DisplayNameRole` and `FormattedSizeRole` to `AppImageListModel`
+    - [x] Add `displayName` and `formattedSize` to `AppImageBackend`
+    - [x] Centralize name cleaning and size formatting logic
+- [x] Refactor `ManageWindow.qml`
+    - [x] Use `Kirigami.Units` for spacing/margins
+    - [x] Improve layout and animations (drag-and-drop feedback)
+    - [x] Redesign "About" sheet
+- [x] Refactor `DashboardWindow.qml`
+    - [x] Use new backend roles
+    - [x] Simplify `ItemDelegate`
+    - [x] Improve visual hierarchy
+- [x] Polish `UninstallWindow.qml`
+    - [x] Apply Kirigami standards and spacing
+- [x] Update `StorageDialog.qml`
+- [ ] Verify build and functionality (partially blocked by permission issues in build dir, but code reviewed)

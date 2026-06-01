@@ -1,0 +1,124 @@
+# Task: Add "Recommended" Button to Home Page
+
+- [x] Research task configurations for "recommended" flags
+- [x] Locate gauges in `LandingPage.qml`
+- [x] Create implementation plan
+- [x] Implement the button and logic
+- [x] Verify the implementation
+- [x] Refine home page layout (consistent widths)
+    - [x] Define shared width calculation
+    - [x] Update Description box
+    - [x] Update Gauges row
+    - [x] Update Recommended button
+    - [x] Verify responsive behavior
+- [x] Debug blank screen issue
+    - [x] Inspect `LandingPage.qml` for syntax or logic errors
+    - [x] Fix identified issues (removed `applicationWindow` conflict)
+    - [x] Investigate "Cannot override FINAL property" error in `LandingPage.qml`
+    - [x] Apply fix for page loading error
+    - [x] Verify application renders correctly
+- [x] Add space savings summary to home page
+    - [x] Make CombinedModel accessible to QML (or expose total size property)
+    - [x] Retrieve space savings string from the combined model
+    - [x] Add Label under Recommended tasks button with the size
+- [x] Add gauge color toggle and centering
+    - [x] Add `colorfulGauges` property to `SettingsManager`
+    - [x] Add toggle switch in `SettingsPage.qml`
+    - [x] Bind gauge colors to the setting in `LandingPage.qml`
+    - [x] Adjust gauge layout to be tightly centered on the page
+- [x] Add Custom Scripts module
+    - [x] Modify `task_registry.py` to scan `scripts` directory
+    - [x] Auto-generate tasks and category for discovered scripts
+    - [x] Verify Scripts category appears in UI and functions correctly
+- [x] Add Terminal View for Custom Scripts
+    - [x] Create `ScriptTask` class extending `CommandTask` to store output history
+    - [x] Expose `outputHistory` property from `ScriptTask`
+    - [x] Modify `RunningTasksPage.qml` to show a terminal view when executing `ScriptTask`
+- [x] Add Misc UI Enhancements and Test Task
+    - [x] Add "Open Scripts Folder" button to `SettingsPage.qml`
+    - [x] Move category icon above task name in `TaskSelectionPage.qml`
+    - [x] Add a simulated test task to `tasks_config.json`
+- [x] Fix Kirigami Drawer and Column View
+    - [x] Remove `isMenu: true` from `GlobalDrawer` so it can act as a sidebar
+    - [x] Set `pageStack.defaultColumnWidth: pageStack.width` to prevent side-by-side pages
+    - [x] Make drawer items clear the `pageStack` down to the root before replacing
+- [x] Update Task List Status UI
+    - [x] Remove checkmark and radio button icons from `RunningTasksPage.qml` and `FinishedTasksPage.qml`
+    - [x] Change task text color based on status (green=finished, red=failed, grey=running/waiting)
+    - [x] Append "...." to the task name when running
+- [x] Refine Home Page UI Alignment
+    - [x] Align Status Gauges row width with other elements in `LandingPage.qml`
+- [x] Create Master UI Naming System
+    - [x] Identify all hardcoded UI strings in QML files
+    - [x] Create `ui_strings.json` configuration file
+    - [x] Implement `UIStringsManager` in Python to load and expose strings
+    - [x] Refactor QML files to use `UIStringsManager`
+    - [x] Verify UI labels remain correct and are editable via JSON
+- [x] Redesign UI to Modular Elisa-style Layout
+    - [x] Refactor `main.qml` into a 3-column architecture (GlobalDrawer, PageStack, TaskProgressPane)
+    - [x] Remove independent `RunningTasksPage.qml` and `FinishedTasksPage.qml` as they are now components of the persistent sidebar
+    - [x] Update `TaskSelectionPage.qml` to decouple the 'Confirm' actions to fit the new layout
+    - [x] Move Task list CheckBoxes to the Right Pane (TaskProgressPane)
+- [x] Add Padding and Roundness to UI Panes
+    - [x] Add margins and spacing to main `RowLayout` in `main.qml`
+    - [x] Apply `radius` to `leftSidebar` and `rightPane` (and Center Pane background if needed)
+- [x] Implement Favorite Tasks
+    - [x] Add `favoriteTasks` property to `SettingsManager`
+    - [x] Create UI in `SettingsPage.qml` to select favorite tasks
+    - [x] Expose `favoritesTaskModel` in `TaskRegistry`
+    - [x] Display Favorite Tasks dynamically on `LandingPage.qml` (or Right Pane when Home is active)
+- [x] Fix Center Pane Edge Clipping
+    - [x] Make pages within `PageRow` transparent to prevent overlapping rounded corners
+    - [x] Adjust clipping settings in `main.qml`
+- [x] Hide Action Queue in Settings
+    - [x] Add `objectName` to `SettingsPage.qml`
+    - [x] Bind `visible` property of `rightPane` in `main.qml` to current page name
+- [x] Move Ghost Configs to Clean System Files
+    - [x] Update `tasks_config.json`
+- [x] Redesign Action Queue List Style (KDE/Kate style)
+    - [x] Simplify `TaskProgressPane.qml` delegate (remove borders, use compact layout)
+    - [x] Add subtle hover effect and separators
+    - [x] Adjust icon and text sizing to match KDE aesthetic
+- [x] Implement Simulation Toggle and Action Queue Refinements
+    - [x] Add `showSimulationTasks` to `SettingsManager`
+    - [x] Update `TaskRegistry` to hide simulation tasks if disabled
+    - [x] Remove logos from `TaskProgressPane.qml` list items
+    - [x] Show total size of selected tasks in `TaskProgressPane.qml`
+- [x] Rename Ghost Configs to Corpse Cleaner and expand scope
+    - [x] Update `tasks_config.json` with new name and ID
+    - [x] Ensure `maintain_task.py` scans `.local/bin` and other relevant paths
+    - [x] Add `corpseCleanerCustomPaths` property to `SettingsManager`
+    - [x] Add editable list/field for custom paths in `SettingsPage.qml`
+    - [x] Modify `maintain_task.py` to include these custom paths in the scan
+- [x] Fix QML Errors and Binding Loops
+    - [x] Fix `OverlaySheet` binding loop for `implicitHeight` in `SettingsPage.qml`
+    - [x] Fix `CheckBox` binding loop for `checked` in `TaskProgressPane.qml`
+    - [x] Investigate and fix "Created graphical object was not placed in the graphics scene" warnings
+    - [x] Fix TypeError in `TaskProgressPane.qml` (Cannot read property 'rowCount' of undefined)
+- [x] UI Polish: Scrollbars and Localization
+    - [x] Add explicit `ScrollBar.vertical` to `ListView`s in `TaskProgressPane.qml`
+    - [x] Add explicit `ScrollBar.vertical` to `ListView` in `CorpseCleanerPane.qml`
+    - [x] Add explicit `ScrollBar.vertical` to `favoriteTasksSheet` in `SettingsPage.qml`
+    - [x] Add all new hardcoded strings to `ui_strings.json` (Corpse Cleaner, Settings, etc.)
+    - [x] Replace hardcoded strings in QML with `UIStrings` references
+- [x] UI Standardization: Image 1 Style
+    - [x] Apply outline button style (Image 1) to `TaskProgressPane.qml` buttons
+    - [x] Apply outline button style (Image 1) to `CorpseCleanerPane.qml` if not currently explicit
+    - [x] Standardize summary labels to use orange color and consistent text format
+    - [x] Ensure all 3rd pane components use the same spacing and separators
+- [x] Universal SVG Icon System
+    - [x] Create additional SVGs: `ssd.svg`, `ram.svg`, `storage.svg`
+    - [x] Create `ui_icons.json` for centralized management
+    - [x] Implement `models/ui_icons_manager.py`
+    - [x] Expose `UIIcons` to QML in `main.py`
+- [x] Central UI Refinements
+    - [x] Move Health Gauges (SSD, RAM, Storage) to `main.qml` (persistent across all pages)
+    - [x] Remove borders around the central column in `main.qml`
+    - [x] Update `ui_strings.json` with localized headlines and descriptions for all pages
+    - [x] Update `ui_icons.json` with scalability options for headline icons
+    - [x] Standardize Page Headers (Icon + Headline + Description) in:
+        - [x] `LandingPage.qml`
+        - [x] `TaskSelectionPage.qml`
+        - [x] `CorpseCleanerPage.qml`
+    - [x] Eliminate all remaining `.png` references and files
+    - [x] Verify consistent layout and responsiveness across all pages

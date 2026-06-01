@@ -1,0 +1,21 @@
+# Tasks
+
+- [x] Integrate Theme-Switcher installation <!-- id: 0 -->
+    - [x] Add `check_theme_switcher` method to `SystemScanner` in `logic.py` <!-- id: 1 -->
+    - [x] Update `generate_install_plan` to include Theme-Switcher before Affinity <!-- id: 2 -->
+- [x] Verify integration <!-- id: 3 -->
+- [x] Build binary with PyInstaller <!-- id: 4 -->
+- [x] Enhance UI aesthetics <!-- id: 5 -->
+    - [x] (REVERSED) Apply Simulated Breeze Dark Style (QSS) <!-- id: 6 -->
+    - [x] (REVERSED) Add smooth transitions/animations <!-- id: 7 -->
+- [x] Refine component descriptions in list <!-- id: 8 -->
+- [x] Integrate Ferdium AppImage installation <!-- id: 9 -->
+    - [x] Add `check_ferdium` method to `SystemScanner` in `logic.py` <!-- id: 10 -->
+    - [x] Update `generate_install_plan` to include Ferdium before Affinity <!-- id: 11 -->
+    - [x] Rebuild binary with PyInstaller <!-- id: 12 -->
+- [x] Sort component list and group flathub items <!-- id: 13 -->
+    - [x] Implement display-only sorting in `gui.py` <!-- id: 14 -->
+    - [x] Preserve install order during execution <!-- id: 15 -->
+- [/] Debug password validation issue <!-- id: 16 -->
+    - [/] Update `PasswordDialog.validate_password` with detailed error reporting <!-- id: 17 -->
+    - [ ] Rebuild and test <!-- id: 18 -->

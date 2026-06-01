@@ -1,0 +1,7 @@
+- [x] Investigate icon assets and `ui_icons.json` <!-- id: 0 -->
+- [x] Locate `SidebarModel` definition and identify configuration files <!-- id: 1 -->
+- [x] Examine `ui_left_list.json` and `tasks_config.json` <!-- id: 2 -->
+- [x] Determine why `tools.svg` is not being used <!-- id: 3 -->
+- [x] Fix the icon mapping or sidebar configuration <!-- id: 4 -->
+- [x] Verify the fix <!-- id: 5 -->
+- [x] Update `README.md` with recent changes <!-- id: 6 -->

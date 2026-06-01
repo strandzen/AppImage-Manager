@@ -1,0 +1,28 @@
+# Task: Add "Get Latest" Button to Theme Switcher
+
+- [x] Planning and Design
+    - [x] Research UI structure and integration points
+    - [x] Create implementation plan
+- [x] Implementation
+    - [x] Add "Get Latest" button to the UI
+    - [x] Implement the repository sync logic in Python
+- [x] Dynamic Profile Loading
+    - [x] Implement profile directory scanning
+    - [x] Implement README.md parsing for descriptions
+    - [x] Update UI to refresh after "Get Latest"
+- [x] Refine Profile Loading
+    - [x] Switch preview image to PICTURE.png
+    - [x] Remove static presets (exclusively use disk profiles)
+- [x] Verification
+    - [x] Verify only disk profiles are shown
+    - [x] Verify PICTURE.png is used
+- [x] Markdown Support
+    - [x] Enable Markdown rendering in description box
+- [x] Enhancements
+    - [x] Add right-click context menu "Open Profiles Folder"
+    - [x] Ensure "Get Latest" overwrites existing files
+    - [x] Auto-select first profile on load
+- [x] Verification
+    - [x] Verify context menu opens folder
+    - [x] Verify copy uses force overwrite
+    - [x] Verify first profile is selected
