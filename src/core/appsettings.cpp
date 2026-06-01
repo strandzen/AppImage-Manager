@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "appsettings.h"
 #include "version.h"
+#include "appimagemanagersettings.h"
 
-#include <KConfigGroup>
 #include <KCoreAddons>
 
 #include <QDir>
@@ -21,18 +21,12 @@ AppSettings *AppSettings::instance()
 
 AppSettings::AppSettings(QObject *parent)
     : QObject(parent)
-    , m_config(KSharedConfig::openConfig(QStringLiteral("appimagemanagerrc")))
 {
 }
 
 QString AppSettings::applicationsPath() const
 {
-    // Build default as a proper QString to avoid QStringBuilder type deduction
-    // confusing KConfigGroup::readEntry's template parameter.
-    QString defaultPath(QDir::homePath());
-    defaultPath += QStringLiteral("/Applications");
-    return m_config->group(QStringLiteral("General"))
-               .readEntry(QStringLiteral("applicationsPath"), defaultPath);
+    return AppImageManagerSettings::self()->applicationsPath();
 }
 
 void AppSettings::setApplicationsPath(const QString &path)
@@ -43,113 +37,106 @@ void AppSettings::setApplicationsPath(const QString &path)
         Q_EMIT applicationsPathError(path);
         return;
     }
-    m_config->group(QStringLiteral("General"))
-             .writeEntry(QStringLiteral("applicationsPath"), path);
+    AppImageManagerSettings::self()->setApplicationsPath(path);
+    AppImageManagerSettings::self()->save();
     Q_EMIT applicationsPathChanged();
 }
 
 bool AppSettings::showDisclaimer() const
 {
-    return m_config->group(QStringLiteral("General"))
-               .readEntry(QStringLiteral("showDisclaimer"), true);
+    return AppImageManagerSettings::self()->showDisclaimer();
 }
 
 void AppSettings::setShowDisclaimer(bool enabled)
 {
     if (showDisclaimer() == enabled)
         return;
-    m_config->group(QStringLiteral("General"))
-             .writeEntry(QStringLiteral("showDisclaimer"), enabled);
+    AppImageManagerSettings::self()->setShowDisclaimer(enabled);
+    AppImageManagerSettings::self()->save();
     Q_EMIT showDisclaimerChanged();
 }
 
 bool AppSettings::showNotifications() const
 {
-    return m_config->group(QStringLiteral("General"))
-               .readEntry(QStringLiteral("showNotifications"), true);
+    return AppImageManagerSettings::self()->showNotifications();
 }
 
 void AppSettings::setShowNotifications(bool enabled)
 {
     if (showNotifications() == enabled)
         return;
-    m_config->group(QStringLiteral("General"))
-             .writeEntry(QStringLiteral("showNotifications"), enabled);
+    AppImageManagerSettings::self()->setShowNotifications(enabled);
+    AppImageManagerSettings::self()->save();
     Q_EMIT showNotificationsChanged();
 }
 
 int AppSettings::updateFrequency() const
 {
-    return m_config->group(QStringLiteral("Updates"))
-               .readEntry(QStringLiteral("updateFrequency"), 1); // 1 = Daily
+    return AppImageManagerSettings::self()->updateFrequency();
 }
 
 void AppSettings::setUpdateFrequency(int frequency)
 {
     if (updateFrequency() == frequency)
         return;
-    m_config->group(QStringLiteral("Updates"))
-             .writeEntry(QStringLiteral("updateFrequency"), frequency);
+    AppImageManagerSettings::self()->setUpdateFrequency(frequency);
+    AppImageManagerSettings::self()->save();
     Q_EMIT updateFrequencyChanged();
 }
 
 int AppSettings::customUpdateDays() const
 {
-    return m_config->group(QStringLiteral("Updates"))
-               .readEntry(QStringLiteral("customUpdateDays"), 7);
+    return AppImageManagerSettings::self()->customUpdateDays();
 }
 
 void AppSettings::setCustomUpdateDays(int days)
 {
     if (customUpdateDays() == days)
         return;
-    m_config->group(QStringLiteral("Updates"))
-             .writeEntry(QStringLiteral("customUpdateDays"), days);
+    AppImageManagerSettings::self()->setCustomUpdateDays(days);
+    AppImageManagerSettings::self()->save();
     Q_EMIT customUpdateDaysChanged();
 }
 
 int AppSettings::manageIconSize() const
 {
-    return m_config->group(QStringLiteral("Appearance"))
-               .readEntry(QStringLiteral("manageIconSize"), 2); // 2 = Large
+    return AppImageManagerSettings::self()->manageIconSize();
 }
 
 void AppSettings::setManageIconSize(int size)
 {
     if (manageIconSize() == size)
         return;
-    m_config->group(QStringLiteral("Appearance"))
-             .writeEntry(QStringLiteral("manageIconSize"), size);
+    AppImageManagerSettings::self()->setManageIconSize(size);
+    AppImageManagerSettings::self()->save();
     Q_EMIT manageIconSizeChanged();
 }
 
 bool AppSettings::watchDownloads() const
 {
-    return m_config->group(QStringLiteral("Behavior"))
-               .readEntry(QStringLiteral("watchDownloads"), true);
+    return AppImageManagerSettings::self()->watchDownloads();
 }
 
 void AppSettings::setWatchDownloads(bool enabled)
 {
     if (watchDownloads() == enabled)
         return;
-    m_config->group(QStringLiteral("Behavior"))
-             .writeEntry(QStringLiteral("watchDownloads"), enabled);
+    AppImageManagerSettings::self()->setWatchDownloads(enabled);
+    AppImageManagerSettings::self()->save();
     Q_EMIT watchDownloadsChanged();
 }
 
 bool AppSettings::showInstallBox() const
 {
-    return m_config->group(QStringLiteral("Appearance"))
-               .readEntry(QStringLiteral("showInstallBox"), true);
+    return AppImageManagerSettings::self()->showInstallBox();
 }
 
 void AppSettings::setShowInstallBox(bool enabled)
 {
     if (showInstallBox() == enabled)
         return;
-    m_config->group(QStringLiteral("Appearance"))
-             .writeEntry(QStringLiteral("showInstallBox"), enabled);
+    AppImageManagerSettings::self()->setShowInstallBox(enabled);
+    AppImageManagerSettings::self()->save();
     Q_EMIT showInstallBoxChanged();
 }
 
@@ -206,32 +193,31 @@ void AppSettings::copyToClipboard(const QString &text)
 
 bool AppSettings::accentBorders() const
 {
-    return m_config->group(QStringLiteral("Appearance"))
-               .readEntry(QStringLiteral("accentBorders"), true);
+    return AppImageManagerSettings::self()->accentBorders();
 }
 
 void AppSettings::setAccentBorders(bool enabled)
 {
     if (accentBorders() == enabled)
         return;
-    m_config->group(QStringLiteral("Appearance"))
-             .writeEntry(QStringLiteral("accentBorders"), enabled);
-    m_config->sync();
+    AppImageManagerSettings::self()->setAccentBorders(enabled);
+    AppImageManagerSettings::self()->save();
     Q_EMIT accentBordersChanged();
 }
 
 void AppSettings::resetToDefaults()
 {
-    QString defaultPath(QDir::homePath());
-    defaultPath += QStringLiteral("/Applications");
+    AppImageManagerSettings::self()->setDefaults();
+    AppImageManagerSettings::self()->save();
 
-    setApplicationsPath(defaultPath);
-    setShowDisclaimer(true);
-    setShowNotifications(true);
-    setUpdateFrequency(1);
-    setCustomUpdateDays(7);
-    setManageIconSize(2);
-    setWatchDownloads(true);
-    setShowInstallBox(true);
-    setAccentBorders(true);
+    // Emit all signals so QML updates
+    Q_EMIT applicationsPathChanged();
+    Q_EMIT showDisclaimerChanged();
+    Q_EMIT showNotificationsChanged();
+    Q_EMIT updateFrequencyChanged();
+    Q_EMIT customUpdateDaysChanged();
+    Q_EMIT manageIconSizeChanged();
+    Q_EMIT watchDownloadsChanged();
+    Q_EMIT showInstallBoxChanged();
+    Q_EMIT accentBordersChanged();
 }

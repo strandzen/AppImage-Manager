@@ -23,7 +23,7 @@ target_include_directories(tst_appimagereader PRIVATE ${CMAKE_SOURCE_DIR})
 # Tests AppImageCache store/load round-trip against a real SQLite file.
 ecm_add_test(tst_appimagecache.cpp
     TEST_NAME tst_appimagecache
-    LINK_LIBRARIES Qt6::Test Qt6::Sql appimagemanager_core KF6::CoreAddons KF6::ConfigCore
+    LINK_LIBRARIES Qt6::Test Qt6::Sql Qt6::Concurrent appimagemanager_core KF6::CoreAddons KF6::ConfigCore
     NAME_PREFIX "appimagemanager-"
 )
 target_include_directories(tst_appimagecache PRIVATE ${CMAKE_SOURCE_DIR})
@@ -90,6 +90,24 @@ ecm_add_test(tst_updatedaemon.cpp
 target_include_directories(tst_updatedaemon PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/src
+)
+
+# ── tst_appimagedbusadaptor ───────────────────────────────────────────────────
+# Verifies the read-only D-Bus adaptor: Version() matches build version,
+# InstalledAppImages() returns a valid (empty) QVariantList on an empty model.
+# Skipped automatically when no D-Bus session bus is available.
+ecm_add_test(tst_appimagedbusadaptor.cpp
+    TEST_NAME tst_appimagedbusadaptor
+    LINK_LIBRARIES Qt6::Test Qt6::DBus Qt6::Quick appimagemanager_qml KF6::CoreAddons KF6::ConfigCore
+    NAME_PREFIX "appimagemanager-"
+    GUI
+)
+target_include_directories(tst_appimagedbusadaptor PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}/src
+)
+set_tests_properties(appimagemanager-tst_appimagedbusadaptor PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;DBUS_SESSION_BUS_ADDRESS=$ENV{DBUS_SESSION_BUS_ADDRESS}"
 )
 
 # ── tst_qml (QML smoke tests, headless) ──────────────────────────────────────

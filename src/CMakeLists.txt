@@ -11,11 +11,14 @@ ecm_qt_declare_logging_category(LOGGING_SRCS
 # Core object library — pure logic, no Qt Quick / QML dependency.
 # Both the plugin and the binary link against this.
 # ──────────────────────────────────────────────────────────────────────────────
+kconfig_add_kcfg_files(KCFG_SRCS core/appimagemanagersettings.kcfgc)
+
 add_library(appimagemanager_core OBJECT
     core/appimagereader.cpp
     core/appimagecache.cpp
     core/appimagemanager.cpp
     ${LOGGING_SRCS}
+    ${KCFG_SRCS}
 )
 target_include_directories(appimagemanager_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -28,6 +31,7 @@ target_link_libraries(appimagemanager_core PUBLIC
     KF6::CoreAddons
     KF6::I18n
     KF6::ConfigCore
+    KF6::ConfigGui
     KF6::KIOCore
     KF6::KIOWidgets
 )
@@ -44,10 +48,14 @@ set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/qml/DashboardWindow.qml
     ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
-    ${CMAKE_SOURCE_DIR}/qml/StorageDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
+    ${CMAKE_SOURCE_DIR}/qml/Theme.qml
     PROPERTIES QT_RESOURCE_ALIAS ""
+)
+set_source_files_properties(
+    ${CMAKE_SOURCE_DIR}/qml/Theme.qml
+    PROPERTIES QT_QML_SINGLETON_TYPE TRUE
 )
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
     PROPERTY QT_RESOURCE_ALIAS ManageWindow.qml)
@@ -57,12 +65,12 @@ set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
     PROPERTY QT_RESOURCE_ALIAS UninstallDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
     PROPERTY QT_RESOURCE_ALIAS SettingsDialog.qml)
-set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/StorageDialog.qml
-    PROPERTY QT_RESOURCE_ALIAS StorageDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
     PROPERTY QT_RESOURCE_ALIAS UpdateDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
     PROPERTY QT_RESOURCE_ALIAS AboutDialog.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/Theme.qml
+    PROPERTY QT_RESOURCE_ALIAS Theme.qml)
 
 qt_add_qml_module(appimagemanager_qml
     URI "appimagemanager"
@@ -72,9 +80,9 @@ qt_add_qml_module(appimagemanager_qml
         ${CMAKE_SOURCE_DIR}/qml/DashboardWindow.qml
         ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
-        ${CMAKE_SOURCE_DIR}/qml/StorageDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
+        ${CMAKE_SOURCE_DIR}/qml/Theme.qml
     SOURCES
         core/appsettings.h
         core/appsettings.cpp
@@ -84,6 +92,8 @@ qt_add_qml_module(appimagemanager_qml
         gui/appimagebackend.cpp
         gui/appimageiconprovider.h
         gui/appimageiconprovider.cpp
+        gui/appimageiconstore.h
+        gui/appimageiconstore.cpp
         gui/appimagelistmodel.h
         gui/appimagelistmodel.cpp
         gui/appimageupdate.h

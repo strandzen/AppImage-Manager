@@ -10,8 +10,12 @@ This file is the authoritative reference for working on AppImage Manager.
 
 **Distribution target:** KDE Store and AUR.  
 **Philosophy:** Simplicity and efficiency. No unnecessary abstractions. Every feature must justify its existence.  
-**Stack:** C++20, Qt 6.9, KDE Frameworks 6.7, Kirigami (Plasma 6 era), QML. Project version `1.4.0`.  
+**Stack:** C++20, Qt 6.9, KDE Frameworks 6.7, KirigamiAddons, Kirigami (Plasma 6 era), QML. Project version `1.5.0`.  
 **License:** GPL-2.0-or-later.
+
+### AI Assistant Guidelines
+
+- **Plan Backups:** Always "backup" every big change or implementation plan as a `.md` file inside the `markdown/plans/` directory of the project.
 
 ### Roadmap (planned, not yet implemented)
 
@@ -87,7 +91,7 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 | `AppImageReader` | `appimagereader.h/.cpp` | **BLOCKING** extractor. Requires `libappimage` (in-process SquashFS, no FUSE/subprocess). Reads `.desktop` via `KDesktopFile`, then AppStream XML from `usr/share/metainfo/*.appdata.xml` or `usr/share/appdata/*.metainfo.xml` via `QXmlStreamReader`. **Always call via `QtConcurrent::run`** |
 | `AppImageCache` | `appimagecache.h/.cpp` | Thread-safe on-disk cache (SQLite via `Qt6::Sql`, WAL mode, per-thread connection; DB path `$XDG_DATA_HOME/AppImageManager/cache.db`; one row per AppImage keyed by `MD5(path)`). **`kCacheVersion = 4`** — schema migrated from QSettings INI in v4; adds `developer_name` / `homepage`. Rows with `cache_version != 4` or stale `mtime` are returned as invalid (forces a cold re-read) |
 | `AppImageManager` | `appimagemanager.h/.cpp` | File operations: `installAppImage()` (KIO::move when source is under `~/Downloads`, KIO::copy otherwise — preserves originals on USB sticks / project dirs; chmod +x on result), `createDesktopLink()`, `removeDesktopLink()`, `isDesktopLinkEnabled()`, `findCorpses()` (blocking), `removeItems()` (KIO::trash). `rebuildSycoca()` is called automatically from createDesktopLink / removeDesktopLink |
-| `AppSettings` | `appsettings.h/.cpp` | QML singleton (`AppSettings`). KSharedConfig → `appimagemanagerrc`. Properties: `applicationsPath`, `showDisclaimer`, `showNotifications`, `updateFrequency`, `customUpdateDays`, `manageIconSize`, `watchDownloads` (controls both daemon + dashboard download detection), `showInstallBox`, `accentBorders` (persisted; calls `m_config->sync()` immediately on set). Setter validates path via `QDir::mkpath()`, emits `applicationsPathError(msg)` on failure |
+| `AppSettings` | `appsettings.h/.cpp` | QML singleton (`AppSettings`). Delegates all reads/writes to the KConfig XT-generated `AppImageManagerSettings::self()` (schema: `appimagemanagersettings.kcfg`). Properties: `applicationsPath`, `showDisclaimer`, `showNotifications`, `updateFrequency`, `customUpdateDays`, `manageIconSize`, `watchDownloads`, `showInstallBox`, `accentBorders`. Each setter calls `AppImageManagerSettings::self()->save()`. Setter validates path via `QDir::mkpath()`, emits `applicationsPathError(msg)` on failure |
 | `GitHubReleaseChecker` | `githubreleasechecker.h/.cpp` | Parses `gh-releases-zsync\|owner\|repo\|...` update info, hits GitHub Releases API, emits `updateAvailable(newVersion, zsyncUrl)`, `upToDate()`, `networkFailed()`, or `failed()`. Used by both `UpdateDaemon` and `AppImageUpdateManager` — single source of truth for GitHub update logic |
 | `UpdateDaemon` | `updatedaemon.h/.cpp` | Background update checker. Launched via `--daemon` CLI flag (autostart desktop file installs to `$KDE_INSTALL_AUTOSTARTDIR`). Persistent tray entry (`KStatusNotifierItem`) with "Check Now" + "Open Dashboard" actions. Scans `applicationsPath` hourly (interval via `intervalForFrequency`); timer starts only when `updateFrequency != 0` — "Never" (0) leaves the timer stopped. When frequency changes at runtime: 0 → `stop()`; non-zero → `setInterval()` + `start()`. Uses `GitHubReleaseChecker` + parallelised cold-cache `AppImageReader` reads, fires `KNotification` on update found. Owns a `DownloadWatcher` for `~/Downloads`. Registers D-Bus name `io.github.appimagemanager.Daemon` on start so the dashboard can skip duplicate download notifications. Uses `Qt6::Network` |
 
@@ -96,14 +100,15 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 | Class | Files | Role |
 |-------|-------|------|
 | `AppImageBackend` | `appimagebackend.h/.cpp` | QML context property `backend`. Owns `AppImageInfo` + all mutable install state. Exposes metadata + ops as Q_PROPERTYs and slots. Holds `CorpseModel`. Emits `uninstallFinished` |
-| `AppImageIconProvider` | `appimageiconprovider.h/.cpp` | `QQuickImageProvider` for `image://appimage/<id>`. Thread-safe via split locks: `m_iconsLock` (`QReadWriteLock`) guards the icon byte map — shared reads in `requestPixmap`, exclusive write in `setIconData`; `m_cacheMutex` (`QMutex`) guards the rendered-pixmap `QCache` (needed because `QCache::object` mutates LRU state even on read). SVG/PNG rendering happens lock-free between the two lock scopes. Caches rendered pixmaps keyed by `(id, size)`. Key `"icon"` = manage window single icon; key = `qHash(path)` decimal string = dashboard per-file icon |
+| `AppImageIconStore` | `appimageiconstore.h/.cpp` | Process-wide singleton holding raw icon bytes extracted from AppImages. Shared across all QML engine instances (dashboard + manage windows) so multiple windows don't re-extract the same bytes. Thread-safe write (`setIconData`) via internal lock |
+| `AppImageIconProvider` | `appimageiconprovider.h/.cpp` | `QQuickImageProvider` for `image://appimage/<id>`. Reads raw bytes from `AppImageIconStore`; each provider instance owns its own per-engine `QPixmap` render cache (`m_cacheMutex` guards the `QCache` — `QCache::object` mutates LRU state even on read). SVG/PNG rendering happens between the store read and cache write. Caches rendered pixmaps keyed by `(id, size)`. Key `"icon"` = manage window single icon; key = `qHash(path)` decimal string = dashboard per-file icon |
 | `CorpseModel` | `corpsemodel.h/.cpp` | `QAbstractListModel` for leftover config/cache dirs. Roles: `filePath`, `fileSize`, `isChecked`. **No `QML_ELEMENT`** — Qt 6.11 constexpr metaobject bug. Exposed only via `AppImageBackend::corpseModel` Q_PROPERTY. `checkedRole` Q_PROPERTY replaces enum access from QML |
 | `AppImageWindow` | `appimagewindow.h/.cpp` | One `QQuickWindow` per AppImage path. Deduplicates via `static QHash<QString, AppImageWindow*> s_instances`. Re-opening same path raises existing window |
 | `DownloadWatcher` | `downloadwatcher.h/.cpp` | Shared `~/Downloads` watcher. `KDirWatch` in `WatchFiles` mode + settle pass (poll `size`/`mtime` until stable) so we never notify mid-download. Emits `appImageFound(path, displayName)` once per file. Used by both `UpdateDaemon` and `AppImageListModel`; the dashboard suppresses its own listener while the daemon owns the well-known D-Bus name. `isSandboxed()` returns `true` when `isRunningInSandbox()` detected at construction time (env vars `FLATPAK_ID` / `SNAP`); `setEnabled(true)` is a no-op in that case — KDirWatch cannot watch paths outside the sandbox |
 | `AppImageUpdateManager` | `appimageupdate.h/.cpp` | Batched update checker + downloader. `checkForUpdates(items)` — per item, fetches `.zsync` header, compares `SHA-1` (calculated off-thread via `QtConcurrent`), emits `updateFound/upToDate`. `downloadUpdate(path, zsyncUrl, ...)` — spawns `zsync2` subprocess; if `zsync2` is missing on `PATH`, falls back to a full HTTP download via the `URL:` header in the `.zsync` file. Both paths use an atomic-ish swap: `old → old.bak`, then `old.new → old`, then `QFile::remove(bak)` on success. If either rename fails, restores `.bak` to original and emits failure. A leftover `.bak` after a crash = mid-swap interruption, recoverable manually. Signals: `checkingChanged`, `checkFinished(found, failures)`, `updateFound`, `downloadProgress`, `downloadFinished` |
-| `AppImageListModel` | `appimagelistmodel.h/.cpp` | Dashboard list model. Roles: `filePath`, `displayName`, `cleanName`, `appName`, `version`, `iconSource`, `hasDesktopLink`, `metadataLoaded`, `appSize`, `formattedSize`, `addedDate`, `categories`, `comment`, `description`, `developerName`, `homepage`, `updateAvailable`, `updateVersion`, `isUpdating`, `updateProgress`, `isSelected`. Properties: `scanning`, `checkingUpdates`, `selectionMode`, `selectedCount`, `pendingLoads` (int — live count of in-flight metadata futures; QML uses this for a "Loading N…" label), `downloadWatcherSandboxed` (bool `CONSTANT` — true when `FLATPAK_ID`/`SNAP` env present). Invokables: `scan`, `refresh`, `toggleDesktopLink`, `requestRemoveAt`, `requestLaunch`, `checkForUpdates`, `downloadUpdate`, `setSelected`, `selectAll`, `clearSelection`, `selectedPaths`, `trashSelected`, `itemData(row)` (bulk role snapshot for QML). Watches `applicationsPath` via `KDirWatch` (`WatchFiles`) and routes `created/deleted/dirty` straight to incremental inserts/removes — no debounce, no full re-scan. Reader workers dispatch through `m_readerPool` (bounded to `qBound(1, QThread::idealThreadCount() / 2, 4)`) to prevent thread storms on large libraries. Holds an `AppImageUpdateManager` and a `DownloadWatcher`. `m_generation` invalidates stale futures on `refresh()`; `m_pendingLoads` drives both the `scanning` flag and the `pendingLoads` property |
+| `AppImageListModel` | `appimagelistmodel.h/.cpp` | Dashboard list model. Roles: `filePath`, `displayName`, `cleanName`, `appName`, `version`, `iconSource`, `hasDesktopLink`, `metadataLoaded`, `appSize`, `formattedSize`, `addedDate`, `categories`, `comment`, `description`, `developerName`, `homepage`, `updateAvailable`, `updateVersion`, `isUpdating`, `updateProgress`. Properties: `scanning`, `checkingUpdates`, `pendingLoads` (int — live count of in-flight metadata futures; QML uses this for a "Loading N…" label), `downloadWatcherSandboxed` (bool `CONSTANT` — true when `FLATPAK_ID`/`SNAP` env present). Invokables: `scan`, `refresh`, `toggleDesktopLink`, `requestRemoveAt`, `requestLaunch`, `checkForUpdates`, `downloadUpdate`, `itemData(row)` (bulk role snapshot for QML). Watches `applicationsPath` via `KDirWatch` (`WatchFiles`) and routes `created/deleted/dirty` straight to incremental inserts/removes — no debounce, no full re-scan. Reader workers dispatch through `m_readerPool` (bounded to `qBound(1, QThread::idealThreadCount() / 2, 4)`) to prevent thread storms on large libraries. Holds an `AppImageUpdateManager` and a `DownloadWatcher`. `m_generation` invalidates stale futures on `refresh()`; `m_pendingLoads` drives both the `scanning` flag and the `pendingLoads` property. `m_pathIndex` (`QHash<QString, int>`) keeps row index by path for O(1) `findRowByPath` |
 | `AppImageSortFilterModel` | `appimagesortfiltermodel.h/.cpp` | Proxy over `AppImageListModel`. Sort: `SortByName=0`, `SortBySize=1`, `SortByCategory=5`, `SortByDate=9`. Filter: case-insensitive text match on `cleanName` + `appName`. `lessThan` reads typed values via `AppImageListModel::sortKey()` to skip QVariant role dispatch. Uses Qt 6.9 `beginFilterChange/endFilterChange` where applicable |
-| `DashboardWindow` | `dashboardwindow.h/.cpp` | Singleton dashboard host. Creates its own `QQmlApplicationEngine`. Holds `m_listModel`, `m_proxyModel`, `m_uninstallBackend`, `m_storageBackend`. `createBackend(path, withCorpses)` — storage backend passes `false` (skips corpse scan) |
+| `DashboardWindow` | `dashboardwindow.h/.cpp` | Singleton dashboard host. Creates its own `QQmlApplicationEngine`. Holds `m_listModel`, `m_proxyModel`, `m_uninstallBackend`. `createBackend(path, withCorpses)` — uninstall backend passes `true` (triggers corpse scan after metadata load) |
 
 ### D-Bus (`src/dbus/`)
 
@@ -125,12 +130,12 @@ All QML lives in [qml/](qml/) (top-level, not under `src/`). Files are wired int
 
 | File | Type | Context / Properties |
 |------|------|----------------------|
-| `ManageWindow.qml` | `ApplicationWindow` (fixed 26×22 gridUnits) | Context prop: `backend` (AppImageBackend). Drag-and-drop install, inline `UninstallDialog` |
-| `DashboardWindow.qml` | `Kirigami.ApplicationWindow` | Context props: `listModel`, `proxyModel`, `dashboardController`. Sort/filter/search, selection mode, update checks. Master list fills full window when no selection. Details pane: icon, heading (`elide: ElideRight`), chips (`Flow` — wraps when narrow), description (`ScrollView` vertical-only, `Text.StyledText`). Hosts inline `UpdateDialog`. `readonly property bool hasSelection: listView.currentIndex >= 0` cached on the `RowLayout` drives left-pane width/fill bindings — avoids two inline expression evaluations on every selection change. "Loading N…" label below progress bar reads `listModel.pendingLoads` |
+| `Theme.qml` | `pragma Singleton` QtObject | Shared `cardBorderColor` computed from `AppSettings.accentBorders` + `Kirigami.Theme`. Import as `Theme` from `appimagemanager` module. Use instead of duplicating the inline color expression |
+| `ManageWindow.qml` | `ApplicationWindow` (fixed 26×22 gridUnits) | Context prop: `backend` (AppImageBackend). Drag-and-drop install — floating `dragIcon` surrogate used as drag target, original icon fades to 30% opacity during drag. Inline `UninstallDialog` |
+| `DashboardWindow.qml` | `Kirigami.ApplicationWindow` | Context props: `listModel`, `proxyModel`, `dashboardController`. Sort/filter/search, update checks. Master list (`Controls.ItemDelegate` delegate with uniform insets) fills full window when no selection; narrows to `preferredWidth: 18 gridUnits` when item selected. Detail pane: icon, heading (`elide: ElideRight`), chips (`Flow`), description (`ScrollView` vertical-only, `Text.StyledText`). No pane separators. Outer scroll hidden — only description-card inner scroller visible. "Loading N…" label reads `listModel.pendingLoads`. Chip visibility controlled by `noSelection` delegate property |
 | `UninstallDialog.qml` | `Kirigami.Dialog` | Prop: `backend`. Corpse checklist + total size + confirm. Sets `backend = null` on close. Used in both ManageWindow and DashboardWindow |
-| `StorageDialog.qml` | `Kirigami.Dialog` | Prop: `backend`. Shows AppImage file + related dirs. Signal: `openInFileManager(path)`. No corpse scan |
 | `UpdateDialog.qml` | `Kirigami.Dialog` | Props: `appName`, `currentVersion`, `newVersion`, `proxyRow`. Signal: `downloadRequested()`. Confirms before kicking off `AppImageUpdateManager::downloadUpdate()` |
-| `SettingsDialog.qml` | `Kirigami.Dialog` | Uses `AppSettings` singleton. Path field + folder picker. Toggles: manage icon size, show install drag box, show security disclaimer, show notifications, notify when AppImage downloaded (`watchDownloads`), update frequency, accent borders. `Kirigami.InlineMessage` below the `watchDownloads` toggle — visible when `listModel.downloadWatcherSandboxed` is true — informs user that download watching is unavailable in sandboxed environments |
+| `SettingsDialog.qml` | `Kirigami.Dialog` (28×34 gridUnits, `padding: 0`) | Uses `AppSettings` singleton + `FormCard` from KirigamiAddons. Path field + folder picker. Toggles: manage icon size, show install drag box, show security disclaimer, show notifications, notify when AppImage downloaded (`watchDownloads`), update frequency, accent borders. `Kirigami.InlineMessage` below `watchDownloads` toggle when `listModel.downloadWatcherSandboxed` is true |
 
 ---
 
@@ -194,7 +199,7 @@ listModel.checkForUpdates()
 ### Uninstall flow
 
 ```
-user clicks Remove (single) or trashSelected (bulk)
+user clicks Remove
   └─ backend.findCorpses()           async QtConcurrent::run
        └─ AppImageManager::findCorpses(info)
             scans ~/.config, ~/.local/share, ~/.cache for dirs matching appName/appId
@@ -224,7 +229,7 @@ user clicks Remove (single) or trashSelected (bulk)
 
 ### Backend lifetimes
 - `AppImageWindow` owns one `AppImageBackend` for its entire lifetime.
-- `DashboardWindow::m_uninstallBackend` / `m_storageBackend`: use `deleteLater()` when replacing, never raw `delete` — in-flight `QFutureWatcher` lambdas capture `this`.
+- `DashboardWindow::m_uninstallBackend`: use `deleteLater()` when replacing, never raw `delete` — in-flight `QFutureWatcher` lambdas capture `this`.
 - `AppImageIconProvider` is parented to the backend (`iconProvider->setParent(backend)`) so it outlives engine teardown. Pass pointer to engine via `addImageProvider()`.
 
 ### Desktop file paths
@@ -237,8 +242,8 @@ user clicks Remove (single) or trashSelected (bulk)
 - Animated show/hide: `visible: opacity > 0` + `Behavior on opacity { NumberAnimation }`.
 - Dialogs: take a `backend` (or domain-specific) property, reset it to `null`/defaults in `onClosed`.
 - `UninstallDialog` / `UpdateDialog` are dialogs, not windows — instantiated inline in their parent.
-- `StorageDialog` backend is created with `withCorpses = false` — it never reads `corpseModel`.
 - Use `listModel.itemData(row)` for bulk role reads; per-role `.data()` round-trips dominate the detail pane otherwise.
+- Shared theme values (e.g. `cardBorderColor`) go in `Theme.qml` singleton — do not duplicate the inline expression in each QML file.
 
 ### Shared helpers (`appimageinfo.h`)
 
@@ -282,6 +287,8 @@ Four `inline` utilities defined at file scope in `appimageinfo.h` (included by e
 | **`zsync2` optional** | `AppImageUpdateManager::downloadUpdate()` probes `PATH` for `zsync2`; if missing, it falls back to a plain HTTP download of the binary URL parsed from the `.zsync` control file. Do not assume zsync2 is installed |
 | **`QLatin1String` and multi-byte UTF-8** | `QLatin1String("• ")` misinterprets the bullet (U+2022, 3 UTF-8 bytes) as 3 Latin-1 chars. Always use `QStringLiteral("• ")` for non-ASCII string literals |
 | **Kirigami Dialog `preferredHeight` binding loop** | Binding `preferredHeight` to `dialog.window.height` (e.g. `preferredHeight: dialog.window.height - someOffset`) creates a circular dependency: Kirigami computes the dialog's `y` from `window.height` + its own `height`, which depends on `preferredHeight`. Result: `Binding loop detected for property "y"` at runtime, followed by SIGABRT via `free(): invalid size`. Use a fixed `Kirigami.Units.gridUnit * N` value instead, or a property that does not involve the dialog's own position or size |
+| **`pendingLoads` dispatch ordering** | In `AppImageListModel::refresh()`, `m_pendingLoads` must be assigned **before** any `loadMetadataForRow()` calls. The cache fast-path decrements `m_pendingLoads` synchronously on the main thread; if the assignment comes after, those decrements race against the final value and leave a stuck non-zero count ("Loading N…" never clears). Always: compute the expected count → assign → emit → dispatch |
+| **Plasma `ItemDelegate` position-aware insets** | The Plasma/Kirigami QQC2 style applies a larger `bottomInset` to the last item in a `ListView`, making its hover/selection highlight appear vertically squashed. Fix: set `topInset`, `bottomInset`, `leftInset`, `rightInset`, and `verticalPadding` explicitly on the delegate so all rows use identical geometry |
 
 ---
 
@@ -297,17 +304,14 @@ After any change, build and verify:
 6. Click Remove → `UninstallDialog` opens inline → corpse list populates → trash works → window closes.
 7. `appimagemanager` (no args) → DashboardWindow opens, scans, shows list with icons. Drop a new `.AppImage` into the apps dir → row inserts live (no full reload).
 8. Dashboard search → filters live. Sort by name/size/category/date → list re-orders with animation.
-9. Dashboard size chip → `StorageDialog` opens. Verify no corpse-scan log output:
-   `QT_LOGGING_RULES="appimagemanager=true" appimagemanager --dashboard`
-10. Dashboard delete button → `UninstallDialog` → list refreshes after trash.
-11. Dashboard selection mode → select several rows → "Move to trash" → all rows trashed in one batch.
-12. Dashboard "Check for updates" → progress bar; if any update found, `UpdateDialog` opens → confirm → download progresses; both `zsync2` present and absent (rename it temporarily) should succeed.
-13. Settings → browse button opens folder picker → valid path saved → invalid path shows error.
-14. Settings → disclaimer toggle persists across restart.
-15. Select an AppImage with AppStream metadata (e.g. ProtonUp-Qt) → description text visible below chips in details pane; vertical scroll works if long; no horizontal scrollbar.
-16. Settings → "Notify when an AppImage is downloaded" on → copy a `.AppImage` into `~/Downloads` → KDE notification fires after settle pass → click "Manage" → ManageWindow opens for that file.
-17. Toggle download notification off → copy another AppImage to `~/Downloads` → no notification fires.
-18. Start daemon (`appimagemanager --daemon`) → tray entry appears with "Check Now" + "Open Dashboard". Open dashboard while daemon runs → drop a file in `~/Downloads` → only one notification fires (daemon wins).
-19. AboutDialog: open dialog → disable network (`nmcli networking off`) → reopen About → wait 8 s → spinner hides, fallback contributors shown, no SIGABRT. Re-enable network, reopen → real contributors load.
-20. Sandbox: run `FLATPAK_ID=test appimagemanager`, open Settings → "Download watching is unavailable in sandboxed environments." InlineMessage visible below toggle. Copy a `.AppImage` to `~/Downloads` → no notification fires.
-21. Update: trigger update on a test AppImage → verify `.bak` file created mid-swap; on success `.bak` removed. Kill process during swap → `.bak` present afterward for manual recovery.
+9. Dashboard delete button → `UninstallDialog` → list refreshes after trash.
+10. Dashboard "Check for updates" → progress bar; if any update found, `UpdateDialog` opens → confirm → download progresses; both `zsync2` present and absent (rename it temporarily) should succeed.
+11. Settings → browse button opens folder picker → valid path saved → invalid path shows error.
+12. Settings → disclaimer toggle persists across restart.
+13. Select an AppImage with AppStream metadata (e.g. ProtonUp-Qt) → description text visible below chips in details pane; only inner description scrollbar visible, no outer scrollbar; no horizontal scrollbar.
+14. Settings → "Notify when an AppImage is downloaded" on → copy a `.AppImage` into `~/Downloads` → KDE notification fires after settle pass → click "Manage" → ManageWindow opens for that file.
+15. Toggle download notification off → copy another AppImage to `~/Downloads` → no notification fires.
+16. Start daemon (`appimagemanager --daemon`) → tray entry appears with "Check Now" + "Open Dashboard". Open dashboard while daemon runs → drop a file in `~/Downloads` → only one notification fires (daemon wins).
+17. AboutDialog: open dialog → disable network (`nmcli networking off`) → reopen About → wait 8 s → spinner hides, fallback contributors shown, no SIGABRT. Re-enable network, reopen → real contributors load.
+18. Sandbox: run `FLATPAK_ID=test appimagemanager`, open Settings → "Download watching is unavailable in sandboxed environments." InlineMessage visible below toggle. Copy a `.AppImage` to `~/Downloads` → no notification fires.
+19. Update: trigger update on a test AppImage → verify `.bak` file created mid-swap; on success `.bak` removed. Kill process during swap → `.bak` present afterward for manual recovery.

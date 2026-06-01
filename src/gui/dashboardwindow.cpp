@@ -21,8 +21,6 @@
 #include <algorithm>
 
 #include <QCoreApplication>
-#include <QDesktopServices>
-#include <QFileInfo>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -111,10 +109,12 @@ void DashboardWindow::setupAndShow()
 
     // Register D-Bus adaptor for querying installed AppImages
     new AppImageDBusAdaptor(m_listModel);
-    QDBusConnection::sessionBus().registerObject(
-        QStringLiteral("/io/github/appimagemanager/Manager"), m_listModel);
-    QDBusConnection::sessionBus().registerService(
-        QStringLiteral("io.github.appimagemanager.Manager1"));
+    if (!QDBusConnection::sessionBus().registerObject(
+            QStringLiteral("/io/github/appimagemanager/Manager"), m_listModel))
+        qCWarning(AIM_LOG) << "Failed to register D-Bus object /io/github/appimagemanager/Manager";
+    if (!QDBusConnection::sessionBus().registerService(
+            QStringLiteral("io.github.appimagemanager.Manager1")))
+        qCWarning(AIM_LOG) << "Failed to register D-Bus service io.github.appimagemanager.Manager1";
 
     m_listModel->scan();
 
@@ -142,19 +142,6 @@ QObject *DashboardWindow::createUninstallBackend(const QString &filePath)
     connect(m_uninstallBackend, &AppImageBackend::uninstallFinished,
             m_listModel, &AppImageListModel::refresh);
     return m_uninstallBackend;
-}
-
-QObject *DashboardWindow::createStorageBackend(const QString &filePath)
-{
-    if (m_storageBackend) m_storageBackend->deleteLater();
-    m_storageBackend = createBackend(filePath, false);
-    return m_storageBackend;
-}
-
-void DashboardWindow::openInFileManager(const QString &path)
-{
-    QFileInfo fi(path);
-    QDesktopServices::openUrl(QUrl::fromLocalFile(fi.isDir() ? path : fi.absolutePath()));
 }
 
 void DashboardWindow::installFromPath(const QUrl &url)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(AppImageManager VERSION 1.4.0 LANGUAGES CXX)
+project(AppImageManager VERSION 1.5.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -44,6 +44,8 @@ find_package(KF6 6.7 REQUIRED COMPONENTS
     DBusAddons         # KDBusService for multi-instance launch control
     StatusNotifierItem # daemon tray icon for pending updates
 )
+
+find_package(KF6KirigamiAddons REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Canberra IMPORTED_TARGET libcanberra)

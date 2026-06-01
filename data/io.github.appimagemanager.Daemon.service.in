@@ -1,0 +1,3 @@
+[D-Bus Service]
+Name=io.github.appimagemanager.Daemon
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/appimagemanager --daemon

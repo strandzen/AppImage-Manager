@@ -28,11 +28,7 @@ ApplicationWindow {
         Kirigami.Units.iconSizes.enormous
     ][AppSettings.manageIconSize]
 
-    readonly property color cardBorderColor: AppSettings.accentBorders 
-        ? root.Kirigami.Theme.focusColor 
-        : (root.Kirigami.Theme.textColor && root.Kirigami.Theme.textColor.r !== undefined
-            ? Qt.rgba(root.Kirigami.Theme.textColor.r, root.Kirigami.Theme.textColor.g, root.Kirigami.Theme.textColor.b, 0.15)
-            : Qt.rgba(0.5, 0.5, 0.5, 0.15))
+    readonly property color cardBorderColor: Theme.cardBorderColor
 
     UninstallDialog { id: uninstallDialog }
 
@@ -120,45 +116,50 @@ ApplicationWindow {
                         id: iconContainer
                         width: root.managedIconSize; height: root.managedIconSize
                         Layout.alignment: Qt.AlignHCenter
+
+                        // The stationary symbolic icon
                         Kirigami.Icon {
                             id: appIcon
-                            width: iconContainer.width; height: iconContainer.height
+                            anchors.fill: parent
                             source: backend.appIconSource !== "" ? backend.appIconSource : "application-x-executable"
-                            Drag.active: dragArea.drag.active
-                            Drag.hotSpot.x: width / 2; Drag.hotSpot.y: height / 2; Drag.keys: ["appimage"]
+                            opacity: dragArea.drag.active ? 0.3 : 1.0
+                            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
                         }
+
+                        // The floating drag surrogate
+                        Kirigami.Icon {
+                            id: dragIcon
+                            width: parent.width; height: parent.height
+                            source: appIcon.source
+                            opacity: 0.8
+                            visible: dragArea.drag.active
+
+                            Drag.active: dragArea.drag.active
+                            Drag.keys: ["appimage"]
+                            Drag.hotSpot.x: width / 2
+                            Drag.hotSpot.y: height / 2
+                        }
+
                         MouseArea {
                             id: dragArea; anchors.fill: parent
                             hoverEnabled: backend.isInstalled
-                            drag.target: backend.isInstalled ? null : appIcon
+                            drag.target: backend.isInstalled ? null : dragIcon
                             cursorShape: backend.isInstalled ? Qt.PointingHandCursor : Qt.OpenHandCursor
                             onClicked: if (backend.isInstalled) backend.launchAppImage()
                             onPressed: {
                                 if (backend.isInstalled) return
-                                snapBackX.stop(); snapBackY.stop()
-                                var pos = appIcon.mapToItem(root.contentItem, 0, 0)
-                                appIcon.parent = root.contentItem
-                                appIcon.x = pos.x; appIcon.y = pos.y
+                                dragIcon.x = 0
+                                dragIcon.y = 0
                             }
                             onReleased: {
                                 if (backend.isInstalled) return
-                                const dropPos = appIcon.mapToItem(folderContainer, appIcon.width / 2, appIcon.height / 2)
-                                const hit = dropPos.x >= 0 && dropPos.x <= folderContainer.width
-                                         && dropPos.y >= 0 && dropPos.y <= folderContainer.height
-                                if (hit) {
+                                if (dragIcon.Drag.target !== null) {
                                     backend.installAppImage()
-                                    appIcon.parent = iconContainer; appIcon.x = 0; appIcon.y = 0
-                                } else {
-                                    var pos = appIcon.mapToItem(iconContainer, 0, 0)
-                                    appIcon.parent = iconContainer
-                                    appIcon.x = pos.x; appIcon.y = pos.y
-                                    snapBackX.to = 0; snapBackY.to = 0
-                                    snapBackX.restart(); snapBackY.restart()
                                 }
+                                // Reset position instantly to return to source
+                                dragIcon.x = 0
+                                dragIcon.y = 0
                             }
-
-                            NumberAnimation { id: snapBackX; target: appIcon; property: "x"; duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic }
-                            NumberAnimation { id: snapBackY; target: appIcon; property: "y"; duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic }
                             ToolTip.visible: backend.isInstalled && containsMouse
                             ToolTip.text: i18n("Launch %1", backend.displayName)
                         }

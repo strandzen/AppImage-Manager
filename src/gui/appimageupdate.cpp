@@ -62,23 +62,15 @@ void AppImageUpdateManager::checkForUpdates(const QList<CheckItem> &items)
         if (item.updateInfo.startsWith(QLatin1String("gh-releases-zsync|"))) {
             const QString filePath = item.filePath;
             auto *checker = new GitHubReleaseChecker(m_nam, this);
-            connect(checker, &GitHubReleaseChecker::updateAvailable, this,
-                    [this, filePath, checker](const QString &ver, const QString &url) {
+            connect(checker, &GitHubReleaseChecker::checkFinished, this,
+                    [this, filePath, checker](GitHubReleaseChecker::Result result,
+                                              const QString &ver, const QString &url) {
                 checker->deleteLater();
-                Q_EMIT updateFound(filePath, ver, url);
-                finishOneCheck(true);
-            });
-            connect(checker, &GitHubReleaseChecker::upToDate, this, [this, checker]() {
-                checker->deleteLater();
-                finishOneCheck(false);
-            });
-            connect(checker, &GitHubReleaseChecker::networkFailed, this, [this, checker]() {
-                checker->deleteLater();
-                finishOneCheck(false, true);
-            });
-            connect(checker, &GitHubReleaseChecker::failed, this, [this, checker]() {
-                checker->deleteLater();
-                finishOneCheck(false);
+                const bool networkFailed = (result == GitHubReleaseChecker::Result::NetworkFailed);
+                if (result == GitHubReleaseChecker::Result::UpdateAvailable)
+                    Q_EMIT updateFound(filePath, ver, url);
+                finishOneCheck(result == GitHubReleaseChecker::Result::UpdateAvailable,
+                               networkFailed);
             });
             checker->check(item.updateInfo, item.currentVersion);
 

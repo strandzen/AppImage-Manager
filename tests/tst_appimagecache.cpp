@@ -6,6 +6,8 @@
 
 #include <QTest>
 #include <QTemporaryDir>
+#include <QThread>
+#include <QtConcurrent/QtConcurrent>
 
 class TstAppImageCache : public QObject
 {
@@ -76,6 +78,32 @@ private Q_SLOTS:
         const AppImageInfo loaded = AppImageCache::instance().load(
             QStringLiteral("/nonexistent/path/app.AppImage"), 12345LL);
         QVERIFY(!loaded.isValid);
+    }
+
+    void concurrentStoreLoad_noDeadlock()
+    {
+        // Hammer the cache from multiple threads simultaneously.
+        // Verifies the per-thread connection + mutex pattern is deadlock-free.
+        AppImageInfo info;
+        info.isValid = true;
+        info.appName = QStringLiteral("ConcurrentApp");
+        const QString path = QStringLiteral("/tmp/fake-concurrent.AppImage");
+        const qint64 mtime = 555'000LL;
+
+        AppImageCache::instance().store(path, mtime, info);
+
+        const int N = 10;
+        QList<QFuture<AppImageInfo>> futures;
+        futures.reserve(N);
+        for (int i = 0; i < N; ++i) {
+            futures.append(QtConcurrent::run([path, mtime]() {
+                return AppImageCache::instance().load(path, mtime);
+            }));
+        }
+        for (auto &f : futures) {
+            f.waitForFinished();
+            QVERIFY(f.result().isValid);
+        }
     }
 
     void iconData_preservedExact()

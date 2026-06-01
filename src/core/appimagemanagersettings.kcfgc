@@ -1,0 +1,6 @@
+File=appimagemanagersettings.kcfg
+ClassName=AppImageManagerSettings
+Singleton=true
+Mutators=true
+Core=true
+IncludeFiles=QDir

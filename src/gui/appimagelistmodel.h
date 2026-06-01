@@ -9,7 +9,7 @@
 
 #include <QAbstractListModel>
 #include <QDateTime>
-#include <QSet>
+#include <QHash>
 #include <QThreadPool>
 #include <QtQml/qqmlregistration.h>
 
@@ -27,8 +27,6 @@ class APPIMAGEMANAGER_EXPORT AppImageListModel : public QAbstractListModel
     Q_PROPERTY(bool scanning        READ isScanning       NOTIFY scanningChanged)
     Q_PROPERTY(int  pendingLoads   READ pendingLoads     NOTIFY pendingLoadsChanged)
     Q_PROPERTY(bool checkingUpdates READ isCheckingUpdates NOTIFY checkingUpdatesChanged)
-    Q_PROPERTY(bool selectionMode  READ selectionMode    WRITE setSelectionMode  NOTIFY selectionModeChanged)
-    Q_PROPERTY(int  selectedCount  READ selectedCount    NOTIFY selectionChanged)
     Q_PROPERTY(bool downloadWatcherSandboxed READ isDownloadWatcherSandboxed CONSTANT)
 
 public:
@@ -48,7 +46,6 @@ public:
         UpdateVersionRole,
         IsUpdatingRole,
         UpdateProgressRole,
-        IsSelectedRole,
         CategoriesRole,
         CommentRole,
         DescriptionRole,
@@ -85,11 +82,7 @@ public:
     bool isScanning()                  const { return m_scanning; }
     int  pendingLoads()                const { return m_pendingLoads; }
     bool isCheckingUpdates()           const;
-    bool selectionMode()               const { return m_selectionMode; }
-    int  selectedCount()               const { return static_cast<int>(m_selected.size()); }
     bool isDownloadWatcherSandboxed()  const;
-
-    void setSelectionMode(bool mode);
 
     // Direct typed accessors used by AppImageSortFilterModel::lessThan to skip
     // the QVariant/role dispatch in data(). `field` matches SortField in
@@ -110,25 +103,18 @@ public:
     Q_INVOKABLE void checkForUpdates();
     Q_INVOKABLE void downloadUpdate(int row);
 
-    Q_INVOKABLE void setSelected(const QString &path, bool selected);
-    Q_INVOKABLE void selectAll();
-    Q_INVOKABLE void clearSelection();
-    Q_INVOKABLE QStringList selectedPaths() const;
-    Q_INVOKABLE void trashSelected();
-
 Q_SIGNALS:
     void scanningChanged();
     void pendingLoadsChanged();
     void checkingUpdatesChanged();
     void updateCheckFinished(int updatesFound, int networkFailures);
-    void selectionModeChanged();
-    void selectionChanged();
     void openUninstallWindow(const QString &filePath);
 
 private:
     void loadMetadataForRow(int row);
     void applyMetadata(int row, AppImageInfo info);
     int  findRowByPath(const QString &path) const;
+    void rebuildPathIndex();
 
     // Incremental KDirWatch handlers — feed inserts/removes/dirty events
     // straight into the model without re-scanning the whole directory.
@@ -148,8 +134,7 @@ private:
     bool                   m_scanning      = false;
     int                    m_pendingLoads  = 0;
     int                    m_generation   = 0;
-    bool                   m_selectionMode = false;
-    QSet<QString>          m_selected;
+    QHash<QString, int>    m_pathIndex;  // path → row; kept in sync for O(1) findRowByPath
 
     QThreadPool            m_readerPool;
     KDirWatch              m_watcher;

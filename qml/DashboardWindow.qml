@@ -18,11 +18,7 @@ Kirigami.ApplicationWindow {
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
 
-    readonly property color cardBorderColor: AppSettings.accentBorders 
-        ? root.Kirigami.Theme.focusColor 
-        : (root.Kirigami.Theme.textColor && root.Kirigami.Theme.textColor.r !== undefined
-            ? Qt.rgba(root.Kirigami.Theme.textColor.r, root.Kirigami.Theme.textColor.g, root.Kirigami.Theme.textColor.b, 0.15)
-            : Qt.rgba(0.5, 0.5, 0.5, 0.15))
+    readonly property color cardBorderColor: Theme.cardBorderColor
 
     function handleDrop(drop) {
         for (const url of drop.urls) {
@@ -92,11 +88,6 @@ Kirigami.ApplicationWindow {
     UninstallDialog { id: uninstallDialog }
     SettingsDialog  { id: settingsDialog  }
     AboutDialog     { id: aboutDialog     }
-
-    StorageDialog {
-        id: storageDialog
-        onOpenInFileManager: (path) => dashboardController.openInFileManager(path)
-    }
 
     UpdateDialog {
         id: updateDialog
@@ -247,29 +238,21 @@ Kirigami.ApplicationWindow {
 
             // ── Populated state: master-detail ────────────────────────────────
             RowLayout {
+                id: masterDetailRow
                 anchors.fill: parent
                 spacing: 0
                 visible: listView.count > 0 || proxyModel.filterText !== ""
 
-                // Cached to avoid re-evaluating listView.currentIndex < 0 in
-                // multiple Layout bindings on every selection change.
-                readonly property bool hasSelection: listView.currentIndex >= 0
-
                 // ── Left pane: master list ────────────────────────────────────
                 Item {
                     id: leftPane
-                    Layout.minimumWidth: Kirigami.Units.gridUnit * 15
-                    // No selection → drop the upper cap so the master list
-                    // can fill the whole window instead of leaving the
-                    // (invisible) detail pane's space blank.
-                    Layout.maximumWidth: parent.hasSelection ? Kirigami.Units.gridUnit * 24 : -1
-                    Layout.preferredWidth: Kirigami.Units.gridUnit * 18
-                    Layout.fillWidth: !parent.hasSelection
                     Layout.fillHeight: true
+                    // When nothing selected, fill the entire row; when selected, fixed width.
+                    Layout.fillWidth: listView.currentIndex < 0
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 18
 
                     Kirigami.Theme.colorSet: Kirigami.Theme.Window
                     Kirigami.Theme.inherit: false
-
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -302,7 +285,6 @@ Kirigami.ApplicationWindow {
                             horizontalAlignment: Text.AlignRight
                             color: Kirigami.Theme.disabledTextColor
                         }
-
 
                         Item {
                             Layout.fillWidth: true
@@ -343,114 +325,103 @@ Kirigami.ApplicationWindow {
                                     NumberAnimation { properties: "y"; duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic }
                                 }
 
-                                delegate: Item {
+                                delegate: Controls.ItemDelegate {
                                     id: delegateRoot
                                     width: listView.width
                                     height: Kirigami.Units.gridUnit * 2.5
+                                    highlighted: ListView.isCurrentItem
+                                    horizontalPadding: Kirigami.Units.smallSpacing
+                                    // Plasma style applies position-aware insets — last item gets
+                                    // a larger bottomInset, making its highlight appear squashed.
+                                    // Pin vertical insets to largeSpacing/2 so every row renders
+                                    // identically; verticalPadding matches so content fills the
+                                    // background area and centers via Qt.AlignVCenter.
+                                    topInset: Kirigami.Units.largeSpacing / 2
+                                    bottomInset: Kirigami.Units.largeSpacing / 2
+                                    leftInset: 0
+                                    rightInset: 0
+                                    verticalPadding: Kirigami.Units.largeSpacing / 2
 
-                                    readonly property bool isCurrent: ListView.isCurrentItem
+                                    // listView.currentIndex is out of scope inside inline
+                                    // contentItem bindings — read it through ListView.view here.
+                                    readonly property bool noSelection: ListView.view.currentIndex < 0
 
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        anchors.margins: 2
-                                        radius: Kirigami.Units.smallSpacing * 2
-                                        color: delegateRoot.isCurrent
-                                               ? Kirigami.Theme.highlightColor
-                                               : delegateMouse.containsMouse
-                                                 ? Kirigami.Theme.hoverColor
-                                                 : index % 2 === 0
-                                                   ? Kirigami.Theme.backgroundColor
-                                                   : Kirigami.Theme.alternateBackgroundColor
-                                        Behavior on color { ColorAnimation { duration: Kirigami.Units.shortDuration } }
+                                    contentItem: RowLayout {
+                                        spacing: Kirigami.Units.smallSpacing
 
-                                        RowLayout {
-                                            anchors {
-                                                fill: parent
-                                                leftMargin: Kirigami.Units.largeSpacing
-                                                rightMargin: Kirigami.Units.smallSpacing
-                                            }
-                                            spacing: Kirigami.Units.smallSpacing
+                                        Kirigami.Icon {
+                                            source: model.iconSource
+                                            implicitWidth:  Kirigami.Units.iconSizes.smallMedium
+                                            implicitHeight: Kirigami.Units.iconSizes.smallMedium
+                                            Layout.alignment: Qt.AlignVCenter
+                                        }
 
-                                            Kirigami.Icon {
-                                                source: model.iconSource
-                                                implicitWidth:  Kirigami.Units.iconSizes.smallMedium
-                                                implicitHeight: Kirigami.Units.iconSizes.smallMedium
-                                                Layout.alignment: Qt.AlignVCenter
-                                            }
+                                        Controls.Label {
+                                            text: model.displayName
+                                            color: delegateRoot.highlighted
+                                                   ? Kirigami.Theme.highlightedTextColor
+                                                   : Kirigami.Theme.textColor
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
 
-                                            Controls.Label {
-                                                text: model.displayName
-                                                color: delegateRoot.isCurrent
-                                                       ? Kirigami.Theme.highlightedTextColor
-                                                       : Kirigami.Theme.textColor
-                                                elide: Text.ElideRight
-                                                Layout.fillWidth: true
-                                                verticalAlignment: Text.AlignVCenter
-                                            }
+                                        Kirigami.Chip {
+                                            readonly property string cat: (model.categories ?? "")
+                                                .split(";").filter(s => s.length > 0)[0] ?? ""
+                                            text: cat
+                                            visible: (delegateRoot.noSelection || proxyModel.sortField === AppImageSortFilterModel.SortByCategory) && model.metadataLoaded && cat !== ""
+                                            closable: false
+                                            checkable: false
+                                            Layout.alignment: Qt.AlignVCenter
+                                        }
 
-                                            Kirigami.Chip {
-                                                readonly property string cat: (model.categories ?? "")
-                                                    .split(";").filter(s => s.length > 0)[0] ?? ""
-                                                text: cat
-                                                visible: (listView.currentIndex < 0 || proxyModel.sortField === AppImageSortFilterModel.SortByCategory) && model.metadataLoaded && cat !== ""
-                                                closable: false
-                                                checkable: false
-                                                Layout.alignment: Qt.AlignVCenter
-                                            }
+                                        Kirigami.Chip {
+                                            text: model.version
+                                            visible: delegateRoot.noSelection && model.metadataLoaded && model.version !== ""
+                                            closable: false
+                                            checkable: false
+                                            Layout.alignment: Qt.AlignVCenter
+                                        }
 
-                                            Kirigami.Chip {
-                                                text: model.version
-                                                visible: listView.currentIndex < 0 && model.metadataLoaded && model.version !== ""
-                                                closable: false
-                                                checkable: false
-                                                Layout.alignment: Qt.AlignVCenter
-                                            }
+                                        Kirigami.Chip {
+                                            text: model.formattedSize
+                                            visible: (delegateRoot.noSelection || proxyModel.sortField === AppImageSortFilterModel.SortBySize) && model.metadataLoaded && model.appSize > 0
+                                            closable: false
+                                            checkable: false
+                                            Layout.alignment: Qt.AlignVCenter
+                                        }
 
-                                            Kirigami.Chip {
-                                                text: model.formattedSize
-                                                visible: (listView.currentIndex < 0 || proxyModel.sortField === AppImageSortFilterModel.SortBySize) && model.metadataLoaded && model.appSize > 0
-                                                closable: false
-                                                checkable: false
-                                                Layout.alignment: Qt.AlignVCenter
-                                            }
+                                        Kirigami.Chip {
+                                            readonly property var d: model.addedDate
+                                            text: d ? Qt.formatDate(d, "d MMM yyyy") : ""
+                                            visible: proxyModel.sortField === AppImageSortFilterModel.SortByDate && model.metadataLoaded && !!d
+                                            closable: false
+                                            checkable: false
+                                            Layout.alignment: Qt.AlignVCenter
+                                        }
 
-                                            Kirigami.Chip {
-                                                readonly property var d: model.addedDate
-                                                text: d ? Qt.formatDate(d, "d MMM yyyy") : ""
-                                                visible: proxyModel.sortField === AppImageSortFilterModel.SortByDate && model.metadataLoaded && !!d
-                                                closable: false
-                                                checkable: false
-                                                Layout.alignment: Qt.AlignVCenter
-                                            }
+                                        Kirigami.Icon {
+                                            source: "software-update-available"
+                                            implicitWidth:  Kirigami.Units.iconSizes.small
+                                            implicitHeight: Kirigami.Units.iconSizes.small
+                                            color: Kirigami.Theme.positiveTextColor
+                                            visible: model.updateAvailable && !model.isUpdating
+                                            Layout.alignment: Qt.AlignVCenter
+                                            HoverHandler { id: updateIconHover }
+                                            Controls.ToolTip.text: i18n("Update available: %1", model.updateVersion)
+                                            Controls.ToolTip.visible: updateIconHover.hovered
+                                            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                                        }
 
-                                            Kirigami.Icon {
-                                                source: "software-update-available"
-                                                implicitWidth:  Kirigami.Units.iconSizes.small
-                                                implicitHeight: Kirigami.Units.iconSizes.small
-                                                color: Kirigami.Theme.positiveTextColor
-                                                visible: model.updateAvailable && !model.isUpdating
-                                                Layout.alignment: Qt.AlignVCenter
-                                                HoverHandler { id: updateIconHover }
-                                                Controls.ToolTip.text: i18n("Update available: %1", model.updateVersion)
-                                                Controls.ToolTip.visible: updateIconHover.hovered
-                                                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                                            }
-
-                                            Controls.BusyIndicator {
-                                                implicitWidth:  Kirigami.Units.iconSizes.small
-                                                implicitHeight: Kirigami.Units.iconSizes.small
-                                                running: !model.metadataLoaded || model.isUpdating
-                                                visible: running
-                                            }
+                                        Controls.BusyIndicator {
+                                            implicitWidth:  Kirigami.Units.iconSizes.small
+                                            implicitHeight: Kirigami.Units.iconSizes.small
+                                            running: !model.metadataLoaded || model.isUpdating
+                                            visible: running
                                         }
                                     }
-
-                                    MouseArea {
-                                        id: delegateMouse
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        onClicked: listView.currentIndex = index
-                                    }
+                                    onClicked: listView.currentIndex = index
                                 }
 
                                 footer: Component {
@@ -472,9 +443,9 @@ Kirigami.ApplicationWindow {
                                         Rectangle {
                                             anchors.fill: parent
                                             anchors.topMargin: Kirigami.Units.largeSpacing
-                                            anchors.leftMargin: 2
-                                            anchors.rightMargin: 2
-                                            anchors.bottomMargin: 2
+                                            anchors.leftMargin: Kirigami.Units.smallSpacing
+                                            anchors.rightMargin: Kirigami.Units.smallSpacing
+                                            anchors.bottomMargin: Kirigami.Units.smallSpacing
                                             visible: AppSettings.showInstallBox
                                             color: Kirigami.Theme.alternateBackgroundColor
                                             radius: Kirigami.Units.smallSpacing * 2
@@ -514,8 +485,8 @@ Kirigami.ApplicationWindow {
 
                         Kirigami.InlineMessage {
                             Layout.fillWidth: true
-                            Layout.leftMargin: 2
-                            Layout.rightMargin: 2
+                            Layout.leftMargin: Kirigami.Units.smallSpacing
+                            Layout.rightMargin: Kirigami.Units.smallSpacing
                             Layout.topMargin: Kirigami.Units.smallSpacing
                             visible: AppSettings.showInstallBox && AppSettings.showDisclaimer
                             type: Kirigami.MessageType.Warning
@@ -528,136 +499,182 @@ Kirigami.ApplicationWindow {
                 // ── Right pane: detail view ───────────────────────────────────
                 Item {
                     id: rightPane
+                    visible: listView.currentIndex >= 0
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    visible: listView.currentIndex >= 0
 
                     ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: Kirigami.Units.gridUnit
-                        anchors.bottomMargin: 2
-                        spacing: Kirigami.Units.largeSpacing
+                        spacing: 0
 
-                        Kirigami.Icon {
-                            source: root.currentItem.iconSource ?? "application-x-executable"
-                            implicitWidth:  Kirigami.Units.iconSizes.enormous
-                            implicitHeight: Kirigami.Units.iconSizes.enormous
-                            Layout.alignment: Qt.AlignHCenter
-                            Layout.topMargin: Kirigami.Units.gridUnit
-                        }
-
-                        Kirigami.Heading {
-                            text: root.currentItem.displayName ?? ""
-                            level: 2
-                            horizontalAlignment: Text.AlignHCenter
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                        }
-
-                        RowLayout {
-                            Layout.alignment: Qt.AlignHCenter
-                            spacing: Kirigami.Units.smallSpacing
-                            visible: (root.currentItem.developerName ?? "") !== ""
-
-                            Controls.Label {
-                                text: root.currentItem.developerName ?? ""
-                                opacity: 0.6
-                                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                            }
-
-                            Controls.Label {
-                                readonly property string host: {
-                                    const url = root.currentItem.homepage ?? ""
-                                    if (!url) return ""
-                                    const m = url.match(/^https?:\/\/([^/]+)/)
-                                    return m ? m[1] : url
-                                }
-                                text: "<a href='" + (root.currentItem.homepage ?? "") + "'>" + host + "</a>"
-                                visible: host !== ""
-                                textFormat: Text.StyledText
-                                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                onLinkActivated: Qt.openUrlExternally(root.currentItem.homepage)
-                                HoverHandler { cursorShape: Qt.PointingHandCursor }
-                            }
-                        }
-
-                        Item {
-                            Layout.fillWidth: true
-                            implicitHeight: chipsRow.implicitHeight
-                            clip: true
-                            visible: opacity > 0
-                            opacity: (root.currentItem.metadataLoaded ?? false) ? 1 : 0
-                            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration } }
-
-                            Row {
-                                id: chipsRow
-                                x: implicitWidth <= parent.width
-                                   ? (parent.width - implicitWidth) / 2
-                                   : 0
-                                spacing: Kirigami.Units.smallSpacing
-
-                                Kirigami.Chip {
-                                    readonly property string cat: (root.currentItem.categories ?? "")
-                                        .split(";").filter(s => s.length > 0)[0] ?? ""
-                                    text: cat
-                                    visible: cat !== ""
-                                    closable: false
-                                    checkable: false
-                                }
-
-                                Kirigami.Chip {
-                                    text: root.currentItem.formattedSize || "—"
-                                    closable: false
-                                    checkable: false
-                                    Controls.ToolTip.text: i18n("File size")
-                                    Controls.ToolTip.visible: hovered
-                                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                                }
-
-                                Kirigami.Chip {
-                                    text: root.currentItem.version || "—"
-                                    closable: false
-                                    checkable: false
-                                    Controls.ToolTip.text: i18n("Version")
-                                    Controls.ToolTip.visible: hovered
-                                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                                }
-
-                                Kirigami.Chip {
-                                    readonly property var d: root.currentItem.addedDate
-                                    text: d ? Qt.formatDate(d, "d MMM yyyy") : ""
-                                    visible: !!d
-                                    closable: false
-                                    checkable: false
-                                    Controls.ToolTip.text: i18n("Date installed")
-                                    Controls.ToolTip.visible: hovered
-                                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                                }
-                            }
-                        }
-
+                        // Scrollable content — use detailScrollView.availableWidth
+                        // (not parent.width) to get the actual viewport width so
+                        // content doesn't clip and wrapping works correctly.
                         Controls.ScrollView {
-                            id: descScrollView
+                            id: detailScrollView
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            Layout.topMargin: Kirigami.Units.largeSpacing
-                            visible: (root.currentItem.metadataLoaded ?? false) && (root.currentItem.description ?? "") !== ""
+                            Layout.leftMargin: Kirigami.Units.largeSpacing
+                            Layout.rightMargin: Kirigami.Units.largeSpacing
+                            clip: true
                             Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
-                            Controls.ScrollBar.vertical.policy: Controls.ScrollBar.AsNeeded
+                            Controls.ScrollBar.vertical.policy: Controls.ScrollBar.AlwaysOff
 
-                            Controls.Label {
-                                width: descScrollView.availableWidth
-                                text: root.currentItem.description ?? ""
-                                wrapMode: Text.WordWrap
-                                opacity: 0.8
-                                textFormat: Text.StyledText
+                            ColumnLayout {
+                                width: detailScrollView.availableWidth
+                                spacing: 0
+
+                                // Loading indicator while metadata is in-flight
+                                Controls.BusyIndicator {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    Layout.topMargin: Kirigami.Units.gridUnit * 3
+                                    running: !(root.currentItem.metadataLoaded ?? false)
+                                    visible: running
+                                }
+
+                                // Hero: icon + name + developer + chips
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: Kirigami.Units.largeSpacing
+                                    spacing: Kirigami.Units.smallSpacing
+                                    visible: root.currentItem.metadataLoaded ?? false
+
+                                    Kirigami.Icon {
+                                        source: root.currentItem.iconSource ?? "application-x-executable"
+                                        implicitWidth: Kirigami.Units.iconSizes.enormous
+                                        implicitHeight: Kirigami.Units.iconSizes.enormous
+                                        Layout.alignment: Qt.AlignHCenter
+                                    }
+
+                                    Kirigami.Heading {
+                                        text: root.currentItem.displayName ?? ""
+                                        level: 2
+                                        horizontalAlignment: Text.AlignHCenter
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                    }
+
+                                    RowLayout {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        spacing: Kirigami.Units.smallSpacing
+                                        visible: (root.currentItem.developerName ?? "") !== ""
+
+                                        Controls.Label {
+                                            text: root.currentItem.developerName ?? ""
+                                            opacity: 0.6
+                                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                                        }
+
+                                        Controls.Label {
+                                            readonly property string host: {
+                                                const url = root.currentItem.homepage ?? ""
+                                                if (!url) return ""
+                                                const m = url.match(/^https?:\/\/([^/]+)/)
+                                                return m ? m[1] : url
+                                            }
+                                            text: "<a href='" + (root.currentItem.homepage ?? "") + "'>" + host + "</a>"
+                                            visible: host !== ""
+                                            textFormat: Text.StyledText
+                                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                                            onLinkActivated: Qt.openUrlExternally(root.currentItem.homepage)
+                                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                        }
+                                    }
+
+                                    // Metadata chips — centered relative to description card width
+                                    Flow {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        Layout.topMargin: Kirigami.Units.smallSpacing
+                                        spacing: Kirigami.Units.smallSpacing
+
+                                        Kirigami.Chip {
+                                            text: root.currentItem.version ?? ""
+                                            visible: (root.currentItem.version ?? "") !== ""
+                                            closable: false; checkable: false
+                                        }
+                                        Kirigami.Chip {
+                                            text: root.currentItem.formattedSize ?? ""
+                                            visible: (root.currentItem.formattedSize ?? "") !== ""
+                                            closable: false; checkable: false
+                                        }
+                                        Kirigami.Chip {
+                                            readonly property string cat: (root.currentItem.categories ?? "")
+                                                .split(";").filter(s => s.length > 0)[0] ?? ""
+                                            text: cat
+                                            visible: cat !== ""
+                                            closable: false; checkable: false
+                                        }
+                                        Kirigami.Chip {
+                                            readonly property var d: root.currentItem.addedDate
+                                            text: d ? Qt.formatDate(d, "d MMM yyyy") : ""
+                                            visible: !!d
+                                            closable: false; checkable: false
+                                        }
+                                    }
+                                }
+
+                                // Description card — height capped so the checkbox below stays
+                                // visible near the action bar without excessive scrolling.
+                                // Text overflows inside the card's own ScrollView.
+                                Kirigami.Card {
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: Kirigami.Units.largeSpacing
+                                    // Scale down to ~separator line: subtract hero + checkbox + margins
+                                    Layout.maximumHeight: Math.max(
+                                        Kirigami.Units.gridUnit * 8,
+                                        detailScrollView.availableHeight - Kirigami.Units.gridUnit * 15
+                                    )
+                                    visible: (root.currentItem.metadataLoaded ?? false)
+                                             && (root.currentItem.description ?? "") !== ""
+
+                                    contentItem: ColumnLayout {
+                                        spacing: Kirigami.Units.smallSpacing
+
+                                        Kirigami.Heading {
+                                            text: i18n("About")
+                                            level: 4
+                                        }
+
+                                        Controls.ScrollView {
+                                            id: descriptionScroller
+                                            Layout.fillWidth: true
+                                            Layout.fillHeight: true
+                                            clip: true
+                                            Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
+
+                                            Controls.Label {
+                                                width: descriptionScroller.availableWidth
+                                                text: root.currentItem.description ?? ""
+                                                wrapMode: Text.WordWrap
+                                                opacity: 0.85
+                                                textFormat: Text.StyledText
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // "Show in app menu" — position 2 when description fits,
+                                // position 3 below the card when description is large.
+                                Controls.CheckBox {
+                                    text: i18n("Show in app menu")
+                                    checked: root.currentItem.hasDesktopLink ?? false
+                                    enabled: root.currentItem.metadataLoaded ?? false
+                                    visible: root.currentItem.metadataLoaded ?? false
+                                    Layout.alignment: Qt.AlignHCenter
+                                    Layout.topMargin: Kirigami.Units.smallSpacing
+                                    Layout.bottomMargin: Kirigami.Units.largeSpacing
+                                    onToggled: proxyModel.toggleDesktopLink(listView.currentIndex, checked)
+                                }
+
+                                // Bottom padding for scroll overshoot
+                                Item { height: Kirigami.Units.gridUnit }
                             }
                         }
 
-                        Item { Layout.fillHeight: true; visible: (root.currentItem.description ?? "") === "" }
-
+                        // Sticky bottom action bar
                         ColumnLayout {
                             Layout.fillWidth: true
+                            Layout.margins: Kirigami.Units.largeSpacing
                             spacing: Kirigami.Units.smallSpacing
 
                             RowLayout {
@@ -681,7 +698,7 @@ Kirigami.ApplicationWindow {
                                     Layout.fillWidth: true
                                     Controls.ToolTip.text: (root.currentItem.updateAvailable ?? false)
                                         ? i18n("Update to version %1", root.currentItem.updateVersion ?? "")
-                                        : i18n("No update available — use \"Check for Updates\" in the toolbar")
+                                        : i18n("No update available")
                                     Controls.ToolTip.visible: hovered
                                     Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                                     onClicked: {
@@ -705,14 +722,6 @@ Kirigami.ApplicationWindow {
                                 Layout.fillWidth: true
                                 visible: root.currentItem.isUpdating ?? false
                                 value: (root.currentItem.updateProgress ?? 0) / 100.0
-                            }
-
-                            Controls.CheckBox {
-                                text: i18n("Show in app menu")
-                                checked: root.currentItem.hasDesktopLink ?? false
-                                enabled: root.currentItem.metadataLoaded ?? false
-                                Layout.alignment: Qt.AlignHCenter
-                                onToggled: proxyModel.toggleDesktopLink(listView.currentIndex, checked)
                             }
                         }
                     }

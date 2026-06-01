@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "appimageiconprovider.h"
+#include "appimageiconstore.h"
 
 #include <QPainter>
 #include <QPixmap>
@@ -18,19 +19,16 @@ void AppImageIconProvider::setIconData(const QByteArray &data, const QString &ex
 
 void AppImageIconProvider::setIconData(const QString &id, const QByteArray &data, const QString &ext)
 {
-    {
-        QWriteLocker locker(&m_iconsLock);
-        m_icons.insert(id, {data, ext});
-    }
-    // Drop any rendered pixmaps for this id — the underlying bytes just changed.
-    {
-        QMutexLocker cacheLocker(&m_cacheMutex);
-        const QString prefix = id + QLatin1Char(':');
-        const auto keys = m_renderCache.keys();
-        for (const QString &k : keys) {
-            if (k.startsWith(prefix))
-                m_renderCache.remove(k);
-        }
+    AppImageIconStore::instance().set(id, data, ext);
+
+    // Drop any rendered pixmaps for this id in this engine's cache — the
+    // underlying bytes just changed.
+    QMutexLocker cacheLocker(&m_cacheMutex);
+    const QString prefix = id + QLatin1Char(':');
+    const auto keys = m_renderCache.keys();
+    for (const QString &k : keys) {
+        if (k.startsWith(prefix))
+            m_renderCache.remove(k);
     }
 }
 
@@ -44,17 +42,13 @@ QPixmap AppImageIconProvider::requestPixmap(const QString &id,
                                              QSize *size,
                                              const QSize &requestedSize)
 {
-    // Read icon bytes under a shared (read) lock — concurrent requestPixmap calls
-    // don't block each other here. setIconData uses a write lock when mutating.
-    IconEntry entry;
-    {
-        QReadLocker iconsLocker(&m_iconsLock);
-        const auto it = m_icons.constFind(id);
-        if (it == m_icons.constEnd() || it->data.isEmpty()) {
-            if (size) *size = QSize(0, 0);
-            return {};
-        }
-        entry = *it;
+    // Read icon bytes from the process-wide shared store — no lock needed here,
+    // AppImageIconStore::get() acquires its own read lock.
+    QByteArray data;
+    QString ext;
+    if (!AppImageIconStore::instance().get(id, data, ext)) {
+        if (size) *size = QSize(0, 0);
+        return {};
     }
 
     // Check render cache before doing any rendering work.
@@ -76,10 +70,10 @@ QPixmap AppImageIconProvider::requestPixmap(const QString &id,
     };
 
     QPixmap pixmap;
-    if (entry.ext.compare(QStringLiteral(".svg"), Qt::CaseInsensitive) == 0 ||
-        entry.ext.compare(QStringLiteral(".svgz"), Qt::CaseInsensitive) == 0) {
+    if (ext.compare(QStringLiteral(".svg"), Qt::CaseInsensitive) == 0 ||
+        ext.compare(QStringLiteral(".svgz"), Qt::CaseInsensitive) == 0) {
 
-        QSvgRenderer renderer(entry.data);
+        QSvgRenderer renderer(data);
         if (!renderer.isValid()) {
             if (size) *size = QSize(0, 0);
             return {};
@@ -102,7 +96,7 @@ QPixmap AppImageIconProvider::requestPixmap(const QString &id,
         return pixmap;
     }
 
-    pixmap.loadFromData(entry.data);
+    pixmap.loadFromData(data);
     if (pixmap.isNull()) {
         if (size) *size = QSize(0, 0);
         return pixmap;

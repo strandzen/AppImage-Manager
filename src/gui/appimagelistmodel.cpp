@@ -152,7 +152,6 @@ QVariant AppImageListModel::data(const QModelIndex &index, int role) const
     case UpdateVersionRole:   return item.updateVersion;
     case IsUpdatingRole:      return item.isUpdating;
     case UpdateProgressRole:  return item.updateProgress;
-    case IsSelectedRole:      return m_selected.contains(item.filePath);
     case CategoriesRole:      return item.info.categories;
     case CommentRole:         return item.info.comment;
     case DescriptionRole:     return item.cachedDescription;
@@ -180,7 +179,6 @@ QHash<int, QByteArray> AppImageListModel::roleNames() const
         { UpdateVersionRole,   "updateVersion"   },
         { IsUpdatingRole,      "isUpdating"      },
         { UpdateProgressRole,  "updateProgress"  },
-        { IsSelectedRole,      "isSelected"      },
         { CategoriesRole,      "categories"      },
         { CommentRole,         "comment"         },
         { DescriptionRole,     "description"     },
@@ -246,15 +244,12 @@ void AppImageListModel::refresh()
     for (const Item &item : std::as_const(m_items))
         trackedPaths.insert(item.filePath);
 
-    // Re-trigger loading for existing items whose futures were invalidated.
-    // Each produces 1 stale decrement (old future) + 1 real decrement (new future) = 2 total.
+    // Count re-triggers before dispatching — loadMetadataForRow may hit the
+    // cache synchronously and decrement m_pendingLoads immediately, so the
+    // assignment must happen first to avoid a stale non-zero count.
     int reTriggers = 0;
-    for (int i = 0; i < m_items.size(); ++i) {
-        if (!m_items.at(i).metadataLoaded) {
-            ++reTriggers;
-            loadMetadataForRow(i);
-        }
-    }
+    for (const Item &item : std::as_const(m_items))
+        if (!item.metadataLoaded) ++reTriggers;
 
     // Insert newly discovered files
     QList<QFileInfo> toAdd;
@@ -278,15 +273,16 @@ void AppImageListModel::refresh()
             m_items.append(item);
         }
         endInsertRows();
-        for (int i = first; i < m_items.size(); ++i)
-            loadMetadataForRow(i);
     }
 
-    // Total expected decrements:
-    //   staleFutures — old gen futures arriving and returning early
-    //   reTriggers   — new futures for existing unloaded items
-    //   toAdd.size() — new futures for newly inserted items
-    // Re-triggered items produce 2 decrements each (stale + new), hence staleFutures + reTriggers.
+    rebuildPathIndex();
+
+    // Set pendingLoads before dispatching work. Synchronous cache hits in
+    // loadMetadataForRow decrement immediately; assigning afterwards would
+    // overwrite their decrements and leave a stuck non-zero count.
+    // staleFutures — old-gen futures still in flight; each calls finalize() once
+    // reTriggers   — new futures for existing unloaded items (+ 1 stale each = staleFutures)
+    // toAdd.size() — new futures for freshly inserted items
     m_pendingLoads = staleFutures + reTriggers + static_cast<int>(toAdd.size());
     Q_EMIT pendingLoadsChanged();
 
@@ -294,6 +290,12 @@ void AppImageListModel::refresh()
         if (!m_scanning) { m_scanning = true; Q_EMIT scanningChanged(); }
     } else {
         if (m_scanning)  { m_scanning = false; Q_EMIT scanningChanged(); }
+    }
+
+    // Dispatch after m_pendingLoads is live so synchronous decrements are safe.
+    for (int i = 0; i < m_items.size(); ++i) {
+        if (!m_items.at(i).metadataLoaded)
+            loadMetadataForRow(i);
     }
 }
 
@@ -373,6 +375,7 @@ void AppImageListModel::onFileCreated(const QString &path)
     item.cachedDisplayName   = fi.fileName();
     m_items.append(item);
     endInsertRows();
+    m_pathIndex[path] = row;
 
     ++m_pendingLoads;
     Q_EMIT pendingLoadsChanged();
@@ -388,6 +391,7 @@ void AppImageListModel::onFileDeleted(const QString &path)
     beginRemoveRows({}, row, row);
     m_items.removeAt(row);
     endRemoveRows();
+    rebuildPathIndex();
 }
 
 void AppImageListModel::onFileDirty(const QString &path)
@@ -425,7 +429,12 @@ void AppImageListModel::applyMetadata(int row, AppImageInfo info)
     item.cachedIconSource    = computeIconSource(item);
     item.cachedDescription   = info.description;
 
-    Q_EMIT dataChanged(index(row, 0), index(row, 0));
+    Q_EMIT dataChanged(index(row, 0), index(row, 0), {
+        IconSourceRole, DisplayNameRole, CleanNameRole, AppNameRole,
+        VersionRole, FormattedSizeRole, AppSizeRole, HasDesktopLinkRole,
+        MetadataLoadedRole, CategoriesRole, CommentRole, DescriptionRole,
+        DeveloperNameRole, HomepageRole
+    });
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -439,7 +448,7 @@ void AppImageListModel::toggleDesktopLink(int row, bool enable)
         : AppImageManager::removeDesktopLink(item.filePath, item.info);
     if (ok) {
         item.hasDesktopLink = enable;
-        Q_EMIT dataChanged(index(row, 0), index(row, 0));
+        Q_EMIT dataChanged(index(row, 0), index(row, 0), {HasDesktopLinkRole});
     }
 }
 
@@ -485,75 +494,6 @@ void AppImageListModel::downloadUpdate(int row)
                                     item.cachedDisplayName, item.info.appId);
 }
 
-// ── Batch selection ───────────────────────────────────────────────────────────
-
-void AppImageListModel::setSelectionMode(bool mode)
-{
-    if (m_selectionMode == mode) return;
-    m_selectionMode = mode;
-    if (!mode) clearSelection();
-    Q_EMIT selectionModeChanged();
-}
-
-void AppImageListModel::setSelected(const QString &path, bool selected)
-{
-    if (selected) m_selected.insert(path);
-    else          m_selected.remove(path);
-    for (int i = 0; i < m_items.size(); ++i) {
-        if (m_items.at(i).filePath == path) {
-            Q_EMIT dataChanged(index(i), index(i), {IsSelectedRole});
-            break;
-        }
-    }
-    Q_EMIT selectionChanged();
-}
-
-void AppImageListModel::selectAll()
-{
-    for (const Item &item : std::as_const(m_items))
-        m_selected.insert(item.filePath);
-    if (!m_items.isEmpty())
-        Q_EMIT dataChanged(index(0), index(rowCount() - 1), {IsSelectedRole});
-    Q_EMIT selectionChanged();
-}
-
-void AppImageListModel::clearSelection()
-{
-    if (m_selected.isEmpty()) return;
-    m_selected.clear();
-    if (!m_items.isEmpty())
-        Q_EMIT dataChanged(index(0), index(rowCount() - 1), {IsSelectedRole});
-    Q_EMIT selectionChanged();
-}
-
-QStringList AppImageListModel::selectedPaths() const
-{
-    return QStringList(m_selected.begin(), m_selected.end());
-}
-
-void AppImageListModel::trashSelected()
-{
-    QList<QUrl> urls;
-    for (const Item &item : std::as_const(m_items)) {
-        if (!m_selected.contains(item.filePath)) continue;
-        if (item.hasDesktopLink && item.metadataLoaded)
-            AppImageManager::removeDesktopLink(item.filePath, item.info);
-        urls << QUrl::fromLocalFile(item.filePath);
-    }
-    clearSelection();
-    setSelectionMode(false);
-    if (urls.isEmpty())
-        return;
-
-    auto *job = KIO::trash(urls);
-    connect(job, &KJob::result, this, [this](KJob *j) {
-        if (j->error())
-            sendError(this, i18n("Trash Failed"),
-                      i18n("Could not move items to Trash: %1", j->errorString()));
-    });
-    job->start();
-}
-
 // ── Private helpers ───────────────────────────────────────────────────────────
 
 // static
@@ -564,9 +504,15 @@ QString AppImageListModel::iconIdForPath(const QString &path)
 
 int AppImageListModel::findRowByPath(const QString &path) const
 {
+    return m_pathIndex.value(path, -1);
+}
+
+void AppImageListModel::rebuildPathIndex()
+{
+    m_pathIndex.clear();
+    m_pathIndex.reserve(m_items.size());
     for (int i = 0; i < m_items.size(); ++i)
-        if (m_items.at(i).filePath == path) return i;
-    return -1;
+        m_pathIndex[m_items.at(i).filePath] = i;
 }
 
 // static
@@ -641,7 +587,6 @@ QVariantMap AppImageListModel::itemData(int row) const
         { QStringLiteral("updateVersion"),   item.updateVersion                           },
         { QStringLiteral("isUpdating"),      item.isUpdating                              },
         { QStringLiteral("updateProgress"),  item.updateProgress                          },
-        { QStringLiteral("isSelected"),      m_selected.contains(item.filePath)           },
         { QStringLiteral("categories"),      item.info.categories                         },
         { QStringLiteral("comment"),         item.info.comment                            },
         { QStringLiteral("description"),     item.cachedDescription                       },

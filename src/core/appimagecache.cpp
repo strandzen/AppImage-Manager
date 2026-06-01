@@ -111,7 +111,10 @@ AppImageCache::AppImageCache()
 AppImageInfo AppImageCache::load(const QString &path, qint64 mtime)
 {
     QSqlDatabase db = connectionForCurrentThread(m_dbPath);
-    if (!db.isOpen()) return {};
+    if (!db.isOpen()) {
+        qWarning() << "AppImageCache: load skipped — DB unavailable for" << path;
+        return {};
+    }
 
     QSqlQuery q(db);
     q.prepare(QStringLiteral(
@@ -120,7 +123,11 @@ AppImageInfo AppImageCache::load(const QString &path, qint64 mtime)
         "       exec_args, file_size, icon_ext, update_info, icon_data, is_valid "
         "FROM metadata WHERE key = ?"));
     q.addBindValue(keyFor(path));
-    if (!q.exec() || !q.next()) return {};
+    if (!q.exec()) {
+        qWarning() << "AppImageCache: load query failed:" << q.lastError().text();
+        return {};
+    }
+    if (!q.next()) return {}; // normal cache miss, no log needed
 
     if (q.value(0).toInt() != kCacheVersion) return {};  // schema version mismatch
     if (q.value(1).toLongLong() != mtime)    return {};  // file was replaced
@@ -148,7 +155,10 @@ AppImageInfo AppImageCache::load(const QString &path, qint64 mtime)
 void AppImageCache::store(const QString &path, qint64 mtime, const AppImageInfo &info)
 {
     QSqlDatabase db = connectionForCurrentThread(m_dbPath);
-    if (!db.isOpen()) return;
+    if (!db.isOpen()) {
+        qWarning() << "AppImageCache: store skipped — DB unavailable for" << path;
+        return;
+    }
 
     QSqlQuery q(db);
     q.prepare(QStringLiteral(

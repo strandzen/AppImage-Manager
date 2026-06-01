@@ -21,8 +21,6 @@ public:
     static void open();
 
     Q_INVOKABLE QObject *createUninstallBackend(const QString &filePath);
-    Q_INVOKABLE QObject *createStorageBackend(const QString &filePath);
-    Q_INVOKABLE void     openInFileManager(const QString &path);
     Q_INVOKABLE void     installFromPath(const QUrl &url);
 
 private:
@@ -34,7 +32,6 @@ private:
     AppImageListModel         *m_listModel          = nullptr;
     AppImageSortFilterModel   *m_proxyModel         = nullptr;
     AppImageBackend       *m_uninstallBackend   = nullptr;
-    AppImageBackend       *m_storageBackend     = nullptr;
     QQmlApplicationEngine *m_engine             = nullptr;
     QQuickWindow          *m_window             = nullptr;
 

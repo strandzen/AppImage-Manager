@@ -6,6 +6,5 @@ X-KDE-MaxNumberOfUrls=1
 
 [Desktop Action manageAppImage]
 Name=Manage AppImage
-Name[de]=AppImage verwalten
 Icon=application-x-executable
 Exec=appimagemanager %f

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "updatedaemon.h"
 #include "appimageinfo.h"
+#include "logging.h"
 #include "appsettings.h"
 #include "appimagereader.h"
 #include "githubreleasechecker.h"
@@ -70,7 +71,8 @@ UpdateDaemon::UpdateDaemon(QObject *parent)
 
 void UpdateDaemon::start()
 {
-    QDBusConnection::sessionBus().registerService(QStringLiteral("io.github.appimagemanager.Daemon"));
+    if (!QDBusConnection::sessionBus().registerService(QStringLiteral("io.github.appimagemanager.Daemon")))
+        qCWarning(AIM_LOG) << "Failed to register D-Bus service io.github.appimagemanager.Daemon";
 
     // Persistent tray entry — Passive when idle so the user can still trigger
     // a manual check or open the dashboard at any time. Status flips to Active
@@ -86,8 +88,9 @@ void UpdateDaemon::start()
 
     connect(m_trayIcon, &KStatusNotifierItem::activateRequested,
             this, [](bool, const QPoint &) {
-        QProcess::startDetached(QStringLiteral("appimagemanager"),
-                                {QStringLiteral("--dashboard")});
+        if (!QProcess::startDetached(QStringLiteral("appimagemanager"),
+                                     {QStringLiteral("--dashboard")}))
+            qCWarning(AIM_LOG) << "Failed to launch appimagemanager --dashboard";
     });
 
     if (QMenu *menu = m_trayIcon->contextMenu()) {
@@ -98,8 +101,9 @@ void UpdateDaemon::start()
         auto *openAction = menu->addAction(QIcon::fromTheme(QStringLiteral("system-software-install")),
                                            i18n("Open Dashboard"));
         connect(openAction, &QAction::triggered, this, []() {
-            QProcess::startDetached(QStringLiteral("appimagemanager"),
-                                    {QStringLiteral("--dashboard")});
+            if (!QProcess::startDetached(QStringLiteral("appimagemanager"),
+                                         {QStringLiteral("--dashboard")}))
+                qCWarning(AIM_LOG) << "Failed to launch appimagemanager --dashboard";
         });
     }
 
@@ -117,7 +121,8 @@ void UpdateDaemon::onDownloadAppeared(const QString &path, const QString &displa
     n->setIconName(QStringLiteral("application-x-executable"));
     auto *action = n->addAction(i18n("Manage"));
     connect(action, &KNotificationAction::activated, this, [path]() {
-        QProcess::startDetached(QStringLiteral("appimagemanager"), { path });
+        if (!QProcess::startDetached(QStringLiteral("appimagemanager"), { path }))
+            qCWarning(AIM_LOG) << "Failed to launch appimagemanager for" << path;
     });
     n->sendEvent();
 }
@@ -157,38 +162,33 @@ void UpdateDaemon::checkUpdates()
                 continue;
 
             auto *checker = new GitHubReleaseChecker(m_networkManager, this);
-            connect(checker, &GitHubReleaseChecker::updateAvailable, this,
-                    [this, info, checker](const QString &remoteVer, const QString &/*zsyncUrl*/) {
+            connect(checker, &GitHubReleaseChecker::checkFinished, this,
+                    [this, info, checker](GitHubReleaseChecker::Result result,
+                                         const QString &remoteVer, const QString &/*zsyncUrl*/) {
                 checker->deleteLater();
 
-                ++m_updateCount;
-                auto *notification = new KNotification(QStringLiteral("updateAvailable"),
-                                                       KNotification::Persistent, this);
-                notification->setTitle(i18n("Update Available"));
-                notification->setText(i18n("An update is available for %1 (%2 → %3).",
-                    info.cleanName.isEmpty() ? info.originalName : info.cleanName,
-                    normalizeVersion(info.version), remoteVer));
-                notification->setIconName(info.appId.isEmpty()
-                    ? QStringLiteral("application-x-executable") : info.appId);
-                auto *action = notification->addDefaultAction(i18n("Open Manager"));
-                connect(action, &KNotificationAction::activated, this, []() {
-                    QProcess::startDetached(QStringLiteral("appimagemanager"),
-                                            {QStringLiteral("--dashboard")});
-                });
-                notification->sendEvent();
+                if (result == GitHubReleaseChecker::Result::UpdateAvailable) {
+                    ++m_updateCount;
+                    auto *notification = new KNotification(QStringLiteral("updateAvailable"),
+                                                           KNotification::Persistent, this);
+                    notification->setTitle(i18n("Update Available"));
+                    notification->setText(i18n("An update is available for %1 (%2 → %3).",
+                        info.cleanName.isEmpty() ? info.originalName : info.cleanName,
+                        normalizeVersion(info.version), remoteVer));
+                    notification->setIconName(info.appId.isEmpty()
+                        ? QStringLiteral("application-x-executable") : info.appId);
+                    auto *action = notification->addDefaultAction(i18n("Open Manager"));
+                    connect(action, &KNotificationAction::activated, this, []() {
+                        if (!QProcess::startDetached(QStringLiteral("appimagemanager"),
+                                                     {QStringLiteral("--dashboard")}))
+                            qCWarning(AIM_LOG) << "Failed to launch appimagemanager --dashboard";
+                    });
+                    notification->sendEvent();
+                }
 
                 if (--m_pendingChecks == 0)
                     updateTrayStatus();
             });
-
-            auto handleFailure = [this, checker]() {
-                checker->deleteLater();
-                if (--m_pendingChecks == 0)
-                    updateTrayStatus();
-            };
-            connect(checker, &GitHubReleaseChecker::upToDate, this, handleFailure);
-            connect(checker, &GitHubReleaseChecker::networkFailed, this, handleFailure);
-            connect(checker, &GitHubReleaseChecker::failed, this, handleFailure);
 
             checker->check(info.updateInfo, info.version);
         }

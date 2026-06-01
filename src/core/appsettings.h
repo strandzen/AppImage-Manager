@@ -8,8 +8,6 @@
 #include <QWindow>  // Qt 6.11 moc needs the full type for Q_INVOKABLE pointer args
 #include <QtQml/qqmlregistration.h>
 
-#include <KSharedConfig>
-
 class QQmlEngine;
 class QJSEngine;
 
@@ -89,5 +87,4 @@ Q_SIGNALS:
 
 private:
     explicit AppSettings(QObject *parent = nullptr);
-    KSharedConfig::Ptr m_config;
 };

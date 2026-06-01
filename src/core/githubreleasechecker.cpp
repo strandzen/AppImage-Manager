@@ -25,7 +25,7 @@ void GitHubReleaseChecker::check(const QString &updateInfo, const QString &curre
 
     const QStringList parts = updateInfo.split(QLatin1Char('|'));
     if (parts.size() < 3) {
-        Q_EMIT failed();
+        Q_EMIT checkFinished(Result::Failed, {}, {});
         return;
     }
 
@@ -50,19 +50,19 @@ void GitHubReleaseChecker::check(const QString &updateInfo, const QString &curre
 
         const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
         if (!doc.isObject()) {
-            Q_EMIT failed();
+            Q_EMIT checkFinished(Result::Failed, {}, {});
             return;
         }
 
         const QString tag = doc.object().value(QLatin1String("tag_name")).toString();
         if (tag.isEmpty()) {
-            Q_EMIT failed();
+            Q_EMIT checkFinished(Result::Failed, {}, {});
             return;
         }
 
         const QString remoteVer = normalizeVersion(tag);
         if (!isNewerVersion(remoteVer, localVer)) {
-            Q_EMIT upToDate();
+            Q_EMIT checkFinished(Result::UpToDate, {}, {});
             return;
         }
 
@@ -76,7 +76,7 @@ void GitHubReleaseChecker::check(const QString &updateInfo, const QString &curre
             }
         }
 
-        Q_EMIT updateAvailable(remoteVer, zsyncUrl);
+        Q_EMIT checkFinished(Result::UpdateAvailable, remoteVer, zsyncUrl);
     });
 }
 
@@ -84,7 +84,7 @@ void GitHubReleaseChecker::checkAtomFeed()
 {
     const QStringList parts = m_updateInfo.split(QLatin1Char('|'));
     if (parts.size() < 3) {
-        Q_EMIT failed();
+        Q_EMIT checkFinished(Result::Failed, {}, {});
         return;
     }
 
@@ -102,7 +102,7 @@ void GitHubReleaseChecker::checkAtomFeed()
 
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(AIM_LOG) << "GitHub Atom feed fallback also failed:" << reply->errorString();
-            Q_EMIT networkFailed();
+            Q_EMIT checkFinished(Result::NetworkFailed, {}, {});
             return;
         }
 
@@ -132,7 +132,7 @@ void GitHubReleaseChecker::checkAtomFeed()
 
         if (latestTag.isEmpty()) {
             qCWarning(AIM_LOG) << "GitHub Atom feed fallback: could not find latest release tag in feed";
-            Q_EMIT failed();
+            Q_EMIT checkFinished(Result::Failed, {}, {});
             return;
         }
 
@@ -140,7 +140,7 @@ void GitHubReleaseChecker::checkAtomFeed()
         const QString remoteVer = normalizeVersion(latestTag);
 
         if (!isNewerVersion(remoteVer, localVer)) {
-            Q_EMIT upToDate();
+            Q_EMIT checkFinished(Result::UpToDate, {}, {});
             return;
         }
 
@@ -157,6 +157,6 @@ void GitHubReleaseChecker::checkAtomFeed()
         }
 
         qCDebug(AIM_LOG) << "GitHub Atom feed fallback: update available:" << remoteVer << "zsync URL:" << zsyncUrl;
-        Q_EMIT updateAvailable(remoteVer, zsyncUrl);
+        Q_EMIT checkFinished(Result::UpdateAvailable, remoteVer, zsyncUrl);
     });
 }

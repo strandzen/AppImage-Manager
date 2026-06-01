@@ -4,22 +4,22 @@
 
 #include "appimagemanager_qml_export.h"
 
-#include <QByteArray>
 #include <QCache>
 #include <QMutex>
 #include <QPixmap>
 #include <QQuickImageProvider>
-#include <QReadWriteLock>
 #include <QString>
 
-// Provides the raw icon bytes extracted from inside an AppImage.
-// Registered with the QML engine as "image://appimage/icon".
-// Thread-safe: setIconData() is called from a worker thread,
-// requestPixmap() is called from the QML/render thread.
+// Provides rendered pixmaps for icons extracted from AppImages.
+// Registered with each QML engine as "image://appimage/<id>".
 //
-// Supports multiple icons keyed by an arbitrary string id.
-// The single-file manage window uses the "icon" key via the convenience overload.
-// The dashboard registers per-file icons using iconIdForPath() keys.
+// Raw icon bytes are stored in the process-wide AppImageIconStore singleton so
+// multiple engine instances (dashboard + manage windows) share one copy of the data.
+// Each provider instance keeps its own QPixmap render cache — pixmaps cannot be
+// shared across engines because they are bound to a specific rendering context.
+//
+// Thread-safety: setIconData() may be called from worker threads;
+// requestPixmap() is called from the QML/render thread.
 class APPIMAGEMANAGER_EXPORT AppImageIconProvider : public QQuickImageProvider
 {
 public:
@@ -36,14 +36,9 @@ public:
                           const QSize &requestedSize) override;
 
 private:
-    struct IconEntry { QByteArray data; QString ext; };
-    QHash<QString, IconEntry> m_icons;
     // Rendered pixmaps keyed by "id:WxH"; capped at ~32 MB so it cannot grow
     // unbounded with hundreds of dashboard delegates requesting many sizes.
+    // Per-engine: pixmaps are not safe to share across QML engine instances.
     QCache<QString, QPixmap> m_renderCache { 32 * 1024 * 1024 };
-
-    // Two separate locks: m_icons is read-heavy (concurrent requestPixmap calls),
-    // m_renderCache always needs exclusive access (QCache::object mutates LRU).
-    mutable QReadWriteLock m_iconsLock;
-    mutable QMutex         m_cacheMutex;
+    mutable QMutex           m_cacheMutex;
 };

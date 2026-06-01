@@ -49,9 +49,23 @@
   <url type="homepage">https://github.com/strandzen/AppImage-Manager</url>
   <url type="bugtracker">https://github.com/strandzen/AppImage-Manager/issues</url>
 
-  <content_rating type="oars-1.1"/>
+  <kudos>
+    <kudo>HiDpiIcon</kudo>
+    <kudo>ModernToolkit</kudo>
+    <kudo>Notifications</kudo>
+  </kudos>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-info">mild</content_attribute>
+    <content_attribute id="network-transactions">mild</content_attribute>
+  </content_rating>
 
   <releases>
+    <release version="1.5.0" date="2026-06-01">
+      <description>
+        <p>KirigamiAddons FormCard settings layout. KConfig XT settings backend. Process-wide icon store shared across engine instances. Dashboard delegate replaced with Controls.ItemDelegate for uniform selection highlight. Removed batch selection mode. Fixed persistent "Loading N…" label caused by synchronous cache hits racing against pendingLoads assignment. Removed StorageDialog. Drag icon visual improved in manage window.</p>
+      </description>
+    </release>
     <release version="1.4.0" date="2025-05-28">
       <description>
         <p>Settings redesigned with card-based layout. New About dialog with contributor list and library versions. Accent border toggle. Sandbox detection for Flatpak/Snap environments. Nine new translations (cs, ja, pl, pt_BR, ru, sk, tr, uk, zh_CN). Atomic update swap with crash recovery. Concurrent icon rendering with split read/write locks. Background update timer now correctly skips when frequency is set to Never.</p>

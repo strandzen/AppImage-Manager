@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+  <kcfgfile name="appimagemanagerrc"/>
+  <group name="General">
+    <entry name="applicationsPath" type="String">
+      <default code="true">QDir::homePath() + QStringLiteral("/Applications")</default>
+    </entry>
+    <entry name="showDisclaimer" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="showNotifications" type="Bool">
+      <default>true</default>
+    </entry>
+  </group>
+  <group name="Updates">
+    <entry name="updateFrequency" type="Int">
+      <default>1</default>
+    </entry>
+    <entry name="customUpdateDays" type="Int">
+      <default>7</default>
+    </entry>
+  </group>
+  <group name="Appearance">
+    <entry name="manageIconSize" type="Int">
+      <default>2</default>
+    </entry>
+    <entry name="showInstallBox" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="accentBorders" type="Bool">
+      <default>true</default>
+    </entry>
+  </group>
+  <group name="Behavior">
+    <entry name="watchDownloads" type="Bool">
+      <default>true</default>
+    </entry>
+  </group>
+</kcfg>
