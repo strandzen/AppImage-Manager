@@ -1,3 +1,0 @@
-- [x] Prepare content for the new README.md
-- [x] Update README.md with the simplified and user-friendly version
-- [x] Verify the content and links

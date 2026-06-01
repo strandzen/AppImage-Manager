@@ -120,8 +120,8 @@ Kirigami.Dialog {
         ColumnLayout {
             id: contentLayout
             spacing: Kirigami.Units.largeSpacing
-            width: scrollView.availableWidth - Kirigami.Units.largeSpacing
-            x: Kirigami.Units.largeSpacing / 2
+            width: scrollView.availableWidth - Kirigami.Units.largeSpacing * 2
+            x: Kirigami.Units.largeSpacing
 
         // ── Card 1: App Header ───────────────────────────────────────────────
         Rectangle {

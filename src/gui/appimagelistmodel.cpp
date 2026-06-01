@@ -16,6 +16,7 @@
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
 #include <QDir>
+#include <QGuiApplication>
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QIcon>
@@ -62,6 +63,10 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
                 const auto *iface = QDBusConnection::sessionBus().interface();
                 if (iface && iface->isServiceRegistered(
                         QStringLiteral("io.github.appimagemanager.Daemon")))
+                    return;
+
+                // HIG: don't notify while the app's main window is in the foreground.
+                if (QGuiApplication::applicationState() == Qt::ApplicationActive)
                     return;
 
                 auto *n = new KNotification(QStringLiteral("downloaded"),

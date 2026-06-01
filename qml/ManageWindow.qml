@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
-import QtQuick.Window
 import org.kde.kirigami as Kirigami
 import appimagemanager
 
-ApplicationWindow {
+Kirigami.ApplicationWindow {
     id: root
     visible: true
     title: i18n("AppImage Manager")
@@ -16,8 +15,6 @@ ApplicationWindow {
     height: Kirigami.Units.gridUnit * 22
     minimumWidth:  width;  maximumWidth:  width
     minimumHeight: height; maximumHeight: height
-
-    flags: Qt.Window | Qt.WindowMinimizeButtonHint | Qt.WindowCloseButtonHint
 
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
@@ -35,7 +32,7 @@ ApplicationWindow {
     // ── About dialog ─────────────────────────────────────────────────────────
     AboutDialog { id: aboutDialog }
 
-    BusyIndicator {
+    Controls.BusyIndicator {
         anchors.centerIn: parent
         running: !backend.metadataLoaded
         visible: !backend.metadataLoaded
@@ -62,7 +59,7 @@ ApplicationWindow {
                 Kirigami.Heading {
                     text: backend.displayName
                     level: 2; horizontalAlignment: Text.AlignHCenter; Layout.fillWidth: true; elide: Text.ElideRight
-                    ToolTip.visible: infoMouseArea.containsMouse; ToolTip.text: backend.originalName
+                    Controls.ToolTip.visible: infoMouseArea.containsMouse; Controls.ToolTip.text: backend.originalName
                     MouseArea { id: infoMouseArea; anchors.fill: parent; hoverEnabled: true }
                 }
 
@@ -82,10 +79,10 @@ ApplicationWindow {
 
             Item { Layout.fillWidth: true }
 
-            ToolButton {
+            Controls.ToolButton {
                 icon.name: "help-about"
                 onClicked: aboutDialog.open()
-                ToolTip.text: i18n("About"); ToolTip.visible: hovered
+                Controls.ToolTip.text: i18n("About"); Controls.ToolTip.visible: hovered
                 Layout.alignment: Qt.AlignTop
             }
         }
@@ -160,16 +157,16 @@ ApplicationWindow {
                                 dragIcon.x = 0
                                 dragIcon.y = 0
                             }
-                            ToolTip.visible: backend.isInstalled && containsMouse
-                            ToolTip.text: i18n("Launch %1", backend.displayName)
+                            Controls.ToolTip.visible: backend.isInstalled && containsMouse
+                            Controls.ToolTip.text: i18n("Launch %1", backend.displayName)
                         }
                     }
-                    Label {
+                    Controls.Label {
                         text: backend.displayName; horizontalAlignment: Text.AlignHCenter
-                        Layout.alignment: Qt.AlignHCenter; elide: Label.ElideRight
+                        Layout.alignment: Qt.AlignHCenter; elide: Text.ElideRight
                         Layout.maximumWidth: Kirigami.Units.gridUnit * 10; font.bold: backend.isInstalled
                     }
-                    Label {
+                    Controls.Label {
                         text: i18n("Drag icon to install")
                         visible: !backend.isInstalled
                         opacity: 0.5
@@ -205,12 +202,12 @@ ApplicationWindow {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: backend.openDashboard()
-                            ToolTip.text: i18n("Open Dashboard")
-                            ToolTip.visible: containsMouse && !folderDropArea.containsDrag
+                            Controls.ToolTip.text: i18n("Open Dashboard")
+                            Controls.ToolTip.visible: containsMouse && !folderDropArea.containsDrag
                         }
                     }
 
-                    Label {
+                    Controls.Label {
                         text: i18n("Applications")
                         horizontalAlignment: Text.AlignHCenter
                         Layout.alignment: Qt.AlignHCenter
@@ -240,10 +237,10 @@ ApplicationWindow {
         }
 
         // ── Remove (installed) ────────────────────────────────────────────────
-        Button {
+        Controls.Button {
             Layout.alignment: Qt.AlignHCenter
             visible: backend.isInstalled
-            text: i18n("Remove"); icon.name: "edit-delete"
+            text: i18n("Remove"); icon.name: "trash-empty"
             onClicked: {
                 uninstallDialog.backend = backend
                 uninstallDialog.open()

@@ -1,8 +1,0 @@
-- `[x]` Migrate settings subsystem to KConfigXT
-- `[x]` Clean desktop translations and automate via msgfmt
-- `[x]` Refactor installer drag-and-drop to symbolic layout
-- `[x]` Redesign Dashboard to Kirigami.ColumnView
-    - `[x]` Replace master-detail RowLayout with Kirigami.ColumnView
-    - `[x]` Replace list delegate with Kirigami.AbstractListItem
-    - `[x]` Restructure details pane using Kirigami.Cards
-    - `[x]` Verify building and passing QML tests

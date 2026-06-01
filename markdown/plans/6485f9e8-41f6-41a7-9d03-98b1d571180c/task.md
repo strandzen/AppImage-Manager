@@ -1,9 +1,0 @@
-- [/] AppImage GitHub Integration <!-- id: 50 -->
-    - [/] Backend: Add version parsing, signals, QNetworkAccessManager async calls <!-- id: 51 -->
-    - [/] Backend: Implement `check_for_updates`, `check_all_updates`, `download_update` <!-- id: 52 -->
-    - [/] Backend: Add `selectedAppImage` property and `select_appimage` slot <!-- id: 53 -->
-    - [/] Backend: Add `releaseNotes` model role <!-- id: 54 -->
-    - [ ] UI: Rewrite `AppImageManagerPage.qml` as center pane with version info and release notes <!-- id: 55 -->
-    - [ ] UI: Refine `TaskProgressPane.qml` side pane with state-driven action buttons and progress bar <!-- id: 56 -->
-    - [ ] UI: Create `VersionBadge.qml` helper component <!-- id: 57 -->
-    - [ ] Fix binding loop warnings in `ToolButton` elements in `TaskProgressPane.qml` <!-- id: 58 -->

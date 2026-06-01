@@ -13,6 +13,8 @@
 #include <KLocalizedQmlContext>
 #include <KLocalizedString>
 #include <KNotification>
+#include <KSharedConfig>
+#include <KConfigGroup>
 #include <KQuickIconProvider>
 #include "../dbus/appimagedbusadaptor.h"
 
@@ -97,6 +99,11 @@ void DashboardWindow::setupAndShow()
     connect(m_window, &QQuickWindow::closing, this, [this]() {
         s_instance = nullptr;
 
+        KConfigGroup grp = KSharedConfig::openConfig()->group(QStringLiteral("DashboardWindow"));
+        grp.writeEntry("size", m_window->size());
+        grp.writeEntry("position", m_window->position());
+        grp.sync();
+
         // Quit only if the dashboard was the sole visible window.
         const auto windows = qApp->topLevelWindows();
         const bool otherVisible = std::any_of(windows.begin(), windows.end(),
@@ -117,6 +124,17 @@ void DashboardWindow::setupAndShow()
         qCWarning(AIM_LOG) << "Failed to register D-Bus service io.github.appimagemanager.Manager1";
 
     m_listModel->scan();
+
+    // Restore saved window geometry before showing.
+    {
+        KConfigGroup grp = KSharedConfig::openConfig()->group(QStringLiteral("DashboardWindow"));
+        const QSize sz = grp.readEntry("size", QSize());
+        if (sz.isValid())
+            m_window->resize(sz);
+        const QPoint pos = grp.readEntry("position", QPoint(-1, -1));
+        if (pos.x() >= 0 && pos.y() >= 0)
+            m_window->setPosition(pos);
+    }
 
     m_window->show();
     m_window->setTitle(QStringLiteral("AppImage Dashboard"));

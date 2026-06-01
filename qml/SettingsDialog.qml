@@ -38,7 +38,8 @@ Kirigami.Dialog {
         Controls.ScrollBar.vertical.policy: Controls.ScrollBar.AsNeeded
 
         ColumnLayout {
-            width: scrollView.availableWidth
+            width: scrollView.availableWidth - Kirigami.Units.largeSpacing * 2
+            x: Kirigami.Units.largeSpacing
             spacing: 0
 
             Kirigami.InlineMessage {

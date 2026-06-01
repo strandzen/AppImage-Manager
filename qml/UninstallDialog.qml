@@ -255,8 +255,8 @@ Kirigami.Dialog {
                     onClicked: dialog.close()
                 }
                 Controls.Button {
-                    text: i18n("Remove")
-                    icon.name: "edit-delete"
+                    text: i18n("Move to Trash")
+                    icon.name: "trash-empty"
                     palette.button: Kirigami.Theme.negativeTextColor
                     palette.buttonText: Kirigami.Theme.backgroundColor
                     onClicked: confirmRemoveDialog.open()

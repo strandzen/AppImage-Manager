@@ -264,7 +264,7 @@ Kirigami.ApplicationWindow {
                             Layout.leftMargin: Kirigami.Units.smallSpacing
                             Layout.rightMargin: Kirigami.Units.smallSpacing
                             Layout.bottomMargin: Kirigami.Units.smallSpacing
-                            placeholderText: i18n("Search…")
+                            placeholderText: i18n("Search")
                             onTextChanged: proxyModel.filterText = text
                         }
 
@@ -712,7 +712,7 @@ Kirigami.ApplicationWindow {
 
                                 Controls.Button {
                                     text: i18n("Remove")
-                                    icon.name: "edit-delete"
+                                    icon.name: "trash-empty"
                                     onClicked: proxyModel.requestRemoveAt(listView.currentIndex)
                                     Layout.fillWidth: true
                                 }
