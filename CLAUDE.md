@@ -10,16 +10,27 @@ This file is the authoritative reference for working on AppImage Manager.
 
 **Distribution target:** KDE Store and AUR.  
 **Philosophy:** Simplicity and efficiency. No unnecessary abstractions. Every feature must justify its existence.  
-**Stack:** C++20, Qt 6.9, KDE Frameworks 6.7, KirigamiAddons, Kirigami (Plasma 6 era), QML. Project version `1.5.0`.  
+**Stack:** C++20, Qt 6.9, KDE Frameworks 6.7, KirigamiAddons, Kirigami (Plasma 6 era), QML. Project version `2.0.0`.  
 **License:** GPL-2.0-or-later.
 
 ### AI Assistant Guidelines
 
 - **Plan Backups:** Always "backup" every big change or implementation plan as a `.md` file inside the `markdown/plans/` directory of the project.
 
+#### Behavioral principles (derived from Karpathy's LLM coding observations)
+
+**1. Think before coding.** State assumptions explicitly before implementing. If multiple interpretations exist, surface them — don't pick silently. If something is unclear, stop and ask. Push back when a simpler approach exists.
+
+**2. Simplicity first.** Minimum code that solves the problem. No features beyond what was asked. No abstractions for single-use code. No speculative flexibility or configurability. If it could be 50 lines, don't write 200.
+
+**3. Surgical changes.** Touch only what the request requires. Don't improve adjacent code, comments, or formatting. Match existing style even if you'd do it differently. Mention unrelated dead code — don't delete it. Remove only imports/variables/functions that *your* changes made unused.
+
+**4. Goal-driven execution.** Transform tasks into verifiable goals before starting. For multi-step tasks, state a brief plan with per-step success criteria. Loop until verified — don't hand back unverified work.
+
 ### Roadmap (planned, not yet implemented)
 
-- **Signature verification** — verify AppImage signatures before install.
+- **Per-item signature badge in LibraryPage** — lazy-check signature state for each installed AppImage and display a badge in the detail pane (verification on install is done; per-library scan is the remaining piece).
+- **Sandbox/bubblewrap launch option** — opt-in setting to launch AppImages under `bwrap` for filesystem isolation.
 
 ---
 
@@ -87,11 +98,11 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 
 | Class | Files | Role |
 |-------|-------|------|
-| `AppImageInfo` | `appimageinfo.h` | Value struct: `originalName`, `cleanName`, `appId`, `appName`, `version`, `categories`, `comment`, `description`, `developerName`, `homepage`, `execArgs`, `fileSize`, `iconData`, `iconExt`, `updateInfo`, `isValid`. `description` = AppStream XML content; falls back to `comment` (`.desktop Comment=`) if XML absent |
-| `AppImageReader` | `appimagereader.h/.cpp` | **BLOCKING** extractor. Requires `libappimage` (in-process SquashFS, no FUSE/subprocess). Reads `.desktop` via `KDesktopFile`, then AppStream XML from `usr/share/metainfo/*.appdata.xml` or `usr/share/appdata/*.metainfo.xml` via `QXmlStreamReader`. **Always call via `QtConcurrent::run`** |
+| `AppImageInfo` | `appimageinfo.h` | Value struct: `originalName`, `cleanName`, `appId`, `appName`, `version`, `categories`, `comment`, `description`, `developerName`, `homepage`, `execArgs`, `fileSize`, `iconData`, `iconExt`, `updateInfo`, `isValid`. Also defines the `SignatureState` enum (`Unchecked=0`, `Valid=1`, `Invalid=2`, `Unsigned=3`, `GpgUnavailable=4`) used by `AppImageReader::verifySignature()`. `description` = AppStream XML content; falls back to `comment` (`.desktop Comment=`) if XML absent |
+| `AppImageReader` | `appimagereader.h/.cpp` | **BLOCKING** extractor. Requires `libappimage` (in-process SquashFS, no FUSE/subprocess). Reads `.desktop` via `KDesktopFile`, then AppStream XML from `usr/share/metainfo/*.appdata.xml` or `usr/share/appdata/*.metainfo.xml` via `QXmlStreamReader`. **Always call via `QtConcurrent::run`**. Also provides `static SignatureState verifySignature(const QString &path)` — parses ELF64 section headers for `.sha256_sig`/`.sha256_hash` (falls back to `.sha1_sig`/`.sha1_hash`), writes to a `QTemporaryDir`, and invokes `gpg2`/`gpg` to verify the detached signature. Returns `Unsigned` if section absent, `GpgUnavailable` if gpg not on PATH. Safe to call from worker threads |
 | `AppImageCache` | `appimagecache.h/.cpp` | Thread-safe on-disk cache (SQLite via `Qt6::Sql`, WAL mode, per-thread connection; DB path `$XDG_DATA_HOME/AppImageManager/cache.db`; one row per AppImage keyed by `MD5(path)`). **`kCacheVersion = 4`** — schema migrated from QSettings INI in v4; adds `developer_name` / `homepage`. Rows with `cache_version != 4` or stale `mtime` are returned as invalid (forces a cold re-read) |
-| `AppImageManager` | `appimagemanager.h/.cpp` | File operations: `installAppImage()` (KIO::move when source is under `~/Downloads`, KIO::copy otherwise — preserves originals on USB sticks / project dirs; chmod +x on result), `createDesktopLink()`, `removeDesktopLink()`, `isDesktopLinkEnabled()`, `findCorpses()` (blocking), `removeItems()` (KIO::trash). `rebuildSycoca()` is called automatically from createDesktopLink / removeDesktopLink |
-| `AppSettings` | `appsettings.h/.cpp` | QML singleton (`AppSettings`). Delegates all reads/writes to the KConfig XT-generated `AppImageManagerSettings::self()` (schema: `appimagemanagersettings.kcfg`). Properties: `applicationsPath`, `showDisclaimer`, `showNotifications`, `updateFrequency`, `customUpdateDays`, `manageIconSize`, `watchDownloads`, `showInstallBox`, `accentBorders`. Each setter calls `AppImageManagerSettings::self()->save()`. Setter validates path via `QDir::mkpath()`, emits `applicationsPathError(msg)` on failure |
+| `AppImageManager` | `appimagemanager.h/.cpp` | File operations: `installAppImage()` (KIO::move when source is under `~/Downloads`, KIO::copy otherwise — preserves originals on USB sticks / project dirs; chmod +x on result), `createDesktopLink()`, `removeDesktopLink()`, `isDesktopLinkEnabled()`, `findCorpses()` (blocking), `removeItems()` (KIO::trash). `rebuildSycoca()` + `update-desktop-database` + `update-icon-caches` called from `createDesktopLink`/`removeDesktopLink` — covers both Plasma's service catalog and XDG-spec caches for non-Plasma launchers. `fileKey(info)` derives desktop/icon filenames: uses `appId` when it contains `.` (reverse-domain), otherwise appends a 6-char `qHash(originalName)` suffix to the cleanName slug to prevent collision between two AppImages with the same display name |
+| `AppSettings` | `appsettings.h/.cpp` | QML singleton (`AppSettings`). Delegates all reads/writes to the KConfig XT-generated `AppImageManagerSettings::self()` (schema: `appimagemanagersettings.kcfg`). Properties: `applicationsPath`, `showDisclaimer`, `firstRun`, `showNotifications`, `updateFrequency`, `customUpdateDays`, `manageIconSize`, `watchDownloads`, `showInstallBox`, `accentBorders`, `verifySignatures`. Each setter calls `AppImageManagerSettings::self()->save()`. Setter validates path via `QDir::mkpath()`, emits `applicationsPathError(msg)` on failure |
 | `GitHubReleaseChecker` | `githubreleasechecker.h/.cpp` | Parses `gh-releases-zsync\|owner\|repo\|...` update info, hits GitHub Releases API, emits `updateAvailable(newVersion, zsyncUrl)`, `upToDate()`, `networkFailed()`, or `failed()`. Used by both `UpdateDaemon` and `AppImageUpdateManager` — single source of truth for GitHub update logic |
 | `UpdateDaemon` | `updatedaemon.h/.cpp` | Background update checker. Launched via `--daemon` CLI flag (autostart desktop file installs to `$KDE_INSTALL_AUTOSTARTDIR`). Persistent tray entry (`KStatusNotifierItem`) with "Check Now" + "Open Dashboard" actions. Scans `applicationsPath` hourly (interval via `intervalForFrequency`); timer starts only when `updateFrequency != 0` — "Never" (0) leaves the timer stopped. When frequency changes at runtime: 0 → `stop()`; non-zero → `setInterval()` + `start()`. Uses `GitHubReleaseChecker` + parallelised cold-cache `AppImageReader` reads, fires `KNotification` on update found. Owns a `DownloadWatcher` for `~/Downloads`. Registers D-Bus name `io.github.appimagemanager.Daemon` on start so the dashboard can skip duplicate download notifications. Uses `Qt6::Network` |
 
@@ -99,7 +110,7 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 
 | Class | Files | Role |
 |-------|-------|------|
-| `AppImageBackend` | `appimagebackend.h/.cpp` | QML context property `backend`. Owns `AppImageInfo` + all mutable install state. Exposes metadata + ops as Q_PROPERTYs and slots. Holds `CorpseModel`. Emits `uninstallFinished` |
+| `AppImageBackend` | `appimagebackend.h/.cpp` | QML context property `backend`. Owns `AppImageInfo` + all mutable install state. Exposes metadata + ops as Q_PROPERTYs and slots. Holds `CorpseModel`. Emits `uninstallFinished`. Install flow is split: `beginInstall()` runs `AppImageReader::verifySignature()` off-thread (if `AppSettings::verifySignatures` is on) and emits `signatureCheckReady(int state)` — QML inspects the `SigState` Q_ENUM value and either calls `doInstall()` directly or shows a warning dialog first. `SigState` enum (Unchecked=0, Valid=1, Invalid=2, Unsigned=3, GpgUnavailable=4) mirrors `SignatureState` and is registered as Q_ENUM for QML access |
 | `AppImageIconStore` | `appimageiconstore.h/.cpp` | Process-wide singleton holding raw icon bytes extracted from AppImages. Shared across all QML engine instances (dashboard + manage windows) so multiple windows don't re-extract the same bytes. Thread-safe write (`setIconData`) via internal lock |
 | `AppImageIconProvider` | `appimageiconprovider.h/.cpp` | `QQuickImageProvider` for `image://appimage/<id>`. Reads raw bytes from `AppImageIconStore`; each provider instance owns its own per-engine `QPixmap` render cache (`m_cacheMutex` guards the `QCache` — `QCache::object` mutates LRU state even on read). SVG/PNG rendering happens between the store read and cache write. Caches rendered pixmaps keyed by `(id, size)`. Key `"icon"` = manage window single icon; key = `qHash(path)` decimal string = dashboard per-file icon |
 | `CorpseModel` | `corpsemodel.h/.cpp` | `QAbstractListModel` for leftover config/cache dirs. Roles: `filePath`, `fileSize`, `isChecked`. **No `QML_ELEMENT`** — Qt 6.11 constexpr metaobject bug. Exposed only via `AppImageBackend::corpseModel` Q_PROPERTY. `checkedRole` Q_PROPERTY replaces enum access from QML |
@@ -108,7 +119,8 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 | `AppImageUpdateManager` | `appimageupdate.h/.cpp` | Batched update checker + downloader. `checkForUpdates(items)` — per item, fetches `.zsync` header, compares `SHA-1` (calculated off-thread via `QtConcurrent`), emits `updateFound/upToDate`. `downloadUpdate(path, zsyncUrl, ...)` — spawns `zsync2` subprocess; if `zsync2` is missing on `PATH`, falls back to a full HTTP download via the `URL:` header in the `.zsync` file. Both paths use an atomic-ish swap: `old → old.bak`, then `old.new → old`, then `QFile::remove(bak)` on success. If either rename fails, restores `.bak` to original and emits failure. A leftover `.bak` after a crash = mid-swap interruption, recoverable manually. Signals: `checkingChanged`, `checkFinished(found, failures)`, `updateFound`, `downloadProgress`, `downloadFinished` |
 | `AppImageListModel` | `appimagelistmodel.h/.cpp` | Dashboard list model. Roles: `filePath`, `displayName`, `cleanName`, `appName`, `version`, `iconSource`, `hasDesktopLink`, `metadataLoaded`, `appSize`, `formattedSize`, `addedDate`, `categories`, `comment`, `description`, `developerName`, `homepage`, `updateAvailable`, `updateVersion`, `isUpdating`, `updateProgress`. Properties: `scanning`, `checkingUpdates`, `pendingLoads` (int — live count of in-flight metadata futures; QML uses this for a "Loading N…" label), `downloadWatcherSandboxed` (bool `CONSTANT` — true when `FLATPAK_ID`/`SNAP` env present). Invokables: `scan`, `refresh`, `toggleDesktopLink`, `requestRemoveAt`, `requestLaunch`, `checkForUpdates`, `downloadUpdate`, `itemData(row)` (bulk role snapshot for QML). Watches `applicationsPath` via `KDirWatch` (`WatchFiles`) and routes `created/deleted/dirty` straight to incremental inserts/removes — no debounce, no full re-scan. Reader workers dispatch through `m_readerPool` (bounded to `qBound(1, QThread::idealThreadCount() / 2, 4)`) to prevent thread storms on large libraries. Holds an `AppImageUpdateManager` and a `DownloadWatcher`. `m_generation` invalidates stale futures on `refresh()`; `m_pendingLoads` drives both the `scanning` flag and the `pendingLoads` property. `m_pathIndex` (`QHash<QString, int>`) keeps row index by path for O(1) `findRowByPath` |
 | `AppImageSortFilterModel` | `appimagesortfiltermodel.h/.cpp` | Proxy over `AppImageListModel`. Sort: `SortByName=0`, `SortBySize=1`, `SortByCategory=5`, `SortByDate=9`. Filter: case-insensitive text match on `cleanName` + `appName`. `lessThan` reads typed values via `AppImageListModel::sortKey()` to skip QVariant role dispatch. Uses Qt 6.9 `beginFilterChange/endFilterChange` where applicable |
-| `DashboardWindow` | `dashboardwindow.h/.cpp` | Singleton dashboard host. Creates its own `QQmlApplicationEngine`. Holds `m_listModel`, `m_proxyModel`, `m_uninstallBackend`. `createBackend(path, withCorpses)` — uninstall backend passes `true` (triggers corpse scan after metadata load) |
+| `DashboardWindow` | `dashboardwindow.h/.cpp` | Singleton dashboard host. Creates its own `QQmlApplicationEngine`. Holds `m_listModel`, `m_proxyModel`, `m_uninstallBackend`, `m_storeModel`. `createBackend(path, withCorpses)` — uninstall backend passes `true` (triggers corpse scan after metadata load). Exposes `amStoreModel` as context property |
+| `AMStoreModel` | `amstoremodel.h/.cpp` | Discover page store catalog. Two data sources: AM database (`programs/x86_64-appimages`, `◆ package : description` lines) and AppImage Hub feed (`appimage.github.io/feed.json`, 1,383 curated apps with icons, categories, authors). Both fetched in parallel; **parsing runs on worker threads** via `QtConcurrent::run` + `QFutureWatcher<QVector<StoreApp>>`; results marshalled back via `onAmParsed`/`onFeedParsed`. Disk cache in `QStandardPaths::CacheLocation` with 24h freshness check. `mergeDatabases()` cross-references AM + Hub by normalized name; `QIcon::hasThemeIcon()` called here (main thread only). `applyFilter()` dispatched to worker with `m_filterGeneration` counter to discard stale results. `storeSource` (0=All/1=Hub/2=AM) persisted in `QSettings`. SVG icons filtered at parse time — Qt's renderer crashes on CSS mesh-gradient SVGs. **Lazy-loaded: never call `load()` from constructor**; call `initialize()` once from QML when Discover page first becomes visible |
 
 ### D-Bus (`src/dbus/`)
 
@@ -131,11 +143,17 @@ All QML lives in [qml/](qml/) (top-level, not under `src/`). Files are wired int
 | File | Type | Context / Properties |
 |------|------|----------------------|
 | `Theme.qml` | `pragma Singleton` QtObject | Shared `cardBorderColor` computed from `AppSettings.accentBorders` + `Kirigami.Theme`. Import as `Theme` from `appimagemanager` module. Use instead of duplicating the inline color expression |
-| `ManageWindow.qml` | `ApplicationWindow` (fixed 26×22 gridUnits) | Context prop: `backend` (AppImageBackend). Drag-and-drop install — floating `dragIcon` surrogate used as drag target, original icon fades to 30% opacity during drag. Inline `UninstallDialog` |
-| `DashboardWindow.qml` | `Kirigami.ApplicationWindow` | Context props: `listModel`, `proxyModel`, `dashboardController`. Sort/filter/search, update checks. Master list (`Controls.ItemDelegate` delegate with uniform insets) fills full window when no selection; narrows to `preferredWidth: 18 gridUnits` when item selected. Detail pane: icon, heading (`elide: ElideRight`), chips (`Flow`), description (`ScrollView` vertical-only, `Text.StyledText`). No pane separators. Outer scroll hidden — only description-card inner scroller visible. "Loading N…" label reads `listModel.pendingLoads`. Chip visibility controlled by `noSelection` delegate property |
-| `UninstallDialog.qml` | `Kirigami.Dialog` | Prop: `backend`. Corpse checklist + total size + confirm. Sets `backend = null` on close. Used in both ManageWindow and DashboardWindow |
-| `UpdateDialog.qml` | `Kirigami.Dialog` | Props: `appName`, `currentVersion`, `newVersion`, `proxyRow`. Signal: `downloadRequested()`. Confirms before kicking off `AppImageUpdateManager::downloadUpdate()` |
-| `SettingsDialog.qml` | `Kirigami.Dialog` (28×34 gridUnits, `padding: 0`) | Uses `AppSettings` singleton + `FormCard` from KirigamiAddons. Path field + folder picker. Toggles: manage icon size, show install drag box, show security disclaimer, show notifications, notify when AppImage downloaded (`watchDownloads`), update frequency, accent borders. `Kirigami.InlineMessage` below `watchDownloads` toggle when `listModel.downloadWatcherSandboxed` is true |
+| `ManageWindow.qml` | `ApplicationWindow` (fixed 26×22 gridUnits) | Context prop: `backend` (AppImageBackend). Drag-and-drop install — floating `dragIcon` surrogate used as drag target, original icon fades to 30% opacity during drag. On drop calls `backend.beginInstall()` (not `installAppImage`); `onSignatureCheckReady` handler routes to `doInstall()` or opens `signatureWarnDialog`. Inline `UninstallDialog` and `signatureWarnDialog` (`Kirigami.Dialog` with security icon, Ok/Cancel) |
+| `DashboardWindow.qml` | `Kirigami.ApplicationWindow` | Context props: `listModel`, `proxyModel`, `dashboardController`, `amStoreModel`. Sidebar navigation (collapsible, 300ms `InOutQuad` animation) with 4 pages in a `StackLayout`: Discover (`StorePage`), Installed (`LibraryPage`), Settings (`SettingsPage`), About (`AboutPage`). Header: sidebar toggle + "AppImage Manager" heading + "Install from File" button (no app icon). Default page: Installed (index 1). Global drag-and-drop overlay for `.AppImage` files |
+| `LibraryPage.qml` | `Kirigami.Page` | Context props: `listModel`, `proxyModel`. Master-detail layout. Left pane: search field, progress bar (scanning), "Loading N…" label, list with per-row chips (version/size/category/date), update indicator, busy spinner. Right pane: detail view with `displayedItem` property that lags `currentItem` — selection change triggers `SequentialAnimation` (80ms fade-out → swap content → 150ms fade-in); data updates (metadata load, update check) sync `displayedItem` immediately. `ListView` has `Controls.ScrollBar.vertical`. Action bar: Launch / Update / Remove buttons + download progress bar. Keyboard shortcuts: Return=Launch, Delete=Remove, Escape=Deselect |
+| `StorePage.qml` | `Kirigami.Page` | Discover page. Context prop: `amStoreModel`. Left pane: search + sort button + source filter button (funnel → `Controls.Menu`: All/AppImage Hub/AM Database, persisted); category chips in a `Flickable` (horizontal-only, no ScrollView so no vertical clipping); `ListView` with vertical scrollbar. Right pane: detail with `displayedItem` fade-transition (same pattern as LibraryPage). Action bar: split-button `[ primary ][ ▼ ]` — primary is "Install via AM" if `hasAmScript` else "Download"; `▼` dropdown appears only when app has both sources, offering both options; "Cancel" replaces during install. Install log: colorized by keyword (error=red/warning=orange/success=green), collapsible toggle, auto-scroll. Progress bar shows install stage 0–5. Lazy init: `onVisibleChanged` calls `amStoreModel.initialize()` once |
+| `SettingsPage.qml` | `Kirigami.Page` | `AppSettings` singleton. FormCard-based form. Sections: Storage & Location, Appearance, Behavior & Security, Background Updates. Custom update-interval separator + spinbox animate in/out with `Behavior on opacity { NumberAnimation { duration: 150 } }` |
+| `AboutPage.qml` | `Kirigami.Page` | App info, license, links, library versions (Qt/KDE/libappimage), contributors loaded via `ContributorsModel` |
+| `UninstallDialog.qml` | `Kirigami.Dialog` | Prop: `backend`. Corpse checklist + total size + confirm. `Kirigami.InlineMessage` shows KIO trash errors. Sets `backend = null` on close |
+| `UpdateDialog.qml` | `Kirigami.Dialog` | Props: `appName`, `currentVersion`, `newVersion`, `proxyRow`. Signal: `downloadRequested()`. Shows version comparison + zsync2 fallback note |
+| `SettingsDialog.qml` | `Kirigami.Dialog` (28×34 gridUnits, `padding: 0`) | Modal version of `SettingsPage` for ManageWindow context. Footer: "Restore Defaults" (with `Kirigami.PromptDialog` confirmation) + "Close" |
+| `OnboardingDialog.qml` | `Kirigami.Dialog` | 4-step wizard shown on `AppSettings.firstRun == true`. Steps: Welcome, Applications Folder, Desktop Integration, Ready. `closePolicy: NoAutoClose`. `parentWindowWidth` property required — QML file scope does not inherit outer document IDs, so `root.width` is inaccessible; the width is passed explicitly from `DashboardWindow.qml`. `Layout.preferredWidth: 0` on all long labels prevents them from driving the dialog beyond `preferredWidth` (Qt layouts use `implicitWidth` to compute parent `implicitWidth`; wrapping text still reports its unwrapped natural width) |
+| `ContributorsModel.qml` | `pragma Singleton` QtObject | Shared contributor data and fetch logic (XHR to GitHub API, bot-filtered, fallback list). Extracted from `AboutDialog.qml` and `AboutPage.qml` to eliminate duplication. Import as `ContributorsModel` from `appimagemanager` module |
 
 ---
 
@@ -152,8 +170,14 @@ AppImageWindow::open(path)
        └─ onMetadataReady(info)       main thread; emits metadataLoadedChanged
   └─ ManageWindow.qml                 BusyIndicator until metadataLoaded; then icon + info shown
   └─ user drags icon to folder
-       └─ backend.installAppImage()
-            └─ AppImageManager::installAppImage()
+       └─ backend.beginInstall()
+            ├─ if verifySignatures OFF → doInstall() immediately
+            └─ if verifySignatures ON  → QtConcurrent::run(AppImageReader::verifySignature)
+                 └─ QFutureWatcher::finished → signatureCheckReady(state)
+                      ├─ state Valid/Unchecked/GpgUnavailable → doInstall()
+                      └─ state Unsigned/Invalid → signatureWarnDialog.open()
+                           └─ user clicks OK → doInstall()
+       └─ doInstall() → AppImageManager::installAppImage()
                  ├─ KIO::move  if source under ~/Downloads
                  └─ KIO::copy  otherwise (preserves USB / project sources) + chmod +x on result
             └─ onInstallJobFinished → isInstalled = true → folder column fades → icon centers
@@ -194,6 +218,32 @@ listModel.checkForUpdates()
             └─ zsync2 missing         → fetch .zsync header for URL:, full HTTP download to old.new
             └─ on success: rename old→old.bak, rename old.new→old, remove bak, chmod +x, downloadFinished(path, true)
                            (on rename failure: restore bak, remove new, emit failure)
+```
+
+### Discover page: store catalog load
+
+```
+StorePage.qml onVisibleChanged (first open)
+  └─ amStoreModel.initialize()
+       └─ AMStoreModel::load(forceNetwork=false)
+            ├─ ~/.cache/AppImageManager/am-database.txt  fresh? → read file
+            │   OR GET https://raw.githubusercontent.com/ivan-hc/AM/main/programs/x86_64-appimages
+            │        → save cache
+            └─ ~/.cache/AppImageManager/am-feed.json     fresh? → read file
+                OR GET https://appimage.github.io/feed.json
+                     → save cache
+       (two QtConcurrent::run workers in parallel)
+       ├─ parseAmDatabaseSync(rawText)  → QVector<StoreApp>  [worker thread]
+       └─ parseFeedJsonSync(data)       → QVector<StoreApp>  [worker thread]
+            └─ PNG/JPG/WEBP icons only — SVG paths skipped (crash guard)
+  └─ onAmParsed / onFeedParsed  [main thread via QFutureWatcher::finished]
+       └─ checkBothLoaded()
+            └─ mergeDatabases()   [main thread — QIcon::hasThemeIcon() safe here]
+                 └─ cross-ref by normalizedName; Hub metadata wins on description/categories
+            └─ applyFilter()  → QtConcurrent::run worker (filter + localeAwareCompare sort)
+                 └─ m_filterGeneration discards stale results if filter changed mid-flight
+                 └─ beginResetModel / endResetModel on main thread when done
+  └─ amStoreModel.loading = false → BusyIndicator hides → list appears
 ```
 
 ### Uninstall flow
@@ -289,6 +339,16 @@ Four `inline` utilities defined at file scope in `appimageinfo.h` (included by e
 | **Kirigami Dialog `preferredHeight` binding loop** | Binding `preferredHeight` to `dialog.window.height` (e.g. `preferredHeight: dialog.window.height - someOffset`) creates a circular dependency: Kirigami computes the dialog's `y` from `window.height` + its own `height`, which depends on `preferredHeight`. Result: `Binding loop detected for property "y"` at runtime, followed by SIGABRT via `free(): invalid size`. Use a fixed `Kirigami.Units.gridUnit * N` value instead, or a property that does not involve the dialog's own position or size |
 | **`pendingLoads` dispatch ordering** | In `AppImageListModel::refresh()`, `m_pendingLoads` must be assigned **before** any `loadMetadataForRow()` calls. The cache fast-path decrements `m_pendingLoads` synchronously on the main thread; if the assignment comes after, those decrements race against the final value and leave a stuck non-zero count ("Loading N…" never clears). Always: compute the expected count → assign → emit → dispatch |
 | **Plasma `ItemDelegate` position-aware insets** | The Plasma/Kirigami QQC2 style applies a larger `bottomInset` to the last item in a `ListView`, making its hover/selection highlight appear vertically squashed. Fix: set `topInset`, `bottomInset`, `leftInset`, `rightInset`, and `verticalPadding` explicitly on the delegate so all rows use identical geometry |
+| **`AMStoreModel` lazy init** | Never call `load()` from the constructor — the AM database + feed.json are ~500 KB of network + JSON parsing that blocks the main thread. Call `amStoreModel.initialize()` from `StorePage.qml`'s `onVisibleChanged` (guarded by `!storeInitialized`). `initialize()` is idempotent; `sync()` forces a re-fetch regardless |
+| **`AMStoreModel` SVG crash** | `parseFeedJsonSync()` skips any icon whose path does not end in `.png`/`.jpg`/`.jpeg`/`.webp`. Feed.json contains SVGs that use CSS mesh gradients — Qt's SVG renderer `free(): invalid size` → SIGABRT when it encounters them. Never remove this extension filter |
+| **`AMStoreModel` icon base URL** | Icon paths in `feed.json` are relative paths like `86Box/icons/512x512/86box.png`. The correct base is `https://appimage.github.io/database/` — producing `https://appimage.github.io/database/86Box/icons/512x512/86box.png`. Using `https://appimage.github.io/` (without `database/`) returns 404 for all icons |
+| **`OnboardingDialog` sizing** | `preferredHeight` must be a fixed `gridUnit * N` — binding it to `root.height` causes the Kirigami Dialog `y` binding loop → SIGABRT (see **Kirigami Dialog `preferredHeight` binding loop** pitfall). For `preferredWidth`, `root` inside `OnboardingDialog.qml` does NOT resolve to the outer `DashboardWindow.qml`'s `id: root` — QML file scope does not inherit outer document IDs. Pass window width via an explicit property: `parentWindowWidth: root.width` from the instantiating file. Additionally, `Controls.Label` with `wrapMode: Text.WordWrap` reports its natural (unwrapped) line width as `implicitWidth`; Qt Layouts use `implicitWidth` to compute parent `implicitWidth`, which makes `Kirigami.Dialog` expand beyond `preferredWidth`. Fix: set `Layout.preferredWidth: 0` on all long labels |
+| **`AMStoreModel` worker threading rules** | `parseAmDatabaseSync()` and `parseFeedJsonSync()` are `static` pure functions — they must not call `QIcon::hasThemeIcon()` (not guaranteed safe off main thread). Theme icon preference check lives in `mergeDatabases()` on the main thread. `applyFilter()` dispatches to a worker via `QtConcurrent::run`; uses `m_filterGeneration` (incremented on each call) so the `QFutureWatcher::finished` lambda silently discards stale results |
+| **`Controls.ScrollView` chips clipping** | `Controls.ScrollView` reserves vertical space for its scrollbar even with `AlwaysOff` policy, clipping chip text from below. For horizontal-only scrolling with auto-height, use a `Flickable` with `flickableDirection: Flickable.HorizontalFlick` and `Layout.preferredHeight: contentRow.implicitHeight` instead |
+| **Detail pane `displayedItem` pattern** | `LibraryPage` and `StorePage` both use a `displayedItem` property that lags behind `currentItem`. On selection change: `currentItem` updates immediately (so action-bar logic stays correct), then `SequentialAnimation` fades `detailInner` to 0 → ScriptAction updates `displayedItem` → fades back to 1. Data-only updates (metadata loaded, update check result) bypass the animation and sync `displayedItem` directly to avoid flickering on in-place updates |
+| **`installAppImage()` removed from `AppImageBackend`** | The old single-step `installAppImage()` slot is gone. Use `beginInstall()` → wait for `signatureCheckReady(state)` → call `doInstall()`. QML in ManageWindow already does this via the `Connections` handler. Any test or external code that called `backend.installAppImage()` directly must be updated |
+| **`fileKey()` hash suffix is a 2.0 breaking change** | Apps without a reverse-domain `appId` now get a `_<hash>` suffix in their `.desktop` and icon filenames. Pre-2.0 desktop links (without the suffix) will no longer be detected by `isDesktopLinkEnabled()`. Users must re-toggle those links once after upgrading. Do not add a migration fallback that checks the legacy path — it would mask the slug collision bug the change was made to fix |
+| **`verifySignature()` requires `gpg` or `gpg2` on PATH** | If neither is found, `verifySignature()` returns `GpgUnavailable`. The QML treats this like `Valid` (proceeds without dialog) so users without gpg installed are not blocked. Don't treat `GpgUnavailable` as a failure — log a debug message at most |
 
 ---
 
@@ -315,3 +375,13 @@ After any change, build and verify:
 17. AboutDialog: open dialog → disable network (`nmcli networking off`) → reopen About → wait 8 s → spinner hides, fallback contributors shown, no SIGABRT. Re-enable network, reopen → real contributors load.
 18. Sandbox: run `FLATPAK_ID=test appimagemanager`, open Settings → "Download watching is unavailable in sandboxed environments." InlineMessage visible below toggle. Copy a `.AppImage` to `~/Downloads` → no notification fires.
 19. Update: trigger update on a test AppImage → verify `.bak` file created mid-swap; on success `.bak` removed. Kill process during swap → `.bak` present afterward for manual recovery.
+20. Launch app → navigate to Library immediately → no loading delay; Discover tab NOT yet loaded (no network traffic at startup).
+21. Click Discover → spinner visible immediately → list populates after a few seconds with no UI freeze. Close and reopen Discover → loads instantly from cache.
+22. Discover search → type "firefox" → results filter live. Sort A→Z / Z→A. Source filter button (funnel) → select "AppImage Hub" → only Hub apps shown; "AM Database" → only AM apps; "All" restores full list. Filter button highlighted when non-default source active.
+23. Discover: select app with both AM + Hub → `[ Install via AM ][ ▼ ]` split button; `▼` shows "Install via AM" and "Download from Hub". App with only AM → plain "Install via AM" button. App with only Hub download → plain "Download" button.
+24. Discover: category chips row scrolls horizontally by dragging; no vertical text clipping; chips respond with scale pulse on click.
+25. Discover: click Install → log shows, progress bar advances (Fetching→Downloading→Installing→Done); error lines red, success lines green. Cancel mid-install → "Installation cancelled." in log, button resets.
+26. Settings → enable "Verify GPG signatures". Drag an unsigned AppImage to install → `signatureWarnDialog` appears with "No Signature Found" title and security-medium icon. Click Cancel → no install. Click OK → install proceeds normally.
+27. With signature verification on, drag an AppImage that has a valid GPG signature → no dialog, installs directly.
+28. With signature verification OFF → drag any AppImage → installs immediately, no dialog regardless of signature state.
+29. Install two AppImages with the same display name but different filenames, neither having a reverse-domain `appId` → both get unique `.desktop` files in `~/.local/share/applications/` (slugs differ by hash suffix); `isDesktopLinkEnabled` correctly tracks each independently.

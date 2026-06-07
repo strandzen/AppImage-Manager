@@ -18,8 +18,9 @@ Kirigami.Dialog {
     preferredWidth: Kirigami.Units.gridUnit * 28
 
     // Internal state
-    property bool _appChecked: true
-    property int  _corpseRevision: 0   // bumped by Connections to invalidate _totalText binding
+    property bool   _appChecked: true
+    property int    _corpseRevision: 0   // bumped by Connections to invalidate _totalText binding
+    property string _errorMessage: ""
 
     readonly property string _totalText: {
         _corpseRevision   // dependency: re-evaluate when corpse data changes
@@ -32,6 +33,7 @@ Kirigami.Dialog {
     onBackendChanged: {
         _appChecked = true
         _corpseRevision = 0
+        _errorMessage = ""
         if (backend && backend.metadataLoaded)
             backend.findCorpses()
     }
@@ -39,11 +41,14 @@ Kirigami.Dialog {
     onClosed: {
         backend = null
         _appChecked = true
+        _errorMessage = ""
     }
 
     Connections {
         target: dialog.backend
         function onBusyChanged() { dialog._corpseRevision++ }
+        function onUninstallFinished() { dialog.close() }
+        function onErrorOccurred(message) { dialog._errorMessage = message }
     }
 
     Connections {
@@ -65,15 +70,26 @@ Kirigami.Dialog {
         standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
         onAccepted: {
             if (!dialog.backend) return
+            dialog._errorMessage = ""
             dialog.backend.removeAppImageAndCorpses(
                 dialog.backend.corpseModel.checkedPaths(),
                 dialog._appChecked)
-            dialog.close()
+            // dialog stays open; Connections.onUninstallFinished closes it on success,
+            // Connections.onErrorOccurred shows the error message on failure.
         }
     }
 
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
+
+        Kirigami.InlineMessage {
+            Layout.fillWidth: true
+            type: Kirigami.MessageType.Error
+            text: dialog._errorMessage
+            visible: dialog._errorMessage !== ""
+            showCloseButton: true
+            onVisibleChanged: if (!visible) dialog._errorMessage = ""
+        }
 
         ColumnLayout {
             Layout.alignment: Qt.AlignHCenter

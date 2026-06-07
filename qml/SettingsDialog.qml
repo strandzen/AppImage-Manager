@@ -5,6 +5,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.kirigamiaddons.formcard as FormCard
+import QtQuick.Dialogs
 import appimagemanager
 
 Kirigami.Dialog {
@@ -72,7 +73,7 @@ Kirigami.Dialog {
                         }
                         Controls.Button {
                             icon.name: "folder-open"
-                            onClicked: AppSettings.openFolderPicker(pathField.Window.window)
+                            onClicked: folderDialog.open()
                             Controls.ToolTip.text: i18n("Browse…")
                             Controls.ToolTip.visible: hovered
                         }
@@ -126,6 +127,16 @@ Kirigami.Dialog {
             }
 
             FormCard.FormCard {
+                FormCard.FormSwitchDelegate {
+                    id: verifySignaturesCheck
+                    text: i18n("Verify GPG signatures before installing")
+                    description: i18n("Checks each AppImage for an embedded GPG signature. Warns on unsigned files; blocks installation of files with invalid signatures unless overridden.")
+                    checked: AppSettings.verifySignatures
+                    onToggled: AppSettings.verifySignatures = checked
+                }
+
+                FormCard.FormDelegateSeparator {}
+
                 FormCard.FormSwitchDelegate {
                     id: showDisclaimerCheck
                     text: i18n("Show security disclaimer")
@@ -219,8 +230,18 @@ Kirigami.Dialog {
             Controls.Button {
                 text: i18n("Restore Defaults")
                 icon.name: "document-revert"
-                onClicked: {
-                    AppSettings.resetToDefaults();
+                onClicked: restoreDefaultsDialog.open()
+            }
+
+            Kirigami.PromptDialog {
+                id: restoreDefaultsDialog
+                title: i18n("Restore Defaults?")
+                subtitle: i18n("All settings will be reset to their default values. This cannot be undone.")
+                standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
+                Kirigami.Theme.colorSet: Kirigami.Theme.Window
+                Kirigami.Theme.inherit: false
+                onAccepted: {
+                    AppSettings.resetToDefaults()
                     pathField.text = AppSettings.applicationsPath
                 }
             }
@@ -235,5 +256,12 @@ Kirigami.Dialog {
                 onClicked: dialog.close()
             }
         }
+    }
+
+    FolderDialog {
+        id: folderDialog
+        title: i18n("Select Applications Folder")
+        currentFolder: "file://" + AppSettings.applicationsPath
+        onAccepted: AppSettings.setApplicationsPathFromUrl(folderDialog.selectedFolder)
     }
 }

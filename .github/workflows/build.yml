@@ -21,7 +21,7 @@ jobs:
             git base-devel cmake ninja extra-cmake-modules \
             qt6-base qt6-declarative qt6-svg qt6-tools \
             kcoreaddons ki18n kio knotifications kdbusaddons \
-            kstatusnotifieritem kirigami \
+            kstatusnotifieritem kirigami kirigami-addons \
             libappimage libcanberra appstream dbus
 
       - uses: actions/checkout@v4

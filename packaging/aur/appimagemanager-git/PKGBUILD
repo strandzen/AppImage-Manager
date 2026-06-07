@@ -1,0 +1,52 @@
+# Maintainer: Herman Strandzen <strandzen@gmail.com>
+pkgname=appimagemanager-git
+pkgver=r0.000000
+pkgrel=1
+pkgdesc="KDE Plasma 6 utility for managing AppImage files (git)"
+arch=('x86_64')
+url="https://github.com/strandzen/AppImage-Manager"
+license=('GPL-2.0-or-later')
+provides=('appimagemanager')
+conflicts=('appimagemanager')
+depends=(
+    'kf6-config'
+    'kf6-coreaddons'
+    'kf6-crash'
+    'kf6-dbusaddons'
+    'kf6-iconthemes'
+    'kf6-i18n'
+    'kf6-kio'
+    'kf6-notifications'
+    'kf6-statusnotifieritem'
+    'kirigami-addons'
+    'libappimage'
+    'qt6-base'
+    'qt6-declarative'
+    'qt6-svg'
+)
+makedepends=(
+    'cmake'
+    'extra-cmake-modules'
+    'git'
+    'ninja'
+    'qt6-tools'
+)
+source=("$pkgname::git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$pkgname"
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+    cmake -S "$pkgname" -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -GNinja
+    cmake --build build
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+}

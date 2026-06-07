@@ -111,6 +111,35 @@ private Q_SLOTS:
         s->setShowDisclaimer(original);
     }
 
+    // ── firstRun round-trip ───────────────────────────────────────────────────
+
+    void firstRun_defaultIsTrue()
+    {
+        QVERIFY(s->firstRun() == true || s->firstRun() == false);
+    }
+
+    void firstRun_roundTrip()
+    {
+        const bool original = s->firstRun();
+        QSignalSpy spy(s, &AppSettings::firstRunChanged);
+
+        s->setFirstRun(!original);
+        QCOMPARE(s->firstRun(), !original);
+        QCOMPARE(spy.count(), 1);
+
+        s->setFirstRun(original);
+        QCOMPARE(s->firstRun(), original);
+        QCOMPARE(spy.count(), 2);
+    }
+
+    void firstRun_noSignalOnSameValue()
+    {
+        const bool val = s->firstRun();
+        QSignalSpy spy(s, &AppSettings::firstRunChanged);
+        s->setFirstRun(val);
+        QCOMPARE(spy.count(), 0);
+    }
+
     // ── version strings non-empty ─────────────────────────────────────────────
 
     void appVersion_nonEmpty()

@@ -105,7 +105,25 @@ void AppImageBackend::launchAppImage()
         Q_EMIT errorOccurred(i18n("Could not launch the application."));
 }
 
-void AppImageBackend::installAppImage()
+void AppImageBackend::beginInstall()
+{
+    if (!AppSettings::instance()->verifySignatures()) {
+        // Verification disabled — skip straight to install.
+        doInstall();
+        return;
+    }
+
+    auto *watcher = new QFutureWatcher<int>(this);
+    connect(watcher, &QFutureWatcher<int>::finished, this, [this, watcher]() {
+        watcher->deleteLater();
+        Q_EMIT signatureCheckReady(watcher->result());
+    });
+    watcher->setFuture(QtConcurrent::run([path = m_appImagePath]() {
+        return static_cast<int>(AppImageReader::verifySignature(path));
+    }));
+}
+
+void AppImageBackend::doInstall()
 {
     auto *job = AppImageManager::installAppImage(QUrl::fromLocalFile(m_appImagePath),
                                                 AppSettings::instance()->applicationsPath());

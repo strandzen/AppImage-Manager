@@ -47,10 +47,16 @@ set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
     ${CMAKE_SOURCE_DIR}/qml/DashboardWindow.qml
     ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
+    ${CMAKE_SOURCE_DIR}/qml/OnboardingDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/Theme.qml
+    ${CMAKE_SOURCE_DIR}/qml/LibraryPage.qml
+    ${CMAKE_SOURCE_DIR}/qml/StorePage.qml
+    ${CMAKE_SOURCE_DIR}/qml/SettingsPage.qml
+    ${CMAKE_SOURCE_DIR}/qml/AboutPage.qml
+    ${CMAKE_SOURCE_DIR}/qml/ContributorsModel.qml
     PROPERTIES QT_RESOURCE_ALIAS ""
 )
 set_source_files_properties(
@@ -63,6 +69,8 @@ set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/DashboardWindow.qml
     PROPERTY QT_RESOURCE_ALIAS DashboardWindow.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
     PROPERTY QT_RESOURCE_ALIAS UninstallDialog.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/OnboardingDialog.qml
+    PROPERTY QT_RESOURCE_ALIAS OnboardingDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
     PROPERTY QT_RESOURCE_ALIAS SettingsDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
@@ -71,6 +79,16 @@ set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
     PROPERTY QT_RESOURCE_ALIAS AboutDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/Theme.qml
     PROPERTY QT_RESOURCE_ALIAS Theme.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/LibraryPage.qml
+    PROPERTY QT_RESOURCE_ALIAS LibraryPage.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/StorePage.qml
+    PROPERTY QT_RESOURCE_ALIAS StorePage.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/SettingsPage.qml
+    PROPERTY QT_RESOURCE_ALIAS SettingsPage.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/AboutPage.qml
+    PROPERTY QT_RESOURCE_ALIAS AboutPage.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ContributorsModel.qml
+    PROPERTY QT_RESOURCE_ALIAS ContributorsModel.qml)
 
 qt_add_qml_module(appimagemanager_qml
     URI "appimagemanager"
@@ -79,10 +97,16 @@ qt_add_qml_module(appimagemanager_qml
         ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
         ${CMAKE_SOURCE_DIR}/qml/DashboardWindow.qml
         ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
+        ${CMAKE_SOURCE_DIR}/qml/OnboardingDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/Theme.qml
+        ${CMAKE_SOURCE_DIR}/qml/LibraryPage.qml
+        ${CMAKE_SOURCE_DIR}/qml/StorePage.qml
+        ${CMAKE_SOURCE_DIR}/qml/SettingsPage.qml
+        ${CMAKE_SOURCE_DIR}/qml/AboutPage.qml
+        ${CMAKE_SOURCE_DIR}/qml/ContributorsModel.qml
     SOURCES
         core/appsettings.h
         core/appsettings.cpp
@@ -108,6 +132,8 @@ qt_add_qml_module(appimagemanager_qml
         gui/appimagewindow.cpp
         gui/dashboardwindow.h
         gui/dashboardwindow.cpp
+        gui/amstoremodel.h
+        gui/amstoremodel.cpp
         core/updatedaemon.h
         core/updatedaemon.cpp
         dbus/appimagedbusadaptor.h
@@ -132,7 +158,6 @@ target_link_libraries(appimagemanager_qml PUBLIC
     Qt6::Quick
     Qt6::Qml
     Qt6::Concurrent
-    Qt6::Widgets
     Qt6::Svg
     KF6::I18nQml
     KF6::IconThemes
@@ -173,6 +198,7 @@ target_include_directories(appimagemanager_bin PRIVATE
 )
 target_link_libraries(appimagemanager_bin PRIVATE
     appimagemanager_qml
+    Qt6::Widgets
     KF6::Crash
     KF6::DBusAddons
 )

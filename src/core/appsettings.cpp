@@ -7,8 +7,6 @@
 #include <KCoreAddons>
 
 #include <QDir>
-#include <QFileDialog>
-#include <QWindow>
 #include <QGuiApplication>
 #include <QClipboard>
 #include <KLocalizedString>
@@ -54,6 +52,20 @@ void AppSettings::setShowDisclaimer(bool enabled)
     AppImageManagerSettings::self()->setShowDisclaimer(enabled);
     AppImageManagerSettings::self()->save();
     Q_EMIT showDisclaimerChanged();
+}
+
+bool AppSettings::firstRun() const
+{
+    return AppImageManagerSettings::self()->firstRun();
+}
+
+void AppSettings::setFirstRun(bool enabled)
+{
+    if (firstRun() == enabled)
+        return;
+    AppImageManagerSettings::self()->setFirstRun(enabled);
+    AppImageManagerSettings::self()->save();
+    Q_EMIT firstRunChanged();
 }
 
 bool AppSettings::showNotifications() const
@@ -140,29 +152,10 @@ void AppSettings::setShowInstallBox(bool enabled)
     Q_EMIT showInstallBoxChanged();
 }
 
-void AppSettings::openFolderPicker(QWindow *parent)
+void AppSettings::setApplicationsPathFromUrl(const QUrl &url)
 {
-    QFileDialog dialog(nullptr, i18n("Select Applications Folder"), applicationsPath());
-    dialog.setFileMode(QFileDialog::Directory);
-    dialog.setOption(QFileDialog::ShowDirsOnly, true);
-    dialog.setOption(QFileDialog::DontResolveSymlinks, true);
-
-    if (parent) {
-        // winId() forces the native window backing to exist so windowHandle()
-        // returns non-null; QWidget::create() is protected since Qt 6.11.
-        dialog.winId();
-        if (dialog.windowHandle()) {
-            dialog.windowHandle()->setTransientParent(parent);
-        }
-    }
-
-    if (dialog.exec() == QDialog::Accepted) {
-        const QStringList selected = dialog.selectedFiles();
-        if (selected.isEmpty())
-            return;
-        const QString dir = selected.first();
-        if (!dir.isEmpty())
-            setApplicationsPath(dir);
+    if (url.isLocalFile()) {
+        setApplicationsPath(url.toLocalFile());
     }
 }
 
@@ -205,6 +198,20 @@ void AppSettings::setAccentBorders(bool enabled)
     Q_EMIT accentBordersChanged();
 }
 
+bool AppSettings::verifySignatures() const
+{
+    return AppImageManagerSettings::self()->verifySignatures();
+}
+
+void AppSettings::setVerifySignatures(bool enabled)
+{
+    if (verifySignatures() == enabled)
+        return;
+    AppImageManagerSettings::self()->setVerifySignatures(enabled);
+    AppImageManagerSettings::self()->save();
+    Q_EMIT verifySignaturesChanged();
+}
+
 void AppSettings::resetToDefaults()
 {
     AppImageManagerSettings::self()->setDefaults();
@@ -213,6 +220,7 @@ void AppSettings::resetToDefaults()
     // Emit all signals so QML updates
     Q_EMIT applicationsPathChanged();
     Q_EMIT showDisclaimerChanged();
+    Q_EMIT firstRunChanged();
     Q_EMIT showNotificationsChanged();
     Q_EMIT updateFrequencyChanged();
     Q_EMIT customUpdateDaysChanged();
@@ -220,4 +228,5 @@ void AppSettings::resetToDefaults()
     Q_EMIT watchDownloadsChanged();
     Q_EMIT showInstallBoxChanged();
     Q_EMIT accentBordersChanged();
+    Q_EMIT verifySignaturesChanged();
 }

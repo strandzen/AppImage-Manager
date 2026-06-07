@@ -13,6 +13,8 @@
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QNetworkAccessManager>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QJsonDocument>
@@ -29,9 +31,12 @@
 #include <KStatusNotifierItem>
 
 // freq values: 0 = Never, 1 = Daily, 2 = Weekly, 3 = Monthly, 4 = Custom (customDays)
+// start() skips m_timer->start() when freq == 0, so case 0 is never used at
+// runtime; it exists so the switch has no UB on unexpected values.
 static std::chrono::hours intervalForFrequency(int freq, int customDays)
 {
     switch (freq) {
+    case 0: return std::chrono::hours(0); // Never — timer not started by caller
     case 1: return std::chrono::hours(24);
     case 2: return std::chrono::hours(24 * 7);
     case 3: return std::chrono::hours(24 * 30);
@@ -47,6 +52,7 @@ UpdateDaemon::UpdateDaemon(QObject *parent)
     , m_networkManager(new QNetworkAccessManager(this))
     , m_downloadWatcher(new DownloadWatcher(this))
 {
+    m_readerPool.setMaxThreadCount(qBound(1, QThread::idealThreadCount() / 2, 4));
     connect(m_timer, &QTimer::timeout, this, &UpdateDaemon::checkUpdates);
     connect(AppSettings::instance(), &AppSettings::updateFrequencyChanged, this, [this]() {
         const int freq = AppSettings::instance()->updateFrequency();
@@ -131,6 +137,11 @@ void UpdateDaemon::checkUpdates()
 {
     if (AppSettings::instance()->updateFrequency() == 0)
         return;
+    // Guard against re-entrancy: readers still in flight, or GitHub checker
+    // chain still processing the previous batch. Dropping the duplicate call
+    // is correct — the in-flight check will finish and updateTrayStatus().
+    if (m_pendingChecks > 0 || !m_updateQueue.isEmpty())
+        return;
 
     const QString dir = AppSettings::instance()->applicationsPath();
     const QStringList &filters = kAppImageFilters();
@@ -138,65 +149,78 @@ void UpdateDaemon::checkUpdates()
     if (files.isEmpty())
         return;
 
-    auto *watcher = new QFutureWatcher<AppImageInfo>(this);
-    connect(watcher, &QFutureWatcher<AppImageInfo>::finished, this, [this, watcher]() {
-        watcher->deleteLater();
+    auto results = QSharedPointer<QList<AppImageInfo>>::create();
+    auto mutex = QSharedPointer<QMutex>::create();
+    m_pendingChecks = files.size();
 
-        // Reset counters for this check cycle
-        m_updateCount = 0;
-        m_pendingChecks = 0;
+    for (const QFileInfo &fi : files) {
+        const QString path = fi.absoluteFilePath();
+        auto *watcher = new QFutureWatcher<AppImageInfo>(this);
+        connect(watcher, &QFutureWatcher<AppImageInfo>::finished, this, [this, watcher, results, mutex]() {
+            watcher->deleteLater();
+            {
+                QMutexLocker lock(mutex.data());
+                results->append(watcher->result());
+            }
+            if (--m_pendingChecks == 0) {
+                // All files read — build the GitHub checker queue.
+                m_updateQueue.clear();
+                m_updateCount = 0;
 
-        const QList<AppImageInfo> infos = watcher->future().results();
-        for (const AppImageInfo &info : infos) {
-            if (info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|")))
-                ++m_pendingChecks;
-        }
-
-        if (m_pendingChecks == 0) {
-            updateTrayStatus();
-            return;
-        }
-
-        for (const AppImageInfo &info : infos) {
-            if (!info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|")))
-                continue;
-
-            auto *checker = new GitHubReleaseChecker(m_networkManager, this);
-            connect(checker, &GitHubReleaseChecker::checkFinished, this,
-                    [this, info, checker](GitHubReleaseChecker::Result result,
-                                         const QString &remoteVer, const QString &/*zsyncUrl*/) {
-                checker->deleteLater();
-
-                if (result == GitHubReleaseChecker::Result::UpdateAvailable) {
-                    ++m_updateCount;
-                    auto *notification = new KNotification(QStringLiteral("updateAvailable"),
-                                                           KNotification::Persistent, this);
-                    notification->setTitle(i18n("Update Available"));
-                    notification->setText(i18n("An update is available for %1 (%2 → %3).",
-                        info.cleanName.isEmpty() ? info.originalName : info.cleanName,
-                        normalizeVersion(info.version), remoteVer));
-                    notification->setIconName(info.appId.isEmpty()
-                        ? QStringLiteral("application-x-executable") : info.appId);
-                    auto *action = notification->addDefaultAction(i18n("Open Manager"));
-                    connect(action, &KNotificationAction::activated, this, []() {
-                        if (!QProcess::startDetached(QStringLiteral("appimagemanager"),
-                                                     {QStringLiteral("--dashboard")}))
-                            qCWarning(AIM_LOG) << "Failed to launch appimagemanager --dashboard";
-                    });
-                    notification->sendEvent();
+                for (const AppImageInfo &info : *results) {
+                    if (info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|"))) {
+                        m_updateQueue.enqueue(info);
+                    }
                 }
 
-                if (--m_pendingChecks == 0)
-                    updateTrayStatus();
-            });
+                checkNextUpdate();
+            }
+        });
+        watcher->setFuture(QtConcurrent::run(&m_readerPool, [path]() {
+            return AppImageReader(path).read();
+        }));
+    }
+}
 
-            checker->check(info.updateInfo, info.version);
+void UpdateDaemon::checkNextUpdate()
+{
+    if (m_updateQueue.isEmpty()) {
+        updateTrayStatus();
+        return;
+    }
+
+    const AppImageInfo info = m_updateQueue.dequeue();
+
+    auto *checker = new GitHubReleaseChecker(m_networkManager, this);
+    connect(checker, &GitHubReleaseChecker::checkFinished, this,
+            [this, info, checker](GitHubReleaseChecker::Result result,
+                                  const QString &remoteVer, const QString &/*zsyncUrl*/) {
+        checker->deleteLater();
+
+        if (result == GitHubReleaseChecker::Result::UpdateAvailable) {
+            ++m_updateCount;
+            auto *notification = new KNotification(QStringLiteral("updateAvailable"),
+                                                   KNotification::Persistent, this);
+            notification->setTitle(i18n("Update Available"));
+            notification->setText(i18n("An update is available for %1 (%2 → %3).",
+                info.cleanName.isEmpty() ? info.originalName : info.cleanName,
+                normalizeVersion(info.version), remoteVer));
+            notification->setIconName(info.appId.isEmpty()
+                ? QStringLiteral("application-x-executable") : info.appId);
+            auto *action = notification->addDefaultAction(i18n("Open Manager"));
+            connect(action, &KNotificationAction::activated, this, []() {
+                if (!QProcess::startDetached(QStringLiteral("appimagemanager"),
+                                             {QStringLiteral("--dashboard")}))
+                    qCWarning(AIM_LOG) << "Failed to launch appimagemanager --dashboard";
+            });
+            notification->sendEvent();
         }
+
+        // Check next AppImage in queue sequentially
+        checkNextUpdate();
     });
 
-    watcher->setFuture(QtConcurrent::mapped(files, [](const QFileInfo &fi) {
-        return AppImageReader(fi.absoluteFilePath()).read();
-    }));
+    checker->check(info.updateInfo, info.version);
 }
 
 void UpdateDaemon::updateTrayStatus()

@@ -5,9 +5,11 @@
 #include "appimageiconprovider.h"
 #include "appimagelistmodel.h"
 #include "appimagesortfiltermodel.h"
+#include "amstoremodel.h"
 #include "appimagemanager.h"
 #include "appsettings.h"
 #include "logging.h"
+#include "../core/appimagereader.h"
 
 #include <KIO/CopyJob>
 #include <KLocalizedQmlContext>
@@ -19,6 +21,9 @@
 #include "../dbus/appimagedbusadaptor.h"
 
 #include <QDBusConnection>
+#include <QFileInfo>
+#include <QFutureWatcher>
+#include <QtConcurrent/QtConcurrent>
 
 #include <algorithm>
 
@@ -63,6 +68,7 @@ void DashboardWindow::setupAndShow()
     m_listModel    = new AppImageListModel(m_iconProvider, m_engine);
     m_proxyModel   = new AppImageSortFilterModel(m_engine);
     m_proxyModel->setSourceModel(m_listModel);
+    m_amStoreModel = new AMStoreModel(m_engine);
 
     // Disconnect the engine's auto-quit so the dashboard closing does not kill
     // the whole process when a manage window is also open. We handle quit
@@ -76,6 +82,7 @@ void DashboardWindow::setupAndShow()
     m_engine->addImageProvider(QStringLiteral("icon"), new KQuickIconProvider);
     m_engine->rootContext()->setContextProperty(QStringLiteral("listModel"),           m_listModel);
     m_engine->rootContext()->setContextProperty(QStringLiteral("proxyModel"),           m_proxyModel);
+    m_engine->rootContext()->setContextProperty(QStringLiteral("amStoreModel"),        m_amStoreModel);
     m_engine->rootContext()->setContextProperty(QStringLiteral("dashboardController"), this);
 
     m_engine->load(QUrl(QStringLiteral("qrc:/appimagemanager/DashboardWindow.qml")));
@@ -137,7 +144,6 @@ void DashboardWindow::setupAndShow()
     }
 
     m_window->show();
-    m_window->setTitle(QStringLiteral("AppImage Dashboard"));
     m_window->raise();
     m_window->requestActivate();
 }
@@ -164,18 +170,48 @@ QObject *DashboardWindow::createUninstallBackend(const QString &filePath)
 
 void DashboardWindow::installFromPath(const QUrl &url)
 {
-    const QString dest = AppSettings::instance()->applicationsPath();
-    auto *job = AppImageManager::installAppImage(url, dest);
-    connect(job, &KJob::result, this, [url](KJob *j) {
-        if (j->error()) {
-            qCWarning(AIM_LOG) << "Install failed:" << j->errorString();
-            auto *n = KNotification::event(QStringLiteral("installFailed"),
-                                           i18n("Install failed"),
-                                           j->errorString(),
-                                           QStringLiteral("dialog-error"));
+    const QString dest      = AppSettings::instance()->applicationsPath();
+    const QString localPath = url.toLocalFile();
+
+    auto doInstall = [this, url, dest]() {
+        auto *job = AppImageManager::installAppImage(url, dest);
+        connect(job, &KJob::result, this, [](KJob *j) {
+            if (j->error()) {
+                qCWarning(AIM_LOG) << "Install failed:" << j->errorString();
+                auto *n = KNotification::event(QStringLiteral("installFailed"),
+                                               i18n("Install failed"),
+                                               j->errorString(),
+                                               QStringLiteral("dialog-error"));
+                n->sendEvent();
+            }
+            // On success KDirWatch in AppImageListModel picks up the new file automatically.
+        });
+        job->start();
+    };
+
+    if (!AppSettings::instance()->verifySignatures()) {
+        doInstall();
+        return;
+    }
+
+    auto *watcher = new QFutureWatcher<SignatureState>(this);
+    connect(watcher, &QFutureWatcher<SignatureState>::finished, this,
+            [this, watcher, doInstall, localPath]() {
+        watcher->deleteLater();
+        const SignatureState state = watcher->result();
+        if (state == SignatureState::Unsigned || state == SignatureState::Invalid) {
+            const QString fileName = QFileInfo(localPath).fileName();
+            const QString msg = (state == SignatureState::Invalid)
+                ? i18n("The signature on \"%1\" is invalid. Installation aborted.", fileName)
+                : i18n("\"%1\" has no embedded signature. Installation aborted.", fileName);
+            auto *n = KNotification::event(QStringLiteral("signatureWarning"),
+                                           i18n("Signature Check Failed"),
+                                           msg,
+                                           QStringLiteral("security-medium"));
             n->sendEvent();
+            return;
         }
-        // On success the QFileSystemWatcher in AppImageListModel picks up the new file automatically.
+        doInstall();
     });
-    job->start();
+    watcher->setFuture(QtConcurrent::run(&AppImageReader::verifySignature, localPath));
 }

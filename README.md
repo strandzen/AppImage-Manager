@@ -7,38 +7,43 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)](https://en.cppreference.com/w/cpp/20)
 [![License](https://img.shields.io/badge/License-GPL--2.0--or--later-blue)](LICENSES/GPL-2.0-or-later.txt)
 [![Linux](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.kernel.org/)
-[![Vibecoded](https://img.shields.io/badge/Vibecoded-AI--Usage-8a2be2?logo=visualstudiocode&logoColor=white)](https://github.com/strandzen/AppImage-Manager)
 
-> **Disclaimer:** This project is vibecoded.
+> **Disclaimer:** This project is vibecoded — built with heavy AI assistance. It is also an independent, community-driven effort and is not affiliated with or endorsed by KDE or the KDE e.V. organization.
 
 ---
-![Previews](https://img.shields.io/badge/previews-visuals-427070?style=for-the-badge&logo=kde&logoColor=white)
 
 ![Dashboard](assets/dashboard.png)
 
-- **Native Dashboard:** Browse, search, and sort installed AppImages by name, size, category, or date.
-- **Rich Metadata:** Shows app icon, version, size, category, and localized AppStream description extracted directly from the AppImage.
-- **Dolphin Integration:** Right-click any `.AppImage` to open the management window directly.
-- **Drag-and-Drop Install:** Drag an AppImage onto the dashboard to move it to your Applications folder and create desktop shortcuts automatically.
-- **Clean Uninstall:** Scans for leftover configuration and cache directories, moving everything to the KDE Trash instead of leaving orphans behind.
-- **Detailed Storage View:** Quickly see an AppImage's file size and its associated directories.
-- **Download Notifications:** Optionally watches `~/Downloads` and fires a native KDE notification when a new `.AppImage` is detected — click "Manage" to open it immediately.
-- **AppImage Updates:** Checks for newer versions asynchronously, failing over to GitHub Releases RSS feeds if rate limits are hit. Downloads updates using `zsync` delta-patching, with a robust HTTP streaming fallback if `zsync2` is missing.
-- **Plasma Integration:** Uses native Plasma progress bars, Kirigami styling, and KDE notifications.
-
 ---
-![Requirements](https://img.shields.io/badge/requirements-systems-4B6B8A?style=for-the-badge&logo=linux&logoColor=white)
 
-To build this project from source, you need:
+## Features
 
-- **Build Tools:** CMake 3.22+, Ninja, a C++20 compiler (GCC 12+ or Clang 15+)
-- **Qt 6.9+ Modules:** Core, Gui, Quick, Qml, Concurrent, Network, Sql, Svg
-- **KDE Frameworks 6:** CoreAddons, I18n, KIO, IconThemes, Notifications, Crash, DBusAddons, Kirigami
-- **Required Libraries:** `libappimage` for in-process SquashFS metadata extraction.
+- **Dashboard:** Browse, search, and sort all installed AppImages by name, size, category, or date. Sidebar navigation with Installed, Discover, Settings, and About sections.
+- **Rich Metadata:** Displays app icon, version, size, category, and AppStream description extracted directly from each AppImage.
+- **Discover Page:** Browse and install from the combined AM database and AppImage Hub catalog (~1,300 curated apps). Supports both `am` script installs and direct HTTP downloads — no browser redirect.
+- **Dolphin Integration:** Right-click any `.AppImage` in Dolphin to open the management window directly.
+- **Drag-and-Drop Install:** Drag an AppImage onto the management window or dashboard to install it into the configured Applications folder with desktop integration.
+- **GPG Signature Verification:** Optional pre-install check. Parses embedded ELF signature sections and invokes `gpg` to verify authenticity. Warns on unsigned files; blocks tampered ones.
+- **Clean Uninstall:** Detects leftover configuration and cache directories after removal. Moves everything to KDE Trash — no permanent deletion.
+- **AppImage Updates:** Checks for newer versions asynchronously. Downloads updates via `zsync2` delta-patching with a full HTTP fallback when `zsync2` is unavailable.
+- **Background Daemon:** Persistent system tray entry with hourly update scans and Downloads folder monitoring. Prevents duplicate notifications when the dashboard is also open.
+- **Download Notifications:** Watches `~/Downloads` and fires a native KDE notification when a new `.AppImage` appears — click "Manage" to open it immediately.
+- **Plasma Integration:** Native Kirigami styling, KDE notifications, KIO file operations, and XDG desktop/icon database integration for compatibility with non-Plasma launchers.
+- **First-Run Wizard:** Guides new users through folder setup and desktop integration on first launch.
 
 ---
 
-![Dependencies](https://img.shields.io/badge/dependencies-libraries-50659C?style=for-the-badge&logo=qt&logoColor=white)
+## Requirements
+
+- **Build Tools:** CMake 3.22+, Ninja, C++20 compiler (GCC 12+ or Clang 15+)
+- **Qt 6.9+:** Core, Gui, Quick, Qml, Concurrent, Network, Sql, Svg
+- **KDE Frameworks 6:** CoreAddons, I18n, KIO, IconThemes, Notifications, Crash, DBusAddons, Kirigami, KirigamiAddons, StatusNotifierItem
+- **Required:** `libappimage` for in-process SquashFS metadata extraction
+- **Optional:** `gpg`/`gpg2` for signature verification; `zsync2` for delta updates; `am` for script installations from the Discover page
+
+---
+
+## Installing Dependencies
 
 <details>
 <summary><strong>Arch Linux</strong></summary>
@@ -47,7 +52,9 @@ To build this project from source, you need:
 sudo pacman -S base-devel cmake extra-cmake-modules ninja \
     qt6-base qt6-declarative \
     kcoreaddons ki18n kio kiconthemes knotifications kcrash kdbusaddons kirigami \
-    libappimage
+    kirigami-addons kstatusnotifieritem libappimage gnupg
+# Optional: AUR packages for Discover page script installs:
+# yay -S am-git zsync2
 ```
 
 </details>
@@ -60,7 +67,7 @@ sudo dnf install gcc-c++ cmake extra-cmake-modules ninja-build \
     qt6-qtbase-devel qt6-qtdeclarative-devel \
     kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kio-devel kf6-kiconthemes-devel \
     kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kirigami-devel \
-    libappimage-devel
+    kf6-kirigamiaddons-devel libappimage-devel gnupg2
 ```
 
 </details>
@@ -73,7 +80,8 @@ sudo apt install build-essential cmake extra-cmake-modules ninja-build \
     qt6-base-dev qt6-declarative-dev \
     libkf6coreaddons-dev libkf6i18n-dev libkf6kio-dev libkf6iconthemes-dev \
     libkf6notifications-dev libkf6crash-dev libkf6dbusaddons-dev \
-    qml6-module-org-kde-kirigami libappimage-dev
+    qml6-module-org-kde-kirigami qml6-module-org-kde-kirigamiaddons \
+    libappimage-dev gnupg2
 ```
 
 </details>
@@ -86,24 +94,19 @@ sudo zypper in gcc-c++ cmake extra-cmake-modules ninja \
     qt6-base-devel qt6-declarative-devel \
     kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kio-devel kf6-kiconthemes-devel \
     kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kirigami-devel \
-    libappimage-devel
+    kf6-kirigami-addons-devel libappimage-devel gpg2
 ```
 
 </details>
 
 ---
 
-![Build & Install](https://img.shields.io/badge/build%2Finstall-compilation-5D5299?style=for-the-badge&logo=cmake&logoColor=white)
-
-Once your dependencies are installed, you can build and install the manager globally.
+## Build & Install
 
 ```bash
-# Configure and build the project
-cmake --preset dev
-cmake --build --preset dev
-
-# Install to /usr (required for Dolphin plugin discovery)
-sudo cmake --install build/dev
+cmake --preset release
+cmake --build --preset release
+sudo cmake --install build/release
 ```
 
 To reload the Dolphin context menu without logging out:
@@ -113,19 +116,19 @@ kquitapp6 dolphin && dolphin &
 ```
 
 ---
-![Usage](https://img.shields.io/badge/usage-guide-6E488B?style=for-the-badge&logo=readthedocs&logoColor=white)
 
-Run the utility from your terminal or application launcher:
+## Usage
 
 | Command | Action |
-| --- | --- |
-| `appimagemanager` | Opens the main dashboard to view all installed AppImages. |
-| `appimagemanager /path/to/app.AppImage` | Opens the management window for a specific AppImage file. |
+|---------|--------|
+| `appimagemanager` | Opens the dashboard. |
+| `appimagemanager /path/to/app.AppImage` | Opens the management window for a specific file. |
 | `appimagemanager --daemon` | Runs the background update checker (autostarts on login). |
 
-**Dolphin Integration:** Simply right-click any `.AppImage` file and select **Manage AppImage**.
+**Dolphin:** Right-click any `.AppImage` file and select **Manage AppImage**.
 
 ---
-![License](https://img.shields.io/badge/License-GPL_v2+-7E4071?style=for-the-badge&logo=gnu)
+
+## License
 
 Licensed under the **GPL-2.0-or-later**. See [LICENSES/GPL-2.0-or-later.txt](LICENSES/GPL-2.0-or-later.txt) for details.

@@ -71,7 +71,7 @@ Kirigami.ApplicationWindow {
                         closable: false; checkable: false
                     }
                     Kirigami.Chip {
-                        text: i18n("Size: %1", backend.formattedSize)
+                        text: i18n("Size: %1", backend.appSize > 0 ? backend.formattedSize : i18n("Unknown"))
                         closable: false; checkable: false
                     }
                 }
@@ -151,7 +151,7 @@ Kirigami.ApplicationWindow {
                             onReleased: {
                                 if (backend.isInstalled) return
                                 if (dragIcon.Drag.target !== null) {
-                                    backend.installAppImage()
+                                    backend.beginInstall()
                                 }
                                 // Reset position instantly to return to source
                                 dragIcon.x = 0
@@ -254,6 +254,50 @@ Kirigami.ApplicationWindow {
         function onErrorOccurred(message) {
             errorMessage.text = message
             errorMessage.visible = true
+        }
+        function onSignatureCheckReady(state) {
+            // SigValid=1, SigUnchecked=0, SigGpgUnavailable=4 → safe to proceed
+            if (state === 1 || state === 0 || state === 4) {
+                backend.doInstall()
+            } else {
+                // SigUnsigned=3 or SigInvalid=2 → warn the user first
+                signatureWarnDialog.sigState = state
+                signatureWarnDialog.open()
+            }
+        }
+    }
+
+    // ── Signature warning dialog ──────────────────────────────────────────────
+    Kirigami.Dialog {
+        id: signatureWarnDialog
+        property int sigState: 3  // default: Unsigned
+
+        title: sigState === 2 ? i18n("Invalid Signature") : i18n("No Signature Found")
+        preferredWidth: Kirigami.Units.gridUnit * 22
+
+        standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
+        onAccepted: backend.doInstall()
+        onClosed: sigState = 3
+
+        ColumnLayout {
+            spacing: Kirigami.Units.largeSpacing
+            width: signatureWarnDialog.availableWidth
+
+            Kirigami.Icon {
+                Layout.alignment: Qt.AlignHCenter
+                source: signatureWarnDialog.sigState === 2 ? "security-low" : "security-medium"
+                implicitWidth:  Kirigami.Units.iconSizes.large
+                implicitHeight: Kirigami.Units.iconSizes.large
+            }
+
+            Controls.Label {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                horizontalAlignment: Text.AlignHCenter
+                text: signatureWarnDialog.sigState === 2
+                    ? i18n("The GPG signature on this AppImage is <b>invalid</b>. The file may have been tampered with. Installing is strongly discouraged.")
+                    : i18n("This AppImage has no GPG signature and cannot be verified. Only install from sources you trust.")
+            }
         }
     }
 

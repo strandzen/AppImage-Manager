@@ -112,7 +112,7 @@ Q_SIGNALS:
 
 private:
     void loadMetadataForRow(int row);
-    void applyMetadata(int row, AppImageInfo info);
+    void applyMetadata(int row, const AppImageInfo &info);
     int  findRowByPath(const QString &path) const;
     void rebuildPathIndex();
 

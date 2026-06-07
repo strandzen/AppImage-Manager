@@ -19,6 +19,12 @@ public:
 
     static QString cleanName(const QString &filename);
 
+    // Check for an embedded GPG signature in a Type 2 AppImage.
+    // Parses the ELF section table for .sha256_sig / .sha256_hash sections,
+    // then invokes gpg to verify the detached signature against the stored hash.
+    // Safe to call from a worker thread (all I/O is synchronous; gpg is a subprocess).
+    static SignatureState verifySignature(const QString &path);
+
 private:
     static QString extractAppId(const QString &filename);
     static QString versionFromFilename(const QString &filename);

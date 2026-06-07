@@ -192,13 +192,17 @@ AppImageInfo AppImageReader::readInternal()
 
                 const QString execFull = entry.readEntry(QStringLiteral("Exec"));
                 const QStringList execParts = KShell::splitArgs(execFull);
-                if (execParts.size() > 1) {
-                    QStringList args;
-                    for (int i = 1; i < execParts.size(); ++i)
-                        if (!execParts.at(i).startsWith(QLatin1Char('%')))
-                            args << KShell::quoteArg(execParts.at(i));
-                    info.execArgs = args.join(QLatin1Char(' '));
+                QStringList args;
+                QString placeholder = QStringLiteral("%U");
+                for (int i = 1; i < execParts.size(); ++i) {
+                    if (execParts.at(i).startsWith(QLatin1Char('%'))) {
+                        placeholder = execParts.at(i);
+                    } else {
+                        args << KShell::quoteArg(execParts.at(i));
+                    }
                 }
+                args << placeholder;
+                info.execArgs = args.join(QLatin1Char(' '));
 
                 // Find and read icon
                 const QString iconName = entry.readEntry(QStringLiteral("Icon"));
@@ -298,6 +302,133 @@ QByteArray AppImageReader::readFileFromAppImage(const QString &innerPath, QStrin
     }
 
     return result;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Signature verification
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Read the raw bytes of a named section from an ELF64 little-endian binary.
+// Returns empty QByteArray if the section is absent or the file is not ELF64 LE.
+static QByteArray readElfSection(const QString &path, const QByteArray &sectionName)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly))
+        return {};
+
+    const QByteArray hdr = f.read(64);
+    if (hdr.size() < 64)
+        return {};
+    // ELF magic + ELF64 (class=2) + little-endian (data=1)
+    if (hdr[0] != '\x7f' || hdr[1] != 'E' || hdr[2] != 'L' || hdr[3] != 'F'
+            || hdr[4] != 2 || hdr[5] != 1)
+        return {};
+
+    auto rd16 = [&](int off) -> quint16 {
+        return static_cast<quint8>(hdr[off])
+             | (static_cast<quint8>(hdr[off + 1]) << 8);
+    };
+    auto rd64 = [&](const QByteArray &src, int off) -> quint64 {
+        quint64 v = 0;
+        for (int i = 0; i < 8; ++i)
+            v |= static_cast<quint64>(static_cast<quint8>(src[off + i])) << (8 * i);
+        return v;
+    };
+
+    const quint64 shoff    = rd64(hdr, 40);
+    const quint16 shentsz  = rd16(58);
+    const quint16 shnum    = rd16(60);
+    const quint16 shstrndx = rd16(62);
+
+    if (shoff == 0 || shentsz < 64 || shnum == 0 || shstrndx >= shnum)
+        return {};
+
+    if (!f.seek(static_cast<qint64>(shoff)))
+        return {};
+    const QByteArray shdrs = f.read(static_cast<qint64>(shentsz) * shnum);
+    if (shdrs.size() < static_cast<int>(shentsz) * shnum)
+        return {};
+
+    // Load the section-name string table
+    const int strBase = shstrndx * shentsz;
+    const quint64 strOff  = rd64(shdrs, strBase + 24);
+    const quint64 strSize = rd64(shdrs, strBase + 32);
+    if (!f.seek(static_cast<qint64>(strOff)))
+        return {};
+    const QByteArray strtab = f.read(static_cast<qint64>(strSize));
+
+    // Walk sections looking for sectionName
+    for (int i = 0; i < shnum; ++i) {
+        const int base = i * shentsz;
+        quint32 nameIdx = 0;
+        std::memcpy(&nameIdx, shdrs.constData() + base, 4);
+        if (nameIdx >= static_cast<quint32>(strtab.size()))
+            continue;
+        if (QByteArray(strtab.constData() + nameIdx) != sectionName)
+            continue;
+
+        const quint64 secOff  = rd64(shdrs, base + 24);
+        const quint64 secSize = rd64(shdrs, base + 32);
+        if (!f.seek(static_cast<qint64>(secOff)))
+            return {};
+        return f.read(static_cast<qint64>(secSize));
+    }
+    return {};
+}
+
+// static
+SignatureState AppImageReader::verifySignature(const QString &path)
+{
+    // Try sha256 first, then sha1 (older appimagetool used sha1)
+    QByteArray sigData  = readElfSection(path, ".sha256_sig");
+    QByteArray hashData = readElfSection(path, ".sha256_hash");
+    if (sigData.isEmpty()) {
+        sigData  = readElfSection(path, ".sha1_sig");
+        hashData = readElfSection(path, ".sha1_hash");
+    }
+
+    if (sigData.isEmpty())
+        return SignatureState::Unsigned;
+
+    if (hashData.isEmpty()) {
+        qCWarning(AIM_LOG) << "verifySignature:" << path
+                           << "has a signature section but no hash section — corrupt?";
+        return SignatureState::Invalid;
+    }
+
+    // Locate gpg
+    QString gpgExe = QStandardPaths::findExecutable(QStringLiteral("gpg2"));
+    if (gpgExe.isEmpty())
+        gpgExe = QStandardPaths::findExecutable(QStringLiteral("gpg"));
+    if (gpgExe.isEmpty())
+        return SignatureState::GpgUnavailable;
+
+    QTemporaryDir tmp;
+    if (!tmp.isValid())
+        return SignatureState::Unchecked;
+
+    auto writeTemp = [&](const QString &name, const QByteArray &data) -> QString {
+        const QString fp = tmp.filePath(name);
+        QFile f(fp);
+        if (!f.open(QIODevice::WriteOnly) || f.write(data) != data.size())
+            return {};
+        return fp;
+    };
+
+    const QString sigFile  = writeTemp(QStringLiteral("app.sig"),  sigData);
+    const QString hashFile = writeTemp(QStringLiteral("app.hash"), hashData);
+    if (sigFile.isEmpty() || hashFile.isEmpty())
+        return SignatureState::Unchecked;
+
+    // gpg --verify <detached-sig> <signed-data>
+    QProcess gpg;
+    gpg.start(gpgExe, { QStringLiteral("--verify"), sigFile, hashFile });
+    if (!gpg.waitForFinished(15000)) {
+        gpg.kill();
+        return SignatureState::Unchecked;
+    }
+
+    return gpg.exitCode() == 0 ? SignatureState::Valid : SignatureState::Invalid;
 }
 
 void AppImageReader::extractMetadataFromXml(const QByteArray &xmlData, AppImageInfo &info)

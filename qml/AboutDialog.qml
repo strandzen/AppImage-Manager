@@ -21,92 +21,9 @@ Kirigami.Dialog {
             ? Qt.rgba(aboutDialog.Kirigami.Theme.textColor.r, aboutDialog.Kirigami.Theme.textColor.g, aboutDialog.Kirigami.Theme.textColor.b, 0.15)
             : Qt.rgba(0.5, 0.5, 0.5, 0.15))
 
-    property var fallbackContributors: [
-        {
-            "name": "Herman",
-            "role": i18n("Lead Developer"),
-            "initials": "H",
-            "email": "strandzen2@gmail.com",
-            "web": "https://github.com/strandzen"
-        },
-        {
-            "name": "Heimen Stoffels",
-            "role": i18n("Dutch Translator / Contributor"),
-            "initials": "HS",
-            "email": "vistausss@fastmail.com",
-            "web": "https://github.com/vistausss"
-        }
-    ]
+    ContributorsModel { id: contributorsModel }
 
-    property var contributors: []
-    property bool isLoadingContributors: false
-
-    function getInitials(name) {
-        if (!name) return "?";
-        var parts = name.split(" ").filter(function(p) { return p.length > 0; });
-        if (parts.length === 0) return "?";
-        if (parts.length === 1) return parts[0].substring(0, Math.min(2, parts[0].length)).toUpperCase();
-        return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-
-    function fetchContributors() {
-        isLoadingContributors = true;
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "https://api.github.com/repos/strandzen/AppImage-Manager/contributors", true);
-        xhr.timeout = 8000;
-
-        function handleFailure() {
-            isLoadingContributors = false;
-            contributors = fallbackContributors;
-        }
-
-        xhr.onerror   = handleFailure;
-        xhr.ontimeout = handleFailure;
-
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                isLoadingContributors = false;
-                if (xhr.status === 200) {
-                    try {
-                        var rawList = JSON.parse(xhr.responseText);
-                        var parsed = [];
-                        for (var i = 0; i < rawList.length; i++) {
-                            var item = rawList[i];
-                            var login = item.login ? item.login.toLowerCase() : "";
-
-                            // Exclude Claude and other AI / bots / assistants
-                            if (login.indexOf("claude") !== -1 ||
-                                login.indexOf("gemini") !== -1 ||
-                                login.indexOf("antigravity") !== -1 ||
-                                login.indexOf("copilot") !== -1 ||
-                                login.indexOf("bot") !== -1 ||
-                                login.indexOf("assistant") !== -1) {
-                                continue;
-                            }
-
-                            var dispName = item.login || "Contributor";
-                            parsed.push({
-                                "name": dispName,
-                                "role": i === 0 ? i18n("Lead Developer") : i18n("Contributor"),
-                                "initials": getInitials(dispName),
-                                "email": "",
-                                "web": item.html_url || "https://github.com/strandzen/AppImage-Manager"
-                            });
-                        }
-
-                        contributors = parsed.length > 0 ? parsed : fallbackContributors;
-                    } catch (e) {
-                        contributors = fallbackContributors;
-                    }
-                } else {
-                    contributors = fallbackContributors;
-                }
-            }
-        }
-        xhr.send();
-    }
-
-    onOpened: fetchContributors()
+    onOpened: contributorsModel.fetch()
 
     Controls.ScrollView {
         id: scrollView
@@ -488,13 +405,13 @@ Kirigami.Dialog {
                 spacing: Kirigami.Units.mediumSpacing
 
                 Controls.BusyIndicator {
-                    running: aboutDialog.isLoadingContributors
+                    running: contributorsModel.isLoading
                     visible: running
                     Layout.alignment: Qt.AlignHCenter
                 }
 
                 Repeater {
-                    model: aboutDialog.isLoadingContributors ? 0 : aboutDialog.contributors.length > 0 ? aboutDialog.contributors : aboutDialog.fallbackContributors
+                    model: contributorsModel.isLoading ? 0 : contributorsModel.contributors.length > 0 ? contributorsModel.contributors : contributorsModel.fallbackContributors
                     delegate: ColumnLayout {
                         Layout.fillWidth: true
                         spacing: Kirigami.Units.smallSpacing
@@ -569,7 +486,7 @@ Kirigami.Dialog {
 
                         Kirigami.Separator {
                             Layout.fillWidth: true
-                            visible: index < (aboutDialog.contributors.length > 0 ? aboutDialog.contributors.length : aboutDialog.fallbackContributors.length) - 1
+                            visible: index < (contributorsModel.contributors.length > 0 ? contributorsModel.contributors.length : contributorsModel.fallbackContributors.length) - 1
                         }
                     }
                 }

@@ -3,6 +3,9 @@
 #pragma once
 #include <QObject>
 #include <QTimer>
+#include <QQueue>
+#include <QThreadPool>
+#include "appimageinfo.h"
 #include "appimagemanager_qml_export.h"
 
 class QNetworkAccessManager;
@@ -22,6 +25,7 @@ private Q_SLOTS:
 private:
     void onDownloadAppeared(const QString &path, const QString &displayName);
     void updateTrayStatus();
+    void checkNextUpdate();
 
     QTimer               *m_timer;
     QNetworkAccessManager *m_networkManager;
@@ -31,4 +35,7 @@ private:
     int m_pendingChecks = 0;
 
     KStatusNotifierItem *m_trayIcon = nullptr;
+
+    QThreadPool           m_readerPool;
+    QQueue<AppImageInfo>  m_updateQueue;
 };

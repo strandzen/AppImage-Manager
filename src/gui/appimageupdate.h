@@ -4,6 +4,7 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QQueue>
 
 class QNetworkAccessManager;
 
@@ -56,10 +57,18 @@ private:
                                const QString &zsyncUrl,
                                const QString &displayName,
                                const QString &appIconId);
+    static QString calculateFileSha1(const QString &filePath);
+    void swapAndFinalizeDownload(const QString &filePath,
+                                 const QString &newFile,
+                                 const QString &displayName,
+                                 const QString &appIconId);
+
+    void checkNextItem();
 
     QNetworkAccessManager *m_nam;
     int m_pendingChecks    = 0;
     int m_updatesFound     = 0;
     int m_networkFailures  = 0;
     QTimer m_timeoutTimer;
+    QQueue<CheckItem> m_checkQueue;
 };

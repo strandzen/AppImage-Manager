@@ -11,6 +11,7 @@ class AppImageBackend;
 class AppImageIconProvider;
 class AppImageListModel;
 class AppImageSortFilterModel;
+class AMStoreModel;
 class QQmlApplicationEngine;
 class QQuickWindow;
 
@@ -31,6 +32,7 @@ private:
     AppImageIconProvider      *m_iconProvider       = nullptr;
     AppImageListModel         *m_listModel          = nullptr;
     AppImageSortFilterModel   *m_proxyModel         = nullptr;
+    AMStoreModel              *m_amStoreModel       = nullptr;
     AppImageBackend       *m_uninstallBackend   = nullptr;
     QQmlApplicationEngine *m_engine             = nullptr;
     QQuickWindow          *m_window             = nullptr;

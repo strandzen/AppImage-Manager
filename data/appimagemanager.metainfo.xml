@@ -60,6 +60,11 @@
   </content_rating>
 
   <releases>
+    <release version="2.0.0" date="2026-06-07">
+      <description>
+        <p>Modular discover sources. Dynamic sources configuration from Settings. Source-agnostic universal JSON feed support. Smooth drag-to-reorder AppImage source prioritization. Preferred installation method (AM script vs. direct download) dynamically determined by source order. Added a first-time user onboarding wizard with Applications folder setup and feature overview.</p>
+      </description>
+    </release>
     <release version="1.5.0" date="2026-06-01">
       <description>
         <p>KirigamiAddons FormCard settings layout. KConfig XT settings backend. Process-wide icon store shared across engine instances. Dashboard delegate replaced with Controls.ItemDelegate for uniform selection highlight. Removed batch selection mode. Fixed persistent "Loading N…" label caused by synchronous cache hits racing against pendingLoads assignment. Removed StorageDialog. Drag icon visual improved in manage window.</p>

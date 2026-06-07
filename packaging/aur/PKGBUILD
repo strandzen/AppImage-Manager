@@ -1,6 +1,6 @@
 # Maintainer: strandzen <strandzen@gmail.com>
 pkgname=appimagemanager
-pkgver=1.2.0
+pkgver=2.0.0
 pkgrel=1
 pkgdesc="A lightweight KDE Plasma utility for installing, managing, and removing AppImage files"
 arch=('x86_64' 'aarch64')
@@ -10,6 +10,7 @@ depends=(
     'qt6-base'
     'qt6-declarative'
     'kirigami'
+    'kirigami-addons'
     'kcoreaddons'
     'ki18n'
     'kconfig'
@@ -26,9 +27,10 @@ makedepends=(
     'ninja'
 )
 optdepends=(
+    'am-git: install AppImages via the AM package manager'
+    'zsync2: delta updates (falls back to full download without it)'
     'kstatusnotifieritem: system tray icon support'
     'libcanberra: completion sound notifications'
-    'zsync2: downloading AppImage updates'
 )
 provides=('appimagemanager')
 conflicts=('appimagemanager-git')

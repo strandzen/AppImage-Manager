@@ -38,6 +38,27 @@ qint64 dirSize(const QString &path)
 
 namespace AppImageManager {
 
+// Return a stable, collision-free key for desktop/icon file naming.
+// AppImages with proper AppStream metadata supply a namespaced appId (e.g.
+// "org.videolan.vlc"); use it directly.  Others derive a slug from the clean
+// name, disambiguated by a 6-char hex hash of the original filename so that
+// two differently-named AppImages that happen to share a display name don't
+// overwrite each other's .desktop file.
+static QString fileKey(const AppImageInfo &info)
+{
+    if (info.appId.contains(QLatin1Char('.')))
+        return info.appId;
+    const QString base = info.cleanName.toLower()
+                             .remove(QLatin1String(".appimage"))
+                             .replace(QLatin1Char(' '), QLatin1Char('_'));
+    if (info.originalName.isEmpty())
+        return base;
+    const QString hash = QStringLiteral("%1")
+                             .arg(qHash(info.originalName), 6, 16, QLatin1Char('0'))
+                             .left(6);
+    return base + QLatin1Char('_') + hash;
+}
+
 KIO::CopyJob *installAppImage(const QUrl &source, const QString &applicationsDir)
 {
     QDir().mkpath(applicationsDir);
@@ -96,7 +117,7 @@ bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
         }
     }
 
-    const QString iconField = QIcon::hasThemeIcon(info.appId) ? info.appId : iconPath;
+    const QString iconField = QIcon::hasThemeIcon(info.appId) ? info.appId : (QStringLiteral("appimage_") + fileKey(info));
 
     QString execStr = KShell::quoteArg(appImagePath);
     if (!info.execArgs.isEmpty())
@@ -120,6 +141,15 @@ bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
     }
 
     rebuildSycoca();
+    // kbuildsycoca6 covers Plasma's service catalog; also update the XDG
+    // caches so non-Plasma launchers (Rofi, wofi, Hyprland launchers, etc.)
+    // pick up the new entry. Both tools are optional — ignore exit codes.
+    QProcess::startDetached(QStringLiteral("update-desktop-database"),
+        { QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation) });
+    if (!info.iconData.isEmpty())
+        QProcess::startDetached(QStringLiteral("update-icon-caches"),
+            { QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+              + QStringLiteral("/icons/hicolor") });
     return true;
 }
 
@@ -138,8 +168,14 @@ bool removeDesktopLink(const QString & /*appImagePath*/, const AppImageInfo &inf
         ok = false;
     }
 
-    if (ok)
+    if (ok) {
         rebuildSycoca();
+        QProcess::startDetached(QStringLiteral("update-desktop-database"),
+            { QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation) });
+        QProcess::startDetached(QStringLiteral("update-icon-caches"),
+            { QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+              + QStringLiteral("/icons/hicolor") });
+    }
     return ok;
 }
 
@@ -218,21 +254,18 @@ KJob *removeItems(const QUrl &appImageUrl,
 
 QString desktopFilePath(const AppImageInfo &info)
 {
-    const QString slug = info.cleanName.toLower()
-                             .remove(QLatin1String(".appimage"))
-                             .replace(QLatin1Char(' '), QLatin1Char('_'));
     const QString appsDir = QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
-    return appsDir + QStringLiteral("/appimage_") + slug + QStringLiteral(".desktop");
+    return appsDir + QStringLiteral("/appimage_") + fileKey(info) + QStringLiteral(".desktop");
 }
 
 QString iconFilePath(const AppImageInfo &info)
 {
-    const QString slug = info.cleanName.toLower()
-                             .remove(QLatin1String(".appimage"))
-                             .replace(QLatin1Char(' '), QLatin1Char('_'));
-    const QString iconsBase = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-                              + QLatin1String("/icons/AppImages");
-    return iconsBase + QStringLiteral("/appimage_") + slug + info.iconExt;
+    const QString genericData = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+    const QString subDir = (info.iconExt.endsWith(QLatin1String(".svg"), Qt::CaseInsensitive) ||
+                            info.iconExt.endsWith(QLatin1String(".svgz"), Qt::CaseInsensitive))
+                           ? QStringLiteral("/icons/hicolor/scalable/apps")
+                           : QStringLiteral("/icons/hicolor/256x256/apps");
+    return genericData + subDir + QStringLiteral("/appimage_") + fileKey(info) + info.iconExt;
 }
 
 } // namespace AppImageManager

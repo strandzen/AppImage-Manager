@@ -11,19 +11,24 @@
 class QQmlEngine;
 class QJSEngine;
 
+#include <QUrl>
+
 class APPIMAGEMANAGER_EXPORT AppSettings : public QObject
 {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
 
+
     Q_PROPERTY(QString applicationsPath  READ applicationsPath  WRITE setApplicationsPath  NOTIFY applicationsPathChanged)
     Q_PROPERTY(bool    showDisclaimer    READ showDisclaimer    WRITE setShowDisclaimer    NOTIFY showDisclaimerChanged)
+    Q_PROPERTY(bool    firstRun          READ firstRun          WRITE setFirstRun          NOTIFY firstRunChanged)
     Q_PROPERTY(bool    showNotifications READ showNotifications WRITE setShowNotifications NOTIFY showNotificationsChanged)
     Q_PROPERTY(int     updateFrequency   READ updateFrequency   WRITE setUpdateFrequency   NOTIFY updateFrequencyChanged)
     Q_PROPERTY(int     customUpdateDays  READ customUpdateDays  WRITE setCustomUpdateDays  NOTIFY customUpdateDaysChanged)
     Q_PROPERTY(int     manageIconSize    READ manageIconSize    WRITE setManageIconSize    NOTIFY manageIconSizeChanged)
     Q_PROPERTY(bool    watchDownloads    READ watchDownloads    WRITE setWatchDownloads    NOTIFY watchDownloadsChanged)
+    Q_PROPERTY(bool    verifySignatures  READ verifySignatures  WRITE setVerifySignatures  NOTIFY verifySignaturesChanged)
     Q_PROPERTY(bool    showInstallBox    READ showInstallBox    WRITE setShowInstallBox    NOTIFY showInstallBoxChanged)
     Q_PROPERTY(bool    accentBorders     READ accentBorders     WRITE setAccentBorders     NOTIFY accentBordersChanged)
     Q_PROPERTY(QString qtVersion READ qtVersion CONSTANT)
@@ -49,6 +54,9 @@ public:
     bool showDisclaimer() const;
     void setShowDisclaimer(bool enabled);
 
+    bool firstRun() const;
+    void setFirstRun(bool enabled);
+
     bool showNotifications() const;
     void setShowNotifications(bool enabled);
 
@@ -64,24 +72,29 @@ public:
     bool watchDownloads() const;
     void setWatchDownloads(bool enabled);
 
+    bool verifySignatures() const;
+    void setVerifySignatures(bool enabled);
+
     bool showInstallBox() const;
     void setShowInstallBox(bool enabled);
 
     bool accentBorders() const;
     void setAccentBorders(bool enabled);
 
-    Q_INVOKABLE void openFolderPicker(QWindow *parent = nullptr);
+    Q_INVOKABLE void setApplicationsPathFromUrl(const QUrl &url);
     Q_INVOKABLE void resetToDefaults();
 
 Q_SIGNALS:
     void applicationsPathChanged();
     void showDisclaimerChanged();
+    void firstRunChanged();
     void showNotificationsChanged();
     void updateFrequencyChanged();
     void customUpdateDaysChanged();
     void manageIconSizeChanged();
     void watchDownloadsChanged();
     void showInstallBoxChanged();
+    void verifySignaturesChanged();
     void accentBordersChanged();
     void applicationsPathError(const QString &message);
 

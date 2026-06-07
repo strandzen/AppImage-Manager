@@ -57,6 +57,17 @@ public:
     bool     isFindingCorpses() const { return m_isFindingCorpses; }
     bool     isRemovingItems()  const { return m_isRemovingItems; }
 
+    // Mirror of SignatureState enum for QML access.
+    // Values must stay in sync with appimageinfo.h::SignatureState.
+    enum SigState {
+        SigUnchecked      = 0,
+        SigValid          = 1,
+        SigInvalid        = 2,
+        SigUnsigned       = 3,
+        SigGpgUnavailable = 4,
+    };
+    Q_ENUM(SigState)
+
 Q_SIGNALS:
     void metadataLoadedChanged();
     void infoChanged();
@@ -65,9 +76,14 @@ Q_SIGNALS:
     void busyChanged();
     void uninstallFinished();
     void errorOccurred(const QString &message);
+    // Emitted after beginInstall() finishes the async signature check.
+    // QML should inspect state: if SigValid/SigGpgUnavailable/SigUnchecked → call doInstall();
+    // if SigUnsigned or SigInvalid → show warning first, then optionally call doInstall().
+    void signatureCheckReady(int state);
 
 public Q_SLOTS:
-    void installAppImage();
+    void beginInstall();  // starts async sig-check, then emits signatureCheckReady
+    void doInstall();     // performs the actual KIO install job (call after signatureCheckReady)
     void launchAppImage();
     void toggleDesktopLink(bool enable);
     void findCorpses();

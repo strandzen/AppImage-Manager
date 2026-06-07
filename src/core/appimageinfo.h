@@ -9,6 +9,16 @@
 #include <QStringList>
 #include <QVersionNumber>
 
+// Result of a GPG signature check on a Type 2 AppImage.
+// Stored in AppImageInfo so the result survives the AppImageReader round-trip.
+enum class SignatureState : int {
+    Unchecked      = 0, // not yet attempted
+    Valid          = 1, // .sha256_sig present, gpg confirms it
+    Invalid        = 2, // .sha256_sig present, gpg rejects it (tampered / wrong key)
+    Unsigned       = 3, // no .sha256_sig ELF section found
+    GpgUnavailable = 4, // section present but gpg/gpg2 not on PATH
+};
+
 // Metadata extracted from a single AppImage file.
 // `description` holds AppStream XML prose (from usr/share/metainfo/*.appdata.xml).
 // Falls back to the .desktop `Comment=` field (stored in `comment`) when no XML is present.

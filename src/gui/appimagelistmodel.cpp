@@ -417,16 +417,16 @@ void AppImageListModel::onFileDirty(const QString &path)
     loadMetadataForRow(row);
 }
 
-void AppImageListModel::applyMetadata(int row, AppImageInfo info)
+void AppImageListModel::applyMetadata(int row, const AppImageInfo &info)
 {
     const QString path = m_items.at(row).filePath;
-    info.originalName = QFileInfo(path).fileName();
 
     if (!info.iconData.isEmpty())
         m_iconProvider->setIconData(iconIdForPath(path), info.iconData, info.iconExt);
 
     Item &item          = m_items[row];
     item.info           = info;
+    item.info.originalName = QFileInfo(path).fileName();
     item.hasDesktopLink = AppImageManager::isDesktopLinkEnabled(path, info);
     item.metadataLoaded = true;
     item.cachedFormattedSize = formatBytes(info.fileSize);
@@ -454,6 +454,15 @@ void AppImageListModel::toggleDesktopLink(int row, bool enable)
     if (ok) {
         item.hasDesktopLink = enable;
         Q_EMIT dataChanged(index(row, 0), index(row, 0), {HasDesktopLinkRole});
+    } else {
+        auto *n = new KNotification(QStringLiteral("error"),
+                                    KNotification::CloseOnTimeout, this);
+        n->setTitle(i18n("Desktop Link Failed"));
+        n->setText(enable
+            ? i18n("Could not create desktop link for %1.", item.info.appName)
+            : i18n("Could not remove desktop link for %1.", item.info.appName));
+        n->setIconName(QStringLiteral("dialog-error"));
+        n->sendEvent();
     }
 }
 

@@ -6,6 +6,7 @@ Comment=Manage AppImage files
 Exec=appimagemanager %f
 Icon=appimagemanager
 Terminal=false
+StartupNotify=true
 Categories=System;FileManager;
 Keywords=AppImage;install;manage;application;
 MimeType=application/vnd.appimage;application/x-iso9660-appimage;

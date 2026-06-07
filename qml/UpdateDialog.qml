@@ -84,6 +84,14 @@ Kirigami.Dialog {
             Item { Layout.fillWidth: true }
         }
 
+        Controls.Label {
+            Layout.fillWidth: true
+            text: i18n("If zsync2 is not installed, the full AppImage will be downloaded.")
+            wrapMode: Text.WordWrap
+            opacity: 0.6
+            font: Kirigami.Theme.smallFont
+        }
+
         Kirigami.Separator { Layout.fillWidth: true }
 
         // Action buttons
