@@ -12,10 +12,6 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 
 ---
 
-![Dashboard](assets/dashboard.png)
-
----
-
 ## Features
 
 - **Dashboard:** Browse, search, and sort all installed AppImages by name, size, category, or date. Sidebar navigation with Installed, Discover, Settings, and About sections.
