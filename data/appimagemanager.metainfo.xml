@@ -33,7 +33,15 @@
   <screenshots>
     <screenshot type="default">
       <caption>Dashboard showing installed AppImages</caption>
-      <image>https://raw.githubusercontent.com/strandzen/AppImage-Manager/main/assets/dashboard.png</image>
+      <image>https://raw.githubusercontent.com/strandzen/AppImage-Manager/main/assets/installed.png</image>
+    </screenshot>
+    <screenshot type="normal">
+      <caption>Discover page for browsing and installing new AppImages</caption>
+      <image>https://raw.githubusercontent.com/strandzen/AppImage-Manager/main/assets/discover.png</image>
+    </screenshot>
+    <screenshot type="normal">
+      <caption>Drag-and-drop installation from the file manager</caption>
+      <image>https://raw.githubusercontent.com/strandzen/AppImage-Manager/main/assets/drag-to-install.png</image>
     </screenshot>
   </screenshots>
 

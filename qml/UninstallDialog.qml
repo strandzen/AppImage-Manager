@@ -167,7 +167,7 @@ Kirigami.Dialog {
                         }
                     }
                     ColumnLayout {
-                        spacing: 2
+                        spacing: Math.round(Kirigami.Units.smallSpacing / 2)
                         Controls.Label {
                             text: dialog.backend ? dialog.backend.originalName : ""
                             elide: Text.ElideMiddle
@@ -234,7 +234,7 @@ Kirigami.Dialog {
                         }
                     }
                     ColumnLayout {
-                        spacing: 2
+                        spacing: Math.round(Kirigami.Units.smallSpacing / 2)
                         Layout.fillWidth: true
                         Controls.Label {
                             readonly property string home: Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation)

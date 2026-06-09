@@ -542,17 +542,6 @@ void AMStoreModel::checkAllLoaded()
     connect(w, &QFutureWatcher<Result>::finished, this, [this, w]() {
         auto [merged, cats] = w->result();
         m_allApps             = std::move(merged);
-
-        // Main-thread pass: clear iconSource when it's not a URL and not a real
-        // theme icon. Without this, the package name falls through to the QML
-        // fallback which resolves to the system's AppImage file-type icon.
-        for (auto &app : m_allApps) {
-            if (!app.iconSource.startsWith(QStringLiteral("http")) &&
-                !QIcon::hasThemeIcon(app.iconSource)) {
-                app.iconSource.clear();
-            }
-        }
-
         m_availableCategories = std::move(cats);
         Q_EMIT availableCategoriesChanged();
         m_loading = false;
@@ -645,6 +634,16 @@ void AMStoreModel::checkAllLoaded()
         }
         QStringList catList(cats.cbegin(), cats.cend());
         std::sort(catList.begin(), catList.end());
+
+        // Qt 6: QIconLoader is guarded by an internal mutex — safe from worker threads.
+        // Clearing non-URL, non-theme iconSources here avoids blocking the main thread
+        // over ~3000 hasThemeIcon() calls when the finished signal fires.
+        for (auto &app : mergedList) {
+            if (!app.iconSource.startsWith(QStringLiteral("http")) &&
+                !QIcon::hasThemeIcon(app.iconSource)) {
+                app.iconSource.clear();
+            }
+        }
 
         return {std::move(mergedList), std::move(catList)};
     }));

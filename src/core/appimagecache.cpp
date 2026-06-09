@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "appimagecache.h"
+#include "logging.h"
 
 #include <QCryptographicHash>
 #include <QDebug>
@@ -26,7 +27,7 @@ static QString cacheDbPath()
 {
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     if (!QDir().mkpath(dir))
-        qWarning() << "AppImageCache: failed to create cache directory:" << dir;
+        qCWarning(AIM_LOG) << "AppImageCache: failed to create cache directory:" << dir;
     return dir + QStringLiteral("/cache.db");
 }
 
@@ -54,7 +55,7 @@ static QSqlDatabase connectionForCurrentThread(const QString &dbPath)
             QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), name);
             db.setDatabaseName(dbPath);
             if (!db.open()) {
-                qWarning() << "AppImageCache: cannot open database:" << db.lastError().text();
+                qCWarning(AIM_LOG) << "AppImageCache: cannot open database:" << db.lastError().text();
                 return db;
             }
 
@@ -112,7 +113,7 @@ AppImageInfo AppImageCache::load(const QString &path, qint64 mtime)
 {
     QSqlDatabase db = connectionForCurrentThread(m_dbPath);
     if (!db.isOpen()) {
-        qWarning() << "AppImageCache: load skipped — DB unavailable for" << path;
+        qCWarning(AIM_LOG) << "AppImageCache: load skipped — DB unavailable for" << path;
         return {};
     }
 
@@ -124,7 +125,7 @@ AppImageInfo AppImageCache::load(const QString &path, qint64 mtime)
         "FROM metadata WHERE key = ?"));
     q.addBindValue(keyFor(path));
     if (!q.exec()) {
-        qWarning() << "AppImageCache: load query failed:" << q.lastError().text();
+        qCWarning(AIM_LOG) << "AppImageCache: load query failed:" << q.lastError().text();
         return {};
     }
     if (!q.next()) return {}; // normal cache miss, no log needed
@@ -156,7 +157,7 @@ void AppImageCache::store(const QString &path, qint64 mtime, const AppImageInfo 
 {
     QSqlDatabase db = connectionForCurrentThread(m_dbPath);
     if (!db.isOpen()) {
-        qWarning() << "AppImageCache: store skipped — DB unavailable for" << path;
+        qCWarning(AIM_LOG) << "AppImageCache: store skipped — DB unavailable for" << path;
         return;
     }
 
@@ -187,5 +188,5 @@ void AppImageCache::store(const QString &path, qint64 mtime, const AppImageInfo 
     q.addBindValue(info.iconData);   // QByteArray → BLOB, no base64 overhead
     q.addBindValue(info.isValid ? 1 : 0);
     if (!q.exec())
-        qWarning() << "AppImageCache: store failed:" << q.lastError().text();
+        qCWarning(AIM_LOG) << "AppImageCache: store failed:" << q.lastError().text();
 }

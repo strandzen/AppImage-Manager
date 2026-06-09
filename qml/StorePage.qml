@@ -33,6 +33,23 @@ Kirigami.Page {
         currentItem = amStoreModel.itemData(idx)
     }
 
+    function avatarColor(name) {
+        const palette = ["#e57373","#f06292","#ba68c8","#9575cd",
+                         "#7986cb","#64b5f6","#4fc3f7","#4dd0e1",
+                         "#4db6ac","#81c784","#aed581","#ffb74d"]
+        let h = 0
+        for (let i = 0; i < name.length; i++)
+            h = (h * 31 + name.charCodeAt(i)) >>> 0
+        return palette[h % palette.length]
+    }
+
+    function avatarInitials(name) {
+        const words = name.trim().split(/\s+/).filter(w => w.length > 0)
+        if (words.length === 0) return ""
+        if (words.length === 1) return words[0].charAt(0).toUpperCase()
+        return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase()
+    }
+
     function getLogColor(text) {
         const lower = text.toLowerCase()
         if (lower.includes("error") || lower.includes("failed") || lower.includes("✗"))
@@ -135,11 +152,46 @@ Kirigami.Page {
                     }
 
                     Controls.Button {
+                        id: categoryBtn
+                        display: Controls.AbstractButton.IconOnly
+                        icon.name: "tag"
+                        text: i18n("Filter by category")
+                        highlighted: amStoreModel.categoryFilter !== "" && amStoreModel.categoryFilter !== "All"
+                        onClicked: categoryMenu.popup()
+                        Controls.ToolTip.visible: hovered
+                        Controls.ToolTip.text: (amStoreModel.categoryFilter === "" || amStoreModel.categoryFilter === "All")
+                            ? i18n("Category: All")
+                            : i18n("Category: %1", amStoreModel.categoryFilter)
+                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+
+                        Controls.Menu {
+                            id: categoryMenu
+                            Controls.MenuItem {
+                                text: i18n("All Categories")
+                                checkable: true
+                                checked: amStoreModel.categoryFilter === "" || amStoreModel.categoryFilter === "All"
+                                onTriggered: amStoreModel.categoryFilter = ""
+                            }
+                            Controls.MenuSeparator {}
+                            Instantiator {
+                                model: amStoreModel.availableCategories
+                                onObjectAdded: (index, object) => categoryMenu.insertItem(index + 2, object)
+                                onObjectRemoved: (index, object) => categoryMenu.removeItem(object)
+                                delegate: Controls.MenuItem {
+                                    text: modelData
+                                    checkable: true
+                                    checked: amStoreModel.categoryFilter === modelData
+                                    onTriggered: amStoreModel.categoryFilter = modelData
+                                }
+                            }
+                        }
+                    }
+
+                    Controls.Button {
                         id: filterBtn
                         display: Controls.AbstractButton.IconOnly
                         icon.name: "view-filter"
                         text: i18n("Filter by source")
-                        // Highlight when a non-default source is active
                         highlighted: amStoreModel.storeSource !== 0
                         onClicked: sourceMenu.popup()
                         Controls.ToolTip.visible: hovered
@@ -177,44 +229,6 @@ Kirigami.Page {
                     }
                 }
 
-                // Category chips — Flickable avoids the ScrollView scrollbar
-                // stealing vertical height and clipping chip text.
-                Flickable {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: chipRow.implicitHeight
-                    Layout.leftMargin: Kirigami.Units.smallSpacing
-                    Layout.rightMargin: Kirigami.Units.smallSpacing
-                    Layout.bottomMargin: Kirigami.Units.smallSpacing
-                    contentWidth: chipRow.implicitWidth
-                    contentHeight: chipRow.implicitHeight
-                    flickableDirection: Flickable.HorizontalFlick
-                    clip: true
-
-                    RowLayout {
-                        id: chipRow
-                        spacing: Kirigami.Units.smallSpacing
-                        Repeater {
-                            model: amStoreModel.availableCategories
-                            delegate: Controls.Button {
-                                text: modelData
-                                checkable: true
-                                checked: amStoreModel.categoryFilter === modelData
-                                onClicked: {
-                                    amStoreModel.categoryFilter =
-                                        amStoreModel.categoryFilter === modelData ? "" : modelData
-                                }
-                                scale: 1.0
-                                Behavior on scale {
-                                    NumberAnimation { duration: 100; easing.type: Easing.OutBack }
-                                }
-                                onPressed: scale = 0.93
-                                onReleased: scale = 1.0
-                                onCanceled: scale = 1.0
-                            }
-                        }
-                    }
-                }
-
                 // App list
                 Item {
                     Layout.fillWidth: true
@@ -245,6 +259,9 @@ Kirigami.Page {
                         model: amStoreModel
                         clip: true
                         currentIndex: -1
+                        // Pre-create delegates for ±20 items outside the visible area so
+                        // images start loading before rows scroll into view.
+                        cacheBuffer: Math.round(Kirigami.Units.gridUnit * 2.5 * 20)
 
                         Controls.ScrollBar.vertical: Controls.ScrollBar {
                             id: listScrollBar
@@ -294,18 +311,36 @@ Kirigami.Page {
                                     implicitWidth: Kirigami.Units.iconSizes.smallMedium
                                     implicitHeight: Kirigami.Units.iconSizes.smallMedium
                                     Layout.alignment: Qt.AlignVCenter
+
                                     readonly property bool isUrl: model.iconSource.startsWith("http")
+                                    readonly property bool hasThemeIcon: !isUrl && model.iconSource !== ""
+                                    readonly property bool imageReady: isUrl && delegateImg.status === Image.Ready
+
                                     Image {
                                         id: delegateImg
                                         anchors.fill: parent
                                         source: parent.isUrl ? model.iconSource : ""
                                         fillMode: Image.PreserveAspectFit
+                                        asynchronous: true
+                                        visible: parent.imageReady
                                     }
                                     Kirigami.Icon {
                                         anchors.fill: parent
-                                        source: model.iconSource || "package-x-generic"
-                                        fallback: "package-x-generic"
-                                        visible: !parent.isUrl || delegateImg.status !== Image.Ready
+                                        source: model.iconSource
+                                        visible: parent.hasThemeIcon
+                                    }
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        visible: !parent.hasThemeIcon && !parent.imageReady
+                                        radius: 3
+                                        color: pageRoot.avatarColor(model.displayName)
+                                        Controls.Label {
+                                            anchors.centerIn: parent
+                                            text: pageRoot.avatarInitials(model.displayName)
+                                            color: "white"
+                                            font.bold: true
+                                            font.pixelSize: Math.round(parent.height * 0.45)
+                                        }
                                     }
                                 }
 
@@ -383,18 +418,36 @@ Kirigami.Page {
                                 implicitWidth: Kirigami.Units.iconSizes.enormous
                                 implicitHeight: Kirigami.Units.iconSizes.enormous
                                 Layout.alignment: Qt.AlignHCenter
+
                                 readonly property bool isUrl: (pageRoot.displayedItem.iconSource ?? "").startsWith("http")
+                                readonly property bool hasThemeIcon: !isUrl && (pageRoot.displayedItem.iconSource ?? "") !== ""
+                                readonly property bool imageReady: isUrl && detailImg.status === Image.Ready
+
                                 Image {
                                     id: detailImg
                                     anchors.fill: parent
                                     source: parent.isUrl ? (pageRoot.displayedItem.iconSource ?? "") : ""
                                     fillMode: Image.PreserveAspectFit
+                                    asynchronous: true
+                                    visible: parent.imageReady
                                 }
                                 Kirigami.Icon {
                                     anchors.fill: parent
-                                    source: pageRoot.displayedItem.iconSource ?? "package-x-generic"
-                                    fallback: "package-x-generic"
-                                    visible: !parent.isUrl || detailImg.status !== Image.Ready
+                                    source: pageRoot.displayedItem.iconSource ?? ""
+                                    visible: parent.hasThemeIcon
+                                }
+                                Rectangle {
+                                    anchors.fill: parent
+                                    visible: !parent.hasThemeIcon && !parent.imageReady
+                                    radius: Kirigami.Units.smallSpacing * 2
+                                    color: pageRoot.avatarColor(pageRoot.displayedItem.displayName ?? "")
+                                    Controls.Label {
+                                        anchors.centerIn: parent
+                                        text: pageRoot.avatarInitials(pageRoot.displayedItem.displayName ?? "")
+                                        color: "white"
+                                        font.bold: true
+                                        font.pixelSize: Math.round(parent.height * 0.38)
+                                    }
                                 }
                             }
 
@@ -558,7 +611,7 @@ Kirigami.Page {
                                     Column {
                                         id: logConsole
                                         width: logScrollView.availableWidth
-                                        spacing: 2
+                                        spacing: Math.round(Kirigami.Units.smallSpacing / 2)
 
                                         Repeater {
                                             model: logModel

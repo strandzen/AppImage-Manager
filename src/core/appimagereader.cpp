@@ -421,9 +421,10 @@ SignatureState AppImageReader::verifySignature(const QString &path)
         return SignatureState::Unchecked;
 
     // gpg --verify <detached-sig> <signed-data>
+    constexpr int kGpgTimeoutMs = 15'000;
     QProcess gpg;
     gpg.start(gpgExe, { QStringLiteral("--verify"), sigFile, hashFile });
-    if (!gpg.waitForFinished(15000)) {
+    if (!gpg.waitForFinished(kGpgTimeoutMs)) {
         gpg.kill();
         return SignatureState::Unchecked;
     }

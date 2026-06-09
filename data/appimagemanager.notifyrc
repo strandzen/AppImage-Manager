@@ -39,3 +39,8 @@ Action=Popup
 Name=Installation Failed
 Comment=An AppImage could not be installed
 Action=Popup
+
+[Event/signatureWarning]
+Name=Signature Check Failed
+Comment=An AppImage failed signature verification and was not installed
+Action=Popup

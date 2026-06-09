@@ -38,7 +38,7 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 
 - **Build Tools:** CMake 3.22+, Ninja, C++20 compiler (GCC 12+ or Clang 15+)
 - **Qt 6.9+:** Core, Gui, Quick, Qml, Concurrent, Network, Sql, Svg
-- **KDE Frameworks 6:** CoreAddons, I18n, KIO, IconThemes, Notifications, Crash, DBusAddons, Kirigami, KirigamiAddons, StatusNotifierItem
+- **KDE Frameworks 6:** CoreAddons, I18n, Config, KIO, IconThemes, Notifications, Crash, DBusAddons, StatusNotifierItem, Kirigami, KirigamiAddons
 - **Required:** `libappimage` for in-process SquashFS metadata extraction
 - **Optional:** `gpg`/`gpg2` for signature verification; `zsync2` for delta updates; `am` for script installations from the Discover page
 
@@ -51,9 +51,11 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 
 ```bash
 sudo pacman -S base-devel cmake extra-cmake-modules ninja \
-    qt6-base qt6-declarative \
-    kcoreaddons ki18n kio kiconthemes knotifications kcrash kdbusaddons kirigami \
-    kirigami-addons kstatusnotifieritem libappimage gnupg
+    qt6-base qt6-declarative qt6-svg \
+    kcoreaddons ki18n kconfig kio kiconthemes knotifications kcrash kdbusaddons \
+    kirigami kirigami-addons kstatusnotifieritem gnupg
+# libappimage is AUR only:
+# yay -S libappimage
 # Optional: AUR packages for Discover page script installs:
 # yay -S am-git zsync2
 ```
@@ -65,10 +67,10 @@ sudo pacman -S base-devel cmake extra-cmake-modules ninja \
 
 ```bash
 sudo dnf install gcc-c++ cmake extra-cmake-modules ninja-build \
-    qt6-qtbase-devel qt6-qtdeclarative-devel \
-    kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kio-devel kf6-kiconthemes-devel \
-    kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kirigami-devel \
-    kf6-kirigamiaddons-devel libappimage-devel gnupg2
+    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtsvg-devel \
+    kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kconfig-devel kf6-kio-devel kf6-kiconthemes-devel \
+    kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kstatusnotifieritem-devel \
+    kf6-kirigami-devel kf6-kirigami-addons-devel libappimage-devel gnupg2
 ```
 
 </details>
@@ -78,9 +80,9 @@ sudo dnf install gcc-c++ cmake extra-cmake-modules ninja-build \
 
 ```bash
 sudo apt install build-essential cmake extra-cmake-modules ninja-build \
-    qt6-base-dev qt6-declarative-dev \
-    libkf6coreaddons-dev libkf6i18n-dev libkf6kio-dev libkf6iconthemes-dev \
-    libkf6notifications-dev libkf6crash-dev libkf6dbusaddons-dev \
+    qt6-base-dev qt6-declarative-dev libqt6svg6-dev \
+    libkf6coreaddons-dev libkf6i18n-dev libkf6config-dev libkf6kio-dev libkf6iconthemes-dev \
+    libkf6notifications-dev libkf6crash-dev libkf6dbusaddons-dev libkf6statusnotifieritem-dev \
     qml6-module-org-kde-kirigami qml6-module-org-kde-kirigamiaddons \
     libappimage-dev gnupg2
 ```
@@ -92,10 +94,10 @@ sudo apt install build-essential cmake extra-cmake-modules ninja-build \
 
 ```bash
 sudo zypper in gcc-c++ cmake extra-cmake-modules ninja \
-    qt6-base-devel qt6-declarative-devel \
-    kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kio-devel kf6-kiconthemes-devel \
-    kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kirigami-devel \
-    kf6-kirigami-addons-devel libappimage-devel gpg2
+    qt6-base-devel qt6-declarative-devel qt6-svg-devel \
+    kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kconfig-devel kf6-kio-devel kf6-kiconthemes-devel \
+    kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kstatusnotifieritem-devel \
+    kf6-kirigami-devel kf6-kirigami-addons-devel libappimage-devel gpg2
 ```
 
 </details>

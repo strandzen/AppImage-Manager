@@ -122,7 +122,7 @@ Kirigami.Dialog {
 
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 2
+                            spacing: Math.round(Kirigami.Units.smallSpacing / 2)
                             Controls.Label {
                                 text: i18n("Applications Folder:")
                                 font.bold: true

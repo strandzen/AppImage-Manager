@@ -174,15 +174,19 @@ endif()
 # Dolphin plugin — KAbstractFileItemActionPlugin (.so)
 # Auto-discovered by Dolphin via plugin JSON metadata.
 # ──────────────────────────────────────────────────────────────────────────────
-kcoreaddons_add_plugin(appimagemanager
-    SOURCES plugin/appimageactionplugin.cpp
-    INSTALL_NAMESPACE "kf6/fileitemaction"
-)
-target_include_directories(appimagemanager PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}
-)
-target_link_libraries(appimagemanager PRIVATE appimagemanager_qml)
+option(BUILD_DOLPHIN_PLUGIN "Build the Dolphin file item action plugin" ON)
+
+if(BUILD_DOLPHIN_PLUGIN)
+    kcoreaddons_add_plugin(appimagemanager
+        SOURCES plugin/appimageactionplugin.cpp
+        INSTALL_NAMESPACE "kf6/fileitemaction"
+    )
+    target_include_directories(appimagemanager PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}
+    )
+    target_link_libraries(appimagemanager PRIVATE appimagemanager_qml)
+endif()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Standalone binary — launched per-file from the service menu,

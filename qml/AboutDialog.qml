@@ -15,12 +15,6 @@ Kirigami.Dialog {
     preferredWidth: Kirigami.Units.gridUnit * 24
     preferredHeight: Kirigami.Units.gridUnit * 28
 
-    readonly property color cardBorderColor: AppSettings.accentBorders 
-        ? aboutDialog.Kirigami.Theme.focusColor 
-        : (aboutDialog.Kirigami.Theme.textColor && aboutDialog.Kirigami.Theme.textColor.r !== undefined
-            ? Qt.rgba(aboutDialog.Kirigami.Theme.textColor.r, aboutDialog.Kirigami.Theme.textColor.g, aboutDialog.Kirigami.Theme.textColor.b, 0.15)
-            : Qt.rgba(0.5, 0.5, 0.5, 0.15))
-
     ContributorsModel { id: contributorsModel }
 
     onOpened: contributorsModel.fetch()
@@ -45,7 +39,7 @@ Kirigami.Dialog {
             Layout.fillWidth: true
             implicitHeight: headerLayout.implicitHeight + Kirigami.Units.largeSpacing * 2
             color: Kirigami.Theme.alternateBackgroundColor
-            border.color: aboutDialog.cardBorderColor
+            border.color: Theme.cardBorderColor
             border.width: 1
             radius: Kirigami.Units.smallSpacing * 2
 
@@ -88,7 +82,7 @@ Kirigami.Dialog {
             Layout.fillWidth: true
             implicitHeight: licenseLayout.implicitHeight + Kirigami.Units.mediumSpacing * 2
             color: Kirigami.Theme.alternateBackgroundColor
-            border.color: aboutDialog.cardBorderColor
+            border.color: Theme.cardBorderColor
             border.width: 1
             radius: Kirigami.Units.smallSpacing * 2
 
@@ -143,7 +137,7 @@ Kirigami.Dialog {
             Layout.fillWidth: true
             implicitHeight: actionsLayout.implicitHeight + Kirigami.Units.largeSpacing * 2
             color: Kirigami.Theme.alternateBackgroundColor
-            border.color: aboutDialog.cardBorderColor
+            border.color: Theme.cardBorderColor
             border.width: 1
             radius: Kirigami.Units.smallSpacing * 2
 
@@ -271,7 +265,7 @@ Kirigami.Dialog {
             Layout.fillWidth: true
             implicitHeight: libsLayout.implicitHeight + Kirigami.Units.largeSpacing * 2
             color: Kirigami.Theme.alternateBackgroundColor
-            border.color: aboutDialog.cardBorderColor
+            border.color: Theme.cardBorderColor
             border.width: 1
             radius: Kirigami.Units.smallSpacing * 2
 
@@ -394,7 +388,7 @@ Kirigami.Dialog {
             Layout.fillWidth: true
             implicitHeight: authorsLayout.implicitHeight + Kirigami.Units.largeSpacing * 2
             color: Kirigami.Theme.alternateBackgroundColor
-            border.color: aboutDialog.cardBorderColor
+            border.color: Theme.cardBorderColor
             border.width: 1
             radius: Kirigami.Units.smallSpacing * 2
 

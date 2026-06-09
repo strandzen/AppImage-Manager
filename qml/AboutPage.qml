@@ -75,7 +75,8 @@ Kirigami.Page {
             FormCard.FormCard {
                 FormCard.AbstractFormDelegate {
                     onClicked: Qt.openUrlExternally("https://www.gnu.org/licenses/old-licenses/gpl-2.0.html")
-                    
+                    rightPadding: Kirigami.Units.largeSpacing
+
                     contentItem: RowLayout {
                         spacing: Kirigami.Units.largeSpacing
 
@@ -294,8 +295,9 @@ Kirigami.Page {
                         FormCard.AbstractFormDelegate {
                             background: null
                             Layout.fillWidth: true
+                            rightPadding: Kirigami.Units.largeSpacing
                             contentItem: RowLayout {
-                                spacing: Kirigami.Units.largeSpacing
+                                spacing: Kirigami.Units.mediumSpacing
 
                                 Rectangle {
                                     implicitWidth: Kirigami.Units.gridUnit * 2

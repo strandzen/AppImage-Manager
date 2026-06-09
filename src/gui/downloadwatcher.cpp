@@ -14,7 +14,8 @@ namespace {
 constexpr int kSettleIntervalMs = 1500;  // recheck cadence while a file is settling
 constexpr int kMaxSettlePolls   = 5;     // ~7.5s ceiling before we give up on a stalled write
 
-bool isAppImagePath(const QString &path)
+// Takes a full path; isAppImageFile() in appimagelistmodel.cpp takes a basename.
+bool isAppImageFile(const QString &path)
 {
     return path.endsWith(QStringLiteral(".AppImage"), Qt::CaseInsensitive)
         || path.endsWith(QStringLiteral(".appimage"), Qt::CaseInsensitive);
@@ -66,7 +67,7 @@ void DownloadWatcher::setEnabled(bool enabled)
 
 void DownloadWatcher::onCreated(const QString &path)
 {
-    if (path == m_watchedDir || !isAppImagePath(path))
+    if (path == m_watchedDir || !isAppImageFile(path))
         return;
     if (m_pending.contains(path))
         return;
