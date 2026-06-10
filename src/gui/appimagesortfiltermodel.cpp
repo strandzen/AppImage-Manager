@@ -17,8 +17,7 @@ void AppImageSortFilterModel::setFilterText(const QString &text)
         return;
     m_filterText = text;
     Q_EMIT filterTextChanged();
-    beginFilterChange();
-    endFilterChange();
+    invalidateFilter();
 }
 
 void AppImageSortFilterModel::setSortField(int field)
