@@ -9,7 +9,12 @@
 $XGETTEXT \
     src/main.cpp \
     src/core/appimagemanager.cpp \
+    src/core/updatedaemon.cpp \
     src/gui/appimagebackend.cpp \
+    src/gui/appimagelistmodel.cpp \
+    src/gui/appimageupdate.cpp \
+    src/gui/amstoremodel.cpp \
+    src/gui/dashboardwindow.cpp \
     src/plugin/appimageactionplugin.cpp \
     --keyword=i18n:1 \
     --keyword=i18nc:1c,2 \
@@ -22,7 +27,17 @@ $XGETTEXT \
 
 $XGETTEXT \
     qml/ManageWindow.qml \
-    qml/UninstallWindow.qml \
+    qml/UninstallDialog.qml \
+    qml/DashboardWindow.qml \
+    qml/LibraryPage.qml \
+    qml/StorePage.qml \
+    qml/SettingsPage.qml \
+    qml/SettingsDialog.qml \
+    qml/OnboardingDialog.qml \
+    qml/UpdateDialog.qml \
+    qml/AboutDialog.qml \
+    qml/AboutPage.qml \
+    qml/ContributorsModel.qml \
     --keyword=i18n:1 \
     --keyword=i18nc:1c,2 \
     --keyword=i18np:1,2 \
