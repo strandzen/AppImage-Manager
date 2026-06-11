@@ -7,6 +7,7 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)](https://en.cppreference.com/w/cpp/20)
 [![License](https://img.shields.io/badge/License-GPL--2.0--or--later-blue)](LICENSES/GPL-2.0-or-later.txt)
 [![Linux](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.kernel.org/)
+[![AUR](https://img.shields.io/aur/version/appimage-manager-plasma?label=AUR&color=1793d1&logo=archlinux&logoColor=white)](https://aur.archlinux.org/packages/appimage-manager-plasma)
 
 > **Disclaimer:** This project is vibecoded — built with heavy AI assistance. It is also an independent, community-driven effort and is not affiliated with or endorsed by KDE or the KDE e.V. organization.
 
@@ -17,6 +18,23 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 ![Drag to Install](assets/drag-to-install.png)
 
 ---
+
+## Installation
+
+### Arch Linux (AUR) — recommended
+
+```bash
+yay -S appimage-manager-plasma
+```
+
+> **Note:** `libappimage` is an AUR dependency and will be pulled in automatically by your AUR helper.
+
+### Other distributions
+
+Other distros are not validated. Build from source at your own risk — see [Build & Install](#build--install) below.
+
+---
+
 ## Features
 
 - **Dashboard:** Browse, search, and sort all installed AppImages by name, size, category, or date. Sidebar navigation with Installed, Discover, Settings, and About sections.
