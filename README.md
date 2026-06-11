@@ -1,6 +1,6 @@
 # <img src="data/sc-apps-appimagemanager.svg" width="256" height="256" align="center" alt="Logo"> AppImage Manager
 
-A lightweight, native AppImage manager for KDE Plasma 6.
+A lightweight, native AppImage manager for KDE Plasma 6, built with a core philosophy of complete **source agnosticism**.
 
 [![KDE Plasma 6](https://img.shields.io/badge/KDE_Plasma-6-1d99f3?logo=kde&logoColor=white)](https://kde.org/plasma-desktop/)
 [![Qt](https://img.shields.io/badge/Qt-6.9%2B-41CD52?logo=qt&logoColor=white)](https://www.qt.io/)
@@ -9,7 +9,7 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 [![Linux](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.kernel.org/)
 [![AUR](https://img.shields.io/aur/version/appimage-manager-plasma?label=AUR&color=1793d1&logo=archlinux&logoColor=white)](https://aur.archlinux.org/packages/appimage-manager-plasma)
 
-> **Disclaimer:** This project is vibecoded — built with heavy AI assistance. It is also an independent, community-driven effort and is not affiliated with or endorsed by KDE or the KDE e.V. organization.
+> **Disclaimer:** This project is vibecoded - built with heavy AI assistance. It is also an independent, community-driven effort and is not affiliated with or endorsed by KDE or the KDE e.V. organization.
 
 ---
 
@@ -21,17 +21,17 @@ A lightweight, native AppImage manager for KDE Plasma 6.
 
 ## Installation
 
-### Arch Linux (AUR) — recommended
+### Arch Linux (AUR) - recommended
 
 ```bash
-yay -S appimage-manager-plasma
+paru -S appimage-manager-plasma
 ```
 
 > **Note:** `libappimage` is an AUR dependency and will be pulled in automatically by your AUR helper.
 
 ### Other distributions
 
-Other distros are not validated. Build from source at your own risk — see [Build & Install](#build--install) below.
+Other distros are not yet validated. Build from source at your own risk - see [Build & Install](#build--install) below.
 
 ---
 
@@ -39,14 +39,14 @@ Other distros are not validated. Build from source at your own risk — see [Bui
 
 - **Dashboard:** Browse, search, and sort all installed AppImages by name, size, category, or date. Sidebar navigation with Installed, Discover, Settings, and About sections.
 - **Rich Metadata:** Displays app icon, version, size, category, and AppStream description extracted directly from each AppImage.
-- **Discover Page:** Browse and install from the combined AM database and AppImage Hub catalog (~1,300 curated apps). Supports both `am` script installs and direct HTTP downloads — no browser redirect.
+- **Source Agnosticism & Custom Sources:** Built to be fully source-agnostic. In addition to the current default AM database and AppImage Hub catalogs (~1,300 curated apps), you can add, configure, reorder, or disable your own custom JSON repository sources directly. Supports both `am` script installs and direct HTTP downloads with no browser redirects.
 - **Dolphin Integration:** Right-click any `.AppImage` in Dolphin to open the management window directly.
 - **Drag-and-Drop Install:** Drag an AppImage onto the management window or dashboard to install it into the configured Applications folder with desktop integration.
 - **GPG Signature Verification:** Optional pre-install check. Parses embedded ELF signature sections and invokes `gpg` to verify authenticity. Warns on unsigned files; blocks tampered ones.
-- **Clean Uninstall:** Detects leftover configuration and cache directories after removal. Moves everything to KDE Trash — no permanent deletion.
+- **Clean Uninstall:** Detects leftover configuration and cache directories after removal. Moves everything to KDE Trash - no permanent deletion.
 - **AppImage Updates:** Checks for newer versions asynchronously. Downloads updates via `zsync2` delta-patching with a full HTTP fallback when `zsync2` is unavailable.
 - **Background Daemon:** Persistent system tray entry with hourly update scans and Downloads folder monitoring. Prevents duplicate notifications when the dashboard is also open.
-- **Download Notifications:** Watches `~/Downloads` and fires a native KDE notification when a new `.AppImage` appears — click "Manage" to open it immediately.
+- **Download Notifications:** Watches `~/Downloads` and fires a native KDE notification when a new `.AppImage` appears - click "Manage" to open it immediately.
 - **Plasma Integration:** Native Kirigami styling, KDE notifications, KIO file operations, and XDG desktop/icon database integration for compatibility with non-Plasma launchers.
 - **First-Run Wizard:** Guides new users through folder setup and desktop integration on first launch.
 

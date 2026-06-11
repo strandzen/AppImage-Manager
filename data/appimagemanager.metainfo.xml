@@ -20,6 +20,7 @@
       <li>Dolphin context menu integration for quick installation.</li>
       <li>Drag-and-drop support into a centralized dashboard.</li>
       <li>Extracts rich metadata, icons, and descriptions directly from the AppImages.</li>
+      <li>Source-agnostic architecture supporting custom JSON repository sources in the Discover settings.</li>
       <li>Clean uninstallation by automatically scanning for leftover cache and configuration files.</li>
       <li>Built-in update system using zsync for efficient delta-patching.</li>
       <li>Background download monitoring to notify you when new AppImages are downloaded.</li>

@@ -9,7 +9,7 @@ This file is the authoritative reference for working on AppImage Manager.
 **AppImage Manager** is a lightweight KDE Plasma 6 utility for installing, managing, updating, and removing AppImage files. It integrates with Dolphin via a right-click context menu plugin and provides a standalone dashboard for browsing, batch-managing, and updating all installed AppImages.
 
 **Distribution target:** KDE Store and AUR.  
-**Philosophy:** Simplicity and efficiency. No unnecessary abstractions. Every feature must justify its existence.  
+**Philosophy:** Simplicity, efficiency, and complete source agnosticism. No unnecessary abstractions. Every feature must justify its existence. The utility strives to remain entirely agnostic to where AppImages are sourced from, supporting custom repository configurations natively.  
 **Stack:** C++20, Qt 6.9, KDE Frameworks 6.7, KirigamiAddons, Kirigami (Plasma 6 era), QML. Project version `2.0.0`.  
 **License:** GPL-2.0-or-later.
 
