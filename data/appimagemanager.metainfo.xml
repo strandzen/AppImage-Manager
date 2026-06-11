@@ -66,6 +66,11 @@
   </content_rating>
 
   <releases>
+    <release version="2.0.1" date="2026-06-11">
+      <description>
+        <p>Bug fixes: corrected QSortFilterProxyModel filter invalidation (endFilterChange → invalidateFilter), fixed QML module import path for out-of-tree builds, and removed invalid stock icon tag from AppStream metadata.</p>
+      </description>
+    </release>
     <release version="2.0.0" date="2026-06-07">
       <description>
         <p>Modular discover sources. Dynamic sources configuration from Settings. Source-agnostic universal JSON feed support. Smooth drag-to-reorder AppImage source prioritization. Preferred installation method (AM script vs. direct download) dynamically determined by source order. Added a first-time user onboarding wizard with Applications folder setup and feature overview.</p>

@@ -1,6 +1,6 @@
 # Maintainer: strandzen <strandzen@gmail.com>
 pkgname=appimagemanager
-pkgver=2.0.0
+pkgver=2.0.1
 pkgrel=1
 pkgdesc="A lightweight KDE Plasma utility for installing, managing, and removing AppImage files"
 arch=('x86_64' 'aarch64')
