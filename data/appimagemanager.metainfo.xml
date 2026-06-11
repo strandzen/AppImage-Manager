@@ -28,8 +28,6 @@
 
   <launchable type="desktop-id">io.github.strandzen.AppImageManager.desktop</launchable>
 
-  <icon type="stock">appimagemanager</icon>
-
   <screenshots>
     <screenshot type="default">
       <caption>Dashboard showing installed AppImages</caption>

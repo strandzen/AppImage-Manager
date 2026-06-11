@@ -124,7 +124,7 @@ target_include_directories(tst_qml PRIVATE ${CMAKE_BINARY_DIR}/src)
 add_test(
     NAME appimagemanager-tst_qml
     COMMAND bash -c
-        "QT_QPA_PLATFORM=offscreen $<TARGET_FILE:tst_qml> -input ${CMAKE_CURRENT_SOURCE_DIR}/qml; true"
+        "QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH=${CMAKE_BINARY_DIR}/src $<TARGET_FILE:tst_qml> -input ${CMAKE_CURRENT_SOURCE_DIR}/qml; true"
 )
 set_tests_properties(appimagemanager-tst_qml PROPERTIES
     PASS_REGULAR_EXPRESSION "PASS.*cleanupTestCase"
