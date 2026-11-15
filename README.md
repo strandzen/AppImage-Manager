@@ -1,89 +1,92 @@
-# <img src="data/sc-apps-appimagemanager.svg" width="256" height="256" align="center" alt="Logo"> AppImage Manager
+<div align="center">
+    <img width="225" height="225" src="data/sc-apps-appimagemanager.svg">
+    <h1><b>AppImage Manager</b></h1>
+</div>
 
-A lightweight, native AppImage manager for KDE Plasma 6, built with a core philosophy of complete **source agnosticism**.
+Install, update and remove AppImages on KDE Plasma 6.
 
-[![KDE Plasma 6](https://img.shields.io/badge/KDE_Plasma-6-1d99f3?logo=kde&logoColor=white)](https://kde.org/plasma-desktop/)
-[![Qt](https://img.shields.io/badge/Qt-6.9%2B-41CD52?logo=qt&logoColor=white)](https://www.qt.io/)
-[![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)](https://en.cppreference.com/w/cpp/20)
-[![License](https://img.shields.io/badge/License-GPL--2.0--or--later-blue)](LICENSES/GPL-2.0-or-later.txt)
-[![Linux](https://img.shields.io/badge/Platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.kernel.org/)
-[![AUR](https://img.shields.io/aur/version/appimage-manager-plasma?label=AUR&color=1793d1&logo=archlinux&logoColor=white)](https://aur.archlinux.org/packages/appimage-manager-plasma)
+Drop an AppImage on the window, or right-click it in Dolphin, and it goes into one Applications folder and, if you like, into your app menu. AppImage Manager checks your AppImages for updates, can find new apps in online catalogs, and cleans up after the apps you remove.
 
-> **Disclaimer:** This project is vibecoded - built with heavy AI assistance. It is also an independent, community-driven effort and is not affiliated with or endorsed by KDE or the KDE e.V. organization.
+It doesn't care where your AppImages come from. Updates work from the information built into an AppImage, or from a GitHub, Codeberg, Forgejo or Gitea repository, a zsync file or a plain download link that you set yourself. The app catalogs are optional, and you can add your own.
 
----
+This is version 2.1.0. I mostly test it on my own machine on Arch, so other distributions may need some work.
 
-![Installed Library](assets/installed.png)
-![Discover Store](assets/discover.png)
-![Drag to Install](assets/drag-to-install.png)
+> [!NOTE]
+> This project built with heavy AI assistance. It is an independent project and is not affiliated with or endorsed by KDE or KDE e.V.
 
----
+## Screenshots
 
-## Installation
-
-### Arch Linux (AUR) - recommended
-
-```bash
-paru -S appimage-manager-plasma
-```
-
-> **Note:** `libappimage` is an AUR dependency and will be pulled in automatically by your AUR helper.
-
-### Other distributions
-
-Other distros are not yet validated. Build from source at your own risk - see [Build & Install](#build--install) below.
-
----
+![Installed](assets/installed.png)
+![Discover](assets/discover.png)
+![Drag to install](assets/drag-to-install.png)
 
 ## Features
 
-- **Dashboard:** Browse, search, and sort all installed AppImages by name, size, category, or date. Sidebar navigation with Installed, Discover, Settings, and About sections.
-- **Rich Metadata:** Displays app icon, version, size, category, and AppStream description extracted directly from each AppImage.
-- **Source Agnosticism & Custom Sources:** Built to be fully source-agnostic. In addition to the current default AM database and AppImage Hub catalogs (~1,300 curated apps), you can add, configure, reorder, or disable your own custom JSON repository sources directly. Supports both `am` script installs and direct HTTP downloads with no browser redirects.
-- **Dolphin Integration:** Right-click any `.AppImage` in Dolphin to open the management window directly.
-- **Drag-and-Drop Install:** Drag an AppImage onto the management window or dashboard to install it into the configured Applications folder with desktop integration.
-- **GPG Signature Verification:** Optional pre-install check. Parses embedded ELF signature sections and invokes `gpg` to verify authenticity. Warns on unsigned files; blocks tampered ones.
-- **Clean Uninstall:** Detects leftover configuration and cache directories after removal. Moves everything to KDE Trash - no permanent deletion.
-- **AppImage Updates:** Checks for newer versions asynchronously. Downloads updates via `zsync2` delta-patching with a full HTTP fallback when `zsync2` is unavailable.
-- **Background Daemon:** Persistent system tray entry with hourly update scans and Downloads folder monitoring. Prevents duplicate notifications when the dashboard is also open.
-- **Download Notifications:** Watches `~/Downloads` and fires a native KDE notification when a new `.AppImage` appears - click "Manage" to open it immediately.
-- **Plasma Integration:** Native Kirigami styling, KDE notifications, KIO file operations, and XDG desktop/icon database integration for compatibility with non-Plasma launchers.
-- **First-Run Wizard:** Guides new users through folder setup and desktop integration on first launch.
-
----
+- Install an AppImage by dragging it onto the window, with the + button, or from Dolphin's right-click menu. AppImages in Downloads are moved, others (from a USB stick, say) are copied.
+- Add an app to your app menu, or take it out again, with one click.
+- All your AppImages in one list, with their icon, version, size, categories and description. Search, sort by name, size, category or date added, and see them grouped when sorted by category or date.
+- Check all AppImages for updates at once, then update one or all of them. Updates use zsync when `zsync2` is installed, so only the changed parts are downloaded.
+- Set where an AppImage is released when it doesn't say so itself: paste a repository, a zsync link or a download link and the kind is detected. Pre-releases are optional, the file for your CPU is picked for you, and a download that turns out to be a web page is refused.
+- Environment variables per app, for example `WEBKIT_DISABLE_DMABUF_RENDERER=1` for an app that shows a blank window. They apply when you start the app from AppImage Manager and from the app menu.
+- Background update checks with a tray icon and notifications, daily, weekly, monthly or every few days.
+- A notification when an AppImage lands in your Downloads folder, with a button to manage it.
+- Discover: browse and install apps from AppImage Hub and the AM database, or your own catalogs. It's off until you turn it on, so nothing is downloaded from catalogs unless you want it.
+- Remove an app and choose which of its leftover settings and cache folders go with it. Everything goes to the Trash, nothing is deleted outright.
+- Optional signature check before installing: you're warned about unsigned AppImages and ones with a broken signature.
+- Looks and behaves like a Plasma app and follows your theme.
 
 ## Requirements
 
-- **Build Tools:** CMake 3.22+, Ninja, C++20 compiler (GCC 12+ or Clang 15+)
-- **Qt 6.9+:** Core, Gui, Quick, Qml, Concurrent, Network, Sql, Svg
-- **KDE Frameworks 6:** CoreAddons, I18n, Config, KIO, IconThemes, Notifications, Crash, DBusAddons, StatusNotifierItem, Kirigami, KirigamiAddons
-- **Required:** `libappimage` for in-process SquashFS metadata extraction
-- **Optional:** `gpg`/`gpg2` for signature verification; `zsync2` for delta updates; `am` for script installations from the Discover page
+- KDE Plasma 6 (Qt 6.9 or newer and KDE Frameworks 6).
+- `libappimage`, to read AppImages without mounting them.
+- Optional: `zsync2` for smaller update downloads, `gpg` for signature checks, and [am](https://github.com/ivan-hc/AM) to install apps from the AM database in Discover.
 
----
+## Installation
 
-## Installing Dependencies
+### Arch Linux
+
+Install from the AUR, for the latest release:
+
+```sh
+paru -S appimage-manager-plasma
+```
+
+Or `appimage-manager-plasma-git` for the latest development version. Your AUR helper also installs `libappimage`, which is only in the AUR.
+
+To build the source you have checked out, as a package you can remove again with pacman, run this in `packaging`:
+
+```sh
+makepkg -sif
+```
+
+The `-f` matters: without it, makepkg reinstalls a package it built earlier instead of building your changes.
+
+### Other distributions
+
+These aren't tested yet. Install the build dependencies (see below), then:
+
+```sh
+cmake --preset release
+cmake --build --preset release
+sudo cmake --install build/release
+```
 
 <details>
-<summary><strong>Arch Linux</strong></summary>
+<summary><strong>Build dependencies</strong></summary>
 
-```bash
+Arch:
+
+```sh
 sudo pacman -S base-devel cmake extra-cmake-modules ninja \
     qt6-base qt6-declarative qt6-svg \
     kcoreaddons ki18n kconfig kio kiconthemes knotifications kcrash kdbusaddons \
     kirigami kirigami-addons kstatusnotifieritem gnupg
-# libappimage is AUR only:
-# yay -S libappimage
-# Optional: AUR packages for Discover page script installs:
-# yay -S am-git zsync2
+paru -S libappimage        # optional: zsync2 am-git
 ```
 
-</details>
+Fedora:
 
-<details>
-<summary><strong>Fedora</strong></summary>
-
-```bash
+```sh
 sudo dnf install gcc-c++ cmake extra-cmake-modules ninja-build \
     qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtsvg-devel \
     kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kconfig-devel kf6-kio-devel kf6-kiconthemes-devel \
@@ -91,12 +94,9 @@ sudo dnf install gcc-c++ cmake extra-cmake-modules ninja-build \
     kf6-kirigami-devel kf6-kirigami-addons-devel libappimage-devel gnupg2
 ```
 
-</details>
+Debian and Ubuntu (24.04 or newer):
 
-<details>
-<summary><strong>Debian / Ubuntu (24.04+)</strong></summary>
-
-```bash
+```sh
 sudo apt install build-essential cmake extra-cmake-modules ninja-build \
     qt6-base-dev qt6-declarative-dev libqt6svg6-dev \
     libkf6coreaddons-dev libkf6i18n-dev libkf6config-dev libkf6kio-dev libkf6iconthemes-dev \
@@ -105,12 +105,9 @@ sudo apt install build-essential cmake extra-cmake-modules ninja-build \
     libappimage-dev gnupg2
 ```
 
-</details>
+openSUSE Tumbleweed:
 
-<details>
-<summary><strong>openSUSE Tumbleweed</strong></summary>
-
-```bash
+```sh
 sudo zypper in gcc-c++ cmake extra-cmake-modules ninja \
     qt6-base-devel qt6-declarative-devel qt6-svg-devel \
     kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kconfig-devel kf6-kio-devel kf6-kiconthemes-devel \
@@ -120,36 +117,86 @@ sudo zypper in gcc-c++ cmake extra-cmake-modules ninja \
 
 </details>
 
----
+### After installing
 
-## Build & Install
+Restart Dolphin to get **Manage AppImage** in its right-click menu:
 
-```bash
-cmake --preset release
-cmake --build --preset release
-sudo cmake --install build/release
-```
-
-To reload the Dolphin context menu without logging out:
-
-```bash
+```sh
 kquitapp6 dolphin && dolphin &
 ```
 
----
-
 ## Usage
 
-| Command | Action |
-|---------|--------|
-| `appimagemanager` | Opens the dashboard. |
-| `appimagemanager /path/to/app.AppImage` | Opens the management window for a specific file. |
-| `appimagemanager --daemon` | Runs the background update checker (autostarts on login). |
+The first time you open AppImage Manager, one page asks for your Applications folder, whether to notify you about downloads, and whether to turn on Discover. You can change all of it later in Settings.
 
-**Dolphin:** Right-click any `.AppImage` file and select **Manage AppImage**.
+- **Install:** drag an AppImage onto the window or the drop box under the list, click +, or right-click the file in Dolphin and choose **Manage AppImage**.
+- **Update:** open the menu (☰) and choose **Check for Updates**. Apps with an update get a dot and an **Update to …** button; with several, **Update All** appears in the toolbar.
+- **More options:** select an app and click ⋯ for **Show in App Menu**, **Update Source…**, **Environment Variables…** and **Remove…**.
 
----
+### Keys
+
+| Key | What it does |
+|---|---|
+| Ctrl+F | Search |
+| Enter | Start the selected app |
+| Delete | Remove the selected app |
+| Esc | Clear the search, then the selection |
+| Ctrl+, | Settings |
+| Alt+Left | Back from Settings or About |
+| Ctrl+Q | Quit |
+
+### From the command line
+
+| Command | What it does |
+|---|---|
+| `appimagemanager` | Opens the main window |
+| `appimagemanager /path/to/app.AppImage` | Opens the install window for that file |
+| `appimagemanager --daemon` | Runs the background update checker (starts at login by itself) |
+
+## Settings
+
+Open them from the menu (☰), or with Ctrl+,.
+
+- **General:** the Applications folder, the drop box under the list, and notifications
+- **Updates:** how often to check in the background
+- **Security:** signature checks and the reminder that AppImages aren't verified
+- **Discover:** turn it on or off
+- **Catalogs:** which app catalogs Discover searches, in which order, and your own
+
+**Restore Defaults** is at the bottom.
+
+## Troubleshooting
+
+**An app shows a blank or broken window.** Many apps built with WebKit or Electron need an environment variable on some systems. Select the app, click ⋯ → **Environment Variables…** and add, for example, `WEBKIT_DISABLE_DMABUF_RENDERER=1`.
+
+**An AppImage never gets updates.** It probably doesn't say where it is released. Click ⋯ → **Update Source…** and paste its repository or download link. The line under the field shows what was detected; pick another type there if it guessed wrong.
+
+**I rebuilt with makepkg but nothing changed.** Use `makepkg -sif`, see [Arch Linux](#arch-linux). Then close AppImage Manager completely and start it again: a window that is still open just comes to the front.
+
+**pacman says files already exist.** They came from an earlier `sudo cmake --install`. Remove them with `sudo xargs rm < build/release/install_manifest.txt` (or `build/dev/…`), then install again.
+
+**I want to see what AppImage Manager is doing.** Turn on its debug output in `kdebugsettings` (search for "appimagemanager"), or start it from a terminal with:
+
+```sh
+QT_LOGGING_RULES="appimagemanager.debug=true" appimagemanager
+```
+
+Bugs and ideas are welcome in the [issue tracker](https://github.com/strandzen/AppImage-Manager/issues).
+
+## Uninstall
+
+With the package: `sudo pacman -R appimage-manager-plasma` (or `appimage-manager-plasma-git`). With CMake, in the source folder:
+
+```sh
+sudo xargs rm < build/release/install_manifest.txt
+```
+
+Your AppImages stay in your Applications folder. Remove app menu entries you don't want first (⋯ → **Show in App Menu**), or delete the `appimage_*.desktop` files in `~/.local/share/applications`.
+
+## Translations
+
+AppImage Manager is translated into Czech, Dutch, French, German, Italian, Japanese, Norwegian (Bokmål), Polish, Portuguese (Brazil), Russian, Simplified Chinese, Slovak, Spanish, Turkish and Ukrainian. Text added in 2.1.0 isn't translated yet. To add or improve a language, edit `po/<language>/appimagemanager.po`, or copy `po/appimagemanager.pot` for a new one.
 
 ## License
 
-Licensed under the **GPL-2.0-or-later**. See [LICENSES/GPL-2.0-or-later.txt](LICENSES/GPL-2.0-or-later.txt) for details.
+GPL-2.0-or-later. See [LICENSES/GPL-2.0-or-later.txt](LICENSES/GPL-2.0-or-later.txt).

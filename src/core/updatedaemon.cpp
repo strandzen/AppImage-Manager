@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "updatedaemon.h"
+#include "updatesource.h"
 #include "appimageinfo.h"
 #include "logging.h"
 #include "appsettings.h"
 #include "appimagereader.h"
-#include "githubreleasechecker.h"
+#include "releasechecker.h"
 #include "../gui/downloadwatcher.h"
 
 #include <QDBusConnection>
@@ -149,28 +150,29 @@ void UpdateDaemon::checkUpdates()
     if (files.isEmpty())
         return;
 
-    auto results = QSharedPointer<QList<AppImageInfo>>::create();
+    auto results = QSharedPointer<QList<std::pair<QString, AppImageInfo>>>::create();
     auto mutex = QSharedPointer<QMutex>::create();
     m_pendingChecks = files.size();
 
     for (const QFileInfo &fi : files) {
         const QString path = fi.absoluteFilePath();
         auto *watcher = new QFutureWatcher<AppImageInfo>(this);
-        connect(watcher, &QFutureWatcher<AppImageInfo>::finished, this, [this, watcher, results, mutex]() {
+        connect(watcher, &QFutureWatcher<AppImageInfo>::finished, this, [this, watcher, results, mutex, path]() {
             watcher->deleteLater();
             {
                 QMutexLocker lock(mutex.data());
-                results->append(watcher->result());
+                results->append({ path, watcher->result() });
             }
             if (--m_pendingChecks == 0) {
                 // All files read — build the GitHub checker queue.
                 m_updateQueue.clear();
                 m_updateCount = 0;
 
-                for (const AppImageInfo &info : *results) {
-                    if (info.updateInfo.startsWith(QStringLiteral("gh-releases-zsync|"))) {
-                        m_updateQueue.enqueue(info);
-                    }
+                for (const auto &[filePath, info] : *results) {
+                    // Release sources only (GitHub, Forgejo/Codeberg, direct URL; embedded or
+                    // user-set). Plain zsync needs a full-file hash and stays on-demand in the dashboard.
+                    if (isReleaseUpdateInfo(effectiveUpdateInfo(info.updateInfo, loadUpdateSource(filePath))))
+                        m_updateQueue.enqueue({ filePath, info });
                 }
 
                 checkNextUpdate();
@@ -189,15 +191,15 @@ void UpdateDaemon::checkNextUpdate()
         return;
     }
 
-    const AppImageInfo info = m_updateQueue.dequeue();
+    const auto [filePath, info] = m_updateQueue.dequeue();
 
-    auto *checker = new GitHubReleaseChecker(m_networkManager, this);
-    connect(checker, &GitHubReleaseChecker::checkFinished, this,
-            [this, info, checker](GitHubReleaseChecker::Result result,
+    auto *checker = new ReleaseChecker(m_networkManager, this);
+    connect(checker, &ReleaseChecker::checkFinished, this,
+            [this, info, checker](ReleaseChecker::Result result,
                                   const QString &remoteVer, const QString &/*zsyncUrl*/) {
         checker->deleteLater();
 
-        if (result == GitHubReleaseChecker::Result::UpdateAvailable) {
+        if (result == ReleaseChecker::Result::UpdateAvailable) {
             ++m_updateCount;
             auto *notification = new KNotification(QStringLiteral("updateAvailable"),
                                                    KNotification::Persistent, this);
@@ -220,7 +222,7 @@ void UpdateDaemon::checkNextUpdate()
         checkNextUpdate();
     });
 
-    checker->check(info.updateInfo, info.version);
+    checker->check(filePath, info.updateInfo, info.version);
 }
 
 void UpdateDaemon::updateTrayStatus()

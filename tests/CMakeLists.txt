@@ -28,6 +28,19 @@ ecm_add_test(tst_appimagecache.cpp
 )
 target_include_directories(tst_appimagecache PRIVATE ${CMAKE_SOURCE_DIR})
 
+# ── tst_updatesource ─────────────────────────────────────────────────────────
+# Per-AppImage GitHub update source: repo parsing, config round-trip, and the
+# Shelly-derived release asset pick (architecture + name matching).
+ecm_add_test(tst_updatesource.cpp
+    TEST_NAME tst_updatesource
+    LINK_LIBRARIES Qt6::Test appimagemanager_qml KF6::ConfigCore
+    NAME_PREFIX "appimagemanager-"
+)
+target_include_directories(tst_updatesource PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}/src
+)
+
 # ── tst_appimagelistmodel ─────────────────────────────────────────────────────
 # Drives a real AppImageListModel + AppImageSortFilterModel against a tempdir
 # of zero-byte stubs. Covers scanning state, row insert/remove, sort/filter,
@@ -66,7 +79,7 @@ set_tests_properties(appimagemanager-tst_appimageiconprovider PROPERTIES
 
 # ── tst_appsettings ───────────────────────────────────────────────────────────
 # Round-trip tests for KSharedConfig-backed AppSettings properties.
-# Covers accentBorders, applicationsPath, updateFrequency, showDisclaimer,
+# Covers showInstallBox, applicationsPath, updateFrequency, showDisclaimer,
 # and version string helpers.
 ecm_add_test(tst_appsettings.cpp
     TEST_NAME tst_appsettings
@@ -111,7 +124,7 @@ set_tests_properties(appimagemanager-tst_appimagedbusadaptor PROPERTIES
 )
 
 # ── tst_qml (QML smoke tests, headless) ──────────────────────────────────────
-# Instantiates SettingsDialog and AboutDialog under QT_QPA_PLATFORM=offscreen.
+# Instantiates UpdateSourceDialog and AboutDialog under QT_QPA_PLATFORM=offscreen.
 # Catches binding loops that cause SIGABRT (preferredHeight → window.height cycle).
 qt_add_executable(tst_qml tst_qml_main.cpp)
 target_link_libraries(tst_qml PRIVATE Qt6::QuickTest Qt6::Quick appimagemanager_qml KF6::I18n)

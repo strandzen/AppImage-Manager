@@ -8,18 +8,37 @@ import appimagemanager
 
 Kirigami.Page {
     id: pageRoot
-    title: i18n("Discover AppImages")
 
     property alias searchField: searchField
 
-    readonly property color cardBorderColor: Theme.cardBorderColor
+    padding: 0
 
-    // Lazy init — trigger once when this page first becomes visible
+    // Lazy init — trigger once when this page is first visible with Discover enabled
+    // (Discover is opt-in: no catalog network traffic until the user enables it).
     property bool storeInitialized: false
-    onVisibleChanged: {
-        if (visible && !storeInitialized) {
+    function initializeIfNeeded() {
+        if (visible && AppSettings.discoverEnabled && !storeInitialized) {
             storeInitialized = true
             amStoreModel.initialize()
+        }
+    }
+    onVisibleChanged: initializeIfNeeded()
+    Connections {
+        target: AppSettings
+        function onDiscoverEnabledChanged() { pageRoot.initializeIfNeeded() }
+    }
+
+    Kirigami.PlaceholderMessage {
+        anchors.centerIn: parent
+        width: parent.width - Kirigami.Units.gridUnit * 4
+        visible: !AppSettings.discoverEnabled
+        icon.name: "plasma-discover"
+        text: i18n("Discover is turned off")
+        explanation: i18n("Discover lets you search app catalogs such as AppImage Hub and install apps from them. It downloads the catalogs from the internet, so it stays off until you turn it on.")
+        helpfulAction: Kirigami.Action {
+            icon.name: "checkmark"
+            text: i18n("Turn On Discover")
+            onTriggered: AppSettings.discoverEnabled = true
         }
     }
 
@@ -33,43 +52,42 @@ Kirigami.Page {
         currentItem = amStoreModel.itemData(idx)
     }
 
-    function avatarColor(name) {
-        const palette = ["#e57373","#f06292","#ba68c8","#9575cd",
-                         "#7986cb","#64b5f6","#4fc3f7","#4dd0e1",
-                         "#4db6ac","#81c784","#aed581","#ffb74d"]
-        let h = 0
-        for (let i = 0; i < name.length; i++)
-            h = (h * 31 + name.charCodeAt(i)) >>> 0
-        return palette[h % palette.length]
+    // ── Filters ───────────────────────────────────────────────────────────
+    readonly property bool categoryActive: amStoreModel.categoryFilter !== "" && amStoreModel.categoryFilter !== "All"
+    readonly property string sourceName: {
+        const sources = amStoreModel.sources
+        const i = amStoreModel.storeSource - 1
+        return i >= 0 && i < sources.length ? sources[i].name : ""
+    }
+    readonly property bool filtersActive: categoryActive || sourceName !== ""
+
+    function clearFilters() {
+        amStoreModel.categoryFilter = ""
+        amStoreModel.storeSource = 0
     }
 
-    function avatarInitials(name) {
-        const words = name.trim().split(/\s+/).filter(w => w.length > 0)
-        if (words.length === 0) return ""
-        if (words.length === 1) return words[0].charAt(0).toUpperCase()
-        return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase()
+    function iconFor(source) {
+        return source && source !== "" ? source : "application-x-executable"
     }
 
-    function getLogColor(text) {
-        const lower = text.toLowerCase()
-        if (lower.includes("error") || lower.includes("failed") || lower.includes("✗"))
-            return Kirigami.Theme.negativeTextColor
-        if (lower.includes("warning") || lower.includes("warn"))
-            return Kirigami.Theme.neutralTextColor
-        if (lower.includes("success") || lower.includes("done") || lower.includes("✓")
-                || lower.includes("installed") || lower.includes("complete"))
-            return Kirigami.Theme.positiveTextColor
-        return Kirigami.Theme.textColor
-    }
-
-    // Installation log
+    // ── Installation ──────────────────────────────────────────────────────
     ListModel { id: logModel }
 
     property string activePackage: ""
-    property bool showLog: true
+    property bool showLog: false
+    readonly property string statusLine: logModel.count > 0 ? logModel.get(logModel.count - 1).text : ""
+
+    function install(viaDownload) {
+        logModel.clear()
+        showLog = false
+        activePackage = displayedItem.packageName
+        amStoreModel.installApp(displayedItem.packageName, viaDownload)
+    }
 
     Connections {
         target: amStoreModel
+        // Filtering resets the model; the old row index would point at another app.
+        function onModelReset() { listView.currentIndex = -1 }
         function onLogReceived(packageName, line) {
             if (packageName === pageRoot.activePackage) {
                 logModel.append({ "text": line })
@@ -80,12 +98,14 @@ Kirigami.Page {
         function onInstallationFinished(packageName, success) {
             if (packageName === pageRoot.activePackage) {
                 logModel.append({ "text": success
-                    ? i18n("✓ Installation completed successfully!")
-                    : i18n("✗ Installation failed.") })
-                if (success)
-                    showPassiveNotification(i18n("Installed %1 successfully", pageRoot.displayedItem.displayName ?? ""))
-                else
-                    showPassiveNotification(i18n("Failed to install %1", pageRoot.displayedItem.displayName ?? ""))
+                    ? i18n("Installation completed.")
+                    : i18n("Installation failed.") })
+                if (success) {
+                    showPassiveNotification(i18n("Installed %1", pageRoot.displayedItem.displayName ?? ""))
+                } else {
+                    pageRoot.showLog = true
+                    showPassiveNotification(i18n("Could not install %1", pageRoot.displayedItem.displayName ?? ""))
+                }
             }
         }
     }
@@ -107,30 +127,29 @@ Kirigami.Page {
     // ── Master-detail row ─────────────────────────────────────────────────
     RowLayout {
         id: masterDetailRow
+        visible: AppSettings.discoverEnabled
         anchors.fill: parent
         spacing: 0
 
         // ── Left pane ──────────────────────────────────────────────────────
-        Item {
+        // List pane: the View color set sets it apart from the details, like a sidebar.
+        Rectangle {
             id: leftPane
             Layout.fillHeight: true
             Layout.fillWidth: listView.currentIndex < 0
-            Layout.preferredWidth: Kirigami.Units.gridUnit * 18
-
-            Kirigami.Theme.colorSet: Kirigami.Theme.Window
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+            Kirigami.Theme.colorSet: Kirigami.Theme.View
             Kirigami.Theme.inherit: false
+            color: Kirigami.Theme.backgroundColor
 
             ColumnLayout {
                 anchors.fill: parent
                 spacing: 0
 
-                // Search + sort + source filter
+                // Search + one filter menu (sort, source, category)
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.leftMargin: Kirigami.Units.smallSpacing
-                    Layout.rightMargin: Kirigami.Units.smallSpacing
-                    Layout.topMargin: Kirigami.Units.smallSpacing
-                    Layout.bottomMargin: Kirigami.Units.smallSpacing
+                    Layout.margins: Kirigami.Units.smallSpacing
                     spacing: Kirigami.Units.smallSpacing
 
                     Kirigami.SearchField {
@@ -140,92 +159,112 @@ Kirigami.Page {
                         onTextChanged: amStoreModel.filterText = text
                     }
 
-                    Controls.Button {
-                        id: sortBtn
+                    Controls.ToolButton {
+                        id: filterButton
+                        icon.name: "view-filter"
+                        text: i18n("Sort and Filter")
                         display: Controls.AbstractButton.IconOnly
-                        icon.name: amStoreModel.sortAscending ? "view-sort-ascending" : "view-sort-descending"
-                        text: amStoreModel.sortAscending ? i18n("Sort A–Z") : i18n("Sort Z–A")
-                        onClicked: amStoreModel.sortAscending = !amStoreModel.sortAscending
+                        down: filterMenu.visible
+                        onPressed: filterMenu.visible ? filterMenu.close() : filterMenu.popup(filterButton, 0, filterButton.height)
+                        Controls.ToolTip.visible: hovered && !filterMenu.visible
+                        Controls.ToolTip.text: text
+                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+
+                        Controls.Menu {
+                            id: filterMenu
+
+                            Controls.MenuItem {
+                                text: i18n("Sort A–Z")
+                                checkable: true; autoExclusive: true
+                                checked: amStoreModel.sortAscending
+                                onTriggered: amStoreModel.sortAscending = true
+                            }
+                            Controls.MenuItem {
+                                text: i18n("Sort Z–A")
+                                checkable: true; autoExclusive: true
+                                checked: !amStoreModel.sortAscending
+                                onTriggered: amStoreModel.sortAscending = false
+                            }
+
+                            Controls.MenuSeparator {}
+
+                            Controls.Menu {
+                                id: sourceMenu
+                                title: i18n("Source")
+
+                                Controls.MenuItem {
+                                    text: i18n("All Sources")
+                                    checkable: true
+                                    checked: amStoreModel.storeSource === 0
+                                    onTriggered: amStoreModel.storeSource = 0
+                                }
+                                Controls.MenuSeparator {}
+                                Instantiator {
+                                    model: amStoreModel.sources
+                                    onObjectAdded: (index, object) => sourceMenu.insertItem(index + 2, object)
+                                    onObjectRemoved: (index, object) => sourceMenu.removeItem(object)
+                                    delegate: Controls.MenuItem {
+                                        text: modelData.name
+                                        visible: modelData.enabled
+                                        height: visible ? implicitHeight : 0
+                                        checkable: true
+                                        checked: amStoreModel.storeSource === index + 1
+                                        onTriggered: amStoreModel.storeSource = index + 1
+                                    }
+                                }
+                            }
+
+                            Controls.Menu {
+                                id: categoryMenu
+                                title: i18n("Category")
+
+                                Controls.MenuItem {
+                                    text: i18n("All Categories")
+                                    checkable: true
+                                    checked: !pageRoot.categoryActive
+                                    onTriggered: amStoreModel.categoryFilter = ""
+                                }
+                                Controls.MenuSeparator {}
+                                Instantiator {
+                                    model: amStoreModel.availableCategories
+                                    onObjectAdded: (index, object) => categoryMenu.insertItem(index + 2, object)
+                                    onObjectRemoved: (index, object) => categoryMenu.removeItem(object)
+                                    delegate: Controls.MenuItem {
+                                        text: modelData
+                                        checkable: true
+                                        checked: amStoreModel.categoryFilter === modelData
+                                        onTriggered: amStoreModel.categoryFilter = modelData
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Active filters, dimmed, with a clear button
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.smallSpacing
+                    visible: pageRoot.filtersActive
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        text: [pageRoot.sourceName, pageRoot.categoryActive ? amStoreModel.categoryFilter : ""]
+                              .filter(s => s !== "").join(" · ")
+                        color: Kirigami.Theme.disabledTextColor
+                        elide: Text.ElideRight
+                    }
+
+                    Controls.ToolButton {
+                        icon.name: "dialog-close"
+                        text: i18n("Clear Filters")
+                        display: Controls.AbstractButton.IconOnly
+                        onClicked: pageRoot.clearFilters()
                         Controls.ToolTip.visible: hovered
                         Controls.ToolTip.text: text
                         Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                    }
-
-                    Controls.Button {
-                        id: categoryBtn
-                        display: Controls.AbstractButton.IconOnly
-                        icon.name: "tag"
-                        text: i18n("Filter by category")
-                        highlighted: amStoreModel.categoryFilter !== "" && amStoreModel.categoryFilter !== "All"
-                        onClicked: categoryMenu.popup()
-                        Controls.ToolTip.visible: hovered
-                        Controls.ToolTip.text: (amStoreModel.categoryFilter === "" || amStoreModel.categoryFilter === "All")
-                            ? i18n("Category: All")
-                            : i18n("Category: %1", amStoreModel.categoryFilter)
-                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-
-                        Controls.Menu {
-                            id: categoryMenu
-                            Controls.MenuItem {
-                                text: i18n("All Categories")
-                                checkable: true
-                                checked: amStoreModel.categoryFilter === "" || amStoreModel.categoryFilter === "All"
-                                onTriggered: amStoreModel.categoryFilter = ""
-                            }
-                            Controls.MenuSeparator {}
-                            Instantiator {
-                                model: amStoreModel.availableCategories
-                                onObjectAdded: (index, object) => categoryMenu.insertItem(index + 2, object)
-                                onObjectRemoved: (index, object) => categoryMenu.removeItem(object)
-                                delegate: Controls.MenuItem {
-                                    text: modelData
-                                    checkable: true
-                                    checked: amStoreModel.categoryFilter === modelData
-                                    onTriggered: amStoreModel.categoryFilter = modelData
-                                }
-                            }
-                        }
-                    }
-
-                    Controls.Button {
-                        id: filterBtn
-                        display: Controls.AbstractButton.IconOnly
-                        icon.name: "view-filter"
-                        text: i18n("Filter by source")
-                        highlighted: amStoreModel.storeSource !== 0
-                        onClicked: sourceMenu.popup()
-                        Controls.ToolTip.visible: hovered
-                        Controls.ToolTip.text: {
-                            const sources = amStoreModel.sources
-                            if (amStoreModel.storeSource > 0 && amStoreModel.storeSource - 1 < sources.length) {
-                                return i18n("Source: %1", sources[amStoreModel.storeSource - 1].name)
-                            }
-                            return i18n("Source: All")
-                        }
-                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-
-                        Controls.Menu {
-                            id: sourceMenu
-                            Controls.MenuItem {
-                                text: i18n("All Sources")
-                                checkable: true
-                                checked: amStoreModel.storeSource === 0
-                                onTriggered: amStoreModel.storeSource = 0
-                            }
-
-                            Instantiator {
-                                model: amStoreModel.sources
-                                onObjectAdded: (index, object) => sourceMenu.insertItem(index + 1, object)
-                                onObjectRemoved: (index, object) => sourceMenu.removeItem(object)
-                                delegate: Controls.MenuItem {
-                                    text: modelData.name
-                                    visible: modelData.enabled
-                                    checkable: true
-                                    checked: amStoreModel.storeSource === index + 1
-                                    onTriggered: amStoreModel.storeSource = index + 1
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -234,124 +273,110 @@ Kirigami.Page {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
-                    ColumnLayout {
+                    Controls.BusyIndicator {
                         anchors.centerIn: parent
-                        spacing: Kirigami.Units.smallSpacing
-                        visible: amStoreModel.loading
+                        running: amStoreModel.loading
+                        visible: running
                         z: 1
-
-                        Controls.BusyIndicator {
-                            Layout.alignment: Qt.AlignHCenter
-                            running: amStoreModel.loading
-                        }
-
-                        Controls.Label {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: i18n("Gathering from sources…")
-                            opacity: 0.6
-                            font: Kirigami.Theme.smallFont
-                        }
                     }
 
-                    ListView {
-                        id: listView
+                    // The desktop ScrollView reserves room for the scrollbar beside the rows (no overlap)
+                    // and adds Kirigami.WheelHandler for desktop-speed wheel scrolling.
+                    Controls.ScrollView {
                         anchors.fill: parent
-                        model: amStoreModel
-                        clip: true
-                        currentIndex: -1
-                        // Pre-create delegates for ±20 items outside the visible area so
-                        // images start loading before rows scroll into view.
-                        cacheBuffer: Math.round(Kirigami.Units.gridUnit * 2.5 * 20)
 
-                        Controls.ScrollBar.vertical: Controls.ScrollBar {
-                            id: listScrollBar
-                            policy: Controls.ScrollBar.AsNeeded
-                        }
+                        ListView {
+                            id: listView
+                            model: amStoreModel
+                            clip: true
+                            currentIndex: -1
+                            // Pre-create delegates for ±20 items outside the visible area so
+                            // images start loading before rows scroll into view.
+                            cacheBuffer: Math.round(Kirigami.Units.gridUnit * 2.5 * 20)
 
-                        onCurrentIndexChanged: {
-                            pageRoot.refreshCurrentItemAt(currentIndex)
-                            // Clear stale log when selection changes
-                            if (currentIndex >= 0) {
-                                logModel.clear()
-                                pageRoot.activePackage = ""
-                                detailTransition.restart()
-                            } else {
-                                detailTransition.stop()
-                                detailInner.opacity = 1.0
-                                pageRoot.displayedItem = {}
+                            onCurrentIndexChanged: {
+                                pageRoot.refreshCurrentItemAt(currentIndex)
+                                // Clear stale log when selection changes
+                                if (currentIndex >= 0) {
+                                    logModel.clear()
+                                    pageRoot.activePackage = ""
+                                    pageRoot.showLog = false
+                                    detailTransition.restart()
+                                } else {
+                                    detailTransition.stop()
+                                    detailInner.opacity = 1.0
+                                    pageRoot.displayedItem = {}
+                                }
                             }
-                        }
 
-                        TapHandler {
-                            onTapped: (eventPoint) => {
-                                const hit = listView.itemAt(
-                                    eventPoint.position.x,
-                                    eventPoint.position.y + listView.contentY)
-                                if (!hit) listView.currentIndex = -1
+                            // Grouped by category unless one is filtered (the model sorts the same way).
+                            section.property: pageRoot.categoryActive ? "" : "sectionCategory"
+                            section.delegate: Kirigami.ListSectionHeader {
+                                required property string section
+                                width: ListView.view.width
+                                text: section
                             }
-                        }
 
-                        delegate: Controls.ItemDelegate {
-                            id: delegateRoot
-                            width: listView.width - listScrollBar.width
-                            height: Kirigami.Units.gridUnit * 2.5
-                            highlighted: ListView.isCurrentItem
-                            horizontalPadding: Kirigami.Units.smallSpacing
-                            topInset: Kirigami.Units.largeSpacing / 2
-                            bottomInset: Kirigami.Units.largeSpacing / 2
-                            leftInset: 0
-                            rightInset: 0
-                            verticalPadding: Kirigami.Units.largeSpacing / 2
-                            onClicked: listView.currentIndex = index
+                            TapHandler {
+                                onTapped: (eventPoint) => {
+                                    const hit = listView.itemAt(
+                                        eventPoint.position.x,
+                                        eventPoint.position.y + listView.contentY)
+                                    if (!hit) listView.currentIndex = -1
+                                }
+                            }
 
-                            contentItem: RowLayout {
-                                spacing: Kirigami.Units.smallSpacing
+                            delegate: Controls.ItemDelegate {
+                                id: delegateRoot
+                                width: listView.width
+                                highlighted: ListView.isCurrentItem
+                                // Same geometry for every row (the style gives the last row a larger bottom inset).
+                                topInset: 0
+                                bottomInset: 0
+                                leftInset: Kirigami.Units.smallSpacing
+                                rightInset: Kirigami.Units.smallSpacing
+                                verticalPadding: Kirigami.Units.smallSpacing
+                                horizontalPadding: Kirigami.Units.largeSpacing
+                                onClicked: listView.currentIndex = index
 
-                                Item {
-                                    implicitWidth: Kirigami.Units.iconSizes.smallMedium
-                                    implicitHeight: Kirigami.Units.iconSizes.smallMedium
-                                    Layout.alignment: Qt.AlignVCenter
+                                contentItem: RowLayout {
+                                    id: storeRow
+                                    spacing: Kirigami.Units.largeSpacing
 
-                                    readonly property bool isUrl: model.iconSource.startsWith("http")
-                                    readonly property bool hasThemeIcon: !isUrl && model.iconSource !== ""
-                                    readonly property bool imageReady: isUrl && delegateImg.status === Image.Ready
+                                    readonly property string iconSource: model.iconSource ?? ""
+                                    readonly property bool remoteIcon: iconSource.startsWith("http")
 
-                                    Image {
-                                        id: delegateImg
-                                        anchors.fill: parent
-                                        source: parent.isUrl ? model.iconSource : ""
-                                        fillMode: Image.PreserveAspectFit
-                                        asynchronous: true
-                                        visible: parent.imageReady
-                                    }
-                                    Kirigami.Icon {
-                                        anchors.fill: parent
-                                        source: model.iconSource
-                                        visible: parent.hasThemeIcon
-                                    }
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        visible: !parent.hasThemeIcon && !parent.imageReady
-                                        radius: 3
-                                        color: pageRoot.avatarColor(model.displayName)
-                                        Controls.Label {
-                                            anchors.centerIn: parent
-                                            text: pageRoot.avatarInitials(model.displayName)
-                                            color: "white"
-                                            font.bold: true
-                                            font.pixelSize: Math.round(parent.height * 0.45)
+                                    Item {
+                                        implicitWidth: Kirigami.Units.iconSizes.medium
+                                        implicitHeight: Kirigami.Units.iconSizes.medium
+
+                                        // Remote icons are often 512 px: decode off the UI thread at the shown size,
+                                        // so scrolling stays smooth (Kirigami.Icon decodes on the UI thread).
+                                        Image {
+                                            id: remoteIconImage
+                                            anchors.fill: parent
+                                            visible: storeRow.remoteIcon && status === Image.Ready
+                                            source: storeRow.remoteIcon ? storeRow.iconSource : ""
+                                            sourceSize.width: Kirigami.Units.iconSizes.medium * 2
+                                            sourceSize.height: Kirigami.Units.iconSizes.medium * 2
+                                            fillMode: Image.PreserveAspectFit
+                                            asynchronous: true
+                                        }
+                                        Kirigami.Icon {
+                                            anchors.fill: parent
+                                            visible: !remoteIconImage.visible
+                                            source: storeRow.remoteIcon ? "application-x-executable" : pageRoot.iconFor(storeRow.iconSource)
+                                            selected: delegateRoot.highlighted
                                         }
                                     }
-                                }
 
-                                Controls.Label {
-                                    text: model.displayName
-                                    color: delegateRoot.highlighted
-                                           ? Kirigami.Theme.highlightedTextColor
-                                           : Kirigami.Theme.textColor
-                                    elide: Text.ElideRight
-                                    Layout.fillWidth: true
-                                    verticalAlignment: Text.AlignVCenter
+                                    Kirigami.TitleSubtitle {
+                                        Layout.fillWidth: true
+                                        title: model.displayName
+                                        subtitle: model.author ?? ""
+                                        selected: delegateRoot.highlighted
+                                        reserveSpaceForSubtitle: true
+                                    }
                                 }
                             }
                         }
@@ -359,15 +384,26 @@ Kirigami.Page {
 
                     Kirigami.PlaceholderMessage {
                         anchors.centerIn: parent
-                        visible: listView.count === 0 && amStoreModel.filterText !== ""
+                        width: parent.width - Kirigami.Units.gridUnit * 2
+                        visible: !amStoreModel.loading && listView.count === 0
+                                 && (amStoreModel.filterText !== "" || pageRoot.filtersActive)
                         icon.name: "edit-find"
-                        text: i18n("No results for \"%1\"", amStoreModel.filterText)
-                        explanation: i18n("Try a different search term or switch to \"All\" sources")
+                        text: amStoreModel.filterText !== ""
+                              ? i18n("No results for \"%1\"", amStoreModel.filterText)
+                              : i18n("No apps match these filters")
+                        helpfulAction: Kirigami.Action {
+                            icon.name: "edit-clear"
+                            text: i18n("Clear Filters")
+                            enabled: pageRoot.filtersActive
+                            onTriggered: pageRoot.clearFilters()
+                        }
                     }
 
                     Kirigami.PlaceholderMessage {
                         anchors.centerIn: parent
-                        visible: !amStoreModel.loading && listView.count === 0 && amStoreModel.filterText === ""
+                        width: parent.width - Kirigami.Units.gridUnit * 2
+                        visible: !amStoreModel.loading && listView.count === 0
+                                 && amStoreModel.filterText === "" && !pageRoot.filtersActive
                         icon.name: "network-offline"
                         text: i18n("Could not load app catalog")
                         explanation: i18n("Check your network connection and try again.")
@@ -382,342 +418,201 @@ Kirigami.Page {
             }
         }
 
+        Kirigami.Separator {
+            Layout.fillHeight: true
+            visible: rightPane.visible
+        }
+
         // ── Right pane: detail view ────────────────────────────────────────
-        Item {
+        Controls.ScrollView {
             id: rightPane
             visible: listView.currentIndex >= 0
             Layout.fillWidth: true
             Layout.fillHeight: true
+            clip: true
+            Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
 
             ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
+                id: detailInner
+                x: Kirigami.Units.gridUnit
+                width: rightPane.availableWidth - Kirigami.Units.gridUnit * 2
+                spacing: Kirigami.Units.largeSpacing
 
-                Controls.ScrollView {
-                    id: detailScrollView
+                readonly property var item: pageRoot.displayedItem
+                readonly property bool hasAm: item.hasAmScript ?? false
+                readonly property bool hasHub: (item.hasFeedData ?? false) && (item.downloadUrl ?? "") !== ""
+                readonly property bool hasBoth: hasAm && hasHub
+                readonly property bool primaryIsAm: hasBoth ? (item.preferAm ?? false) : hasAm
+
+                Item { implicitHeight: Kirigami.Units.largeSpacing }
+
+                // Icon, name, author · link, one line of metadata
+                RowLayout {
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.leftMargin: Kirigami.Units.largeSpacing
-                    Layout.rightMargin: Kirigami.Units.largeSpacing
-                    clip: true
-                    Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
-                    Controls.ScrollBar.vertical.policy: Controls.ScrollBar.AlwaysOff
+                    spacing: Kirigami.Units.largeSpacing
+
+                    Kirigami.Icon {
+                        source: pageRoot.iconFor(detailInner.item.iconSource)
+                        fallback: "application-x-executable"
+                        implicitWidth: Kirigami.Units.iconSizes.huge
+                        implicitHeight: Kirigami.Units.iconSizes.huge
+                        Layout.alignment: Qt.AlignTop
+                    }
 
                     ColumnLayout {
-                        id: detailInner
-                        width: detailScrollView.availableWidth
+                        Layout.fillWidth: true
                         spacing: 0
 
-                        // Hero: icon + name + source link
-                        ColumnLayout {
+                        Kirigami.Heading {
                             Layout.fillWidth: true
-                            Layout.topMargin: Kirigami.Units.largeSpacing
-                            spacing: Kirigami.Units.smallSpacing
-
-                            Item {
-                                implicitWidth: Kirigami.Units.iconSizes.enormous
-                                implicitHeight: Kirigami.Units.iconSizes.enormous
-                                Layout.alignment: Qt.AlignHCenter
-
-                                readonly property bool isUrl: (pageRoot.displayedItem.iconSource ?? "").startsWith("http")
-                                readonly property bool hasThemeIcon: !isUrl && (pageRoot.displayedItem.iconSource ?? "") !== ""
-                                readonly property bool imageReady: isUrl && detailImg.status === Image.Ready
-
-                                Image {
-                                    id: detailImg
-                                    anchors.fill: parent
-                                    source: parent.isUrl ? (pageRoot.displayedItem.iconSource ?? "") : ""
-                                    fillMode: Image.PreserveAspectFit
-                                    asynchronous: true
-                                    visible: parent.imageReady
-                                }
-                                Kirigami.Icon {
-                                    anchors.fill: parent
-                                    source: pageRoot.displayedItem.iconSource ?? ""
-                                    visible: parent.hasThemeIcon
-                                }
-                                Rectangle {
-                                    anchors.fill: parent
-                                    visible: !parent.hasThemeIcon && !parent.imageReady
-                                    radius: Kirigami.Units.smallSpacing * 2
-                                    color: pageRoot.avatarColor(pageRoot.displayedItem.displayName ?? "")
-                                    Controls.Label {
-                                        anchors.centerIn: parent
-                                        text: pageRoot.avatarInitials(pageRoot.displayedItem.displayName ?? "")
-                                        color: "white"
-                                        font.bold: true
-                                        font.pixelSize: Math.round(parent.height * 0.38)
-                                    }
-                                }
-                            }
-
-                            Kirigami.Heading {
-                                text: pageRoot.displayedItem.displayName ?? ""
-                                level: 2
-                                horizontalAlignment: Text.AlignHCenter
-                                Layout.fillWidth: true
-                                elide: Text.ElideRight
-                            }
-
-                            // Author
-                            Controls.Label {
-                                text: pageRoot.displayedItem.author ?? ""
-                                visible: (pageRoot.displayedItem.author ?? "") !== ""
-                                opacity: 0.6
-                                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                horizontalAlignment: Text.AlignHCenter
-                                Layout.fillWidth: true
-                            }
-
-                            RowLayout {
-                                Layout.alignment: Qt.AlignHCenter
-                                spacing: Kirigami.Units.smallSpacing
-                                visible: (pageRoot.displayedItem.homepage ?? "") !== ""
-
-                                Controls.Label {
-                                    text: (pageRoot.displayedItem.hasAmScript ?? false)
-                                          ? i18n("Install Recipe Script:")
-                                          : i18n("Source:")
-                                    opacity: 0.6
-                                    font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                }
-
-                                Controls.Label {
-                                    text: "<a href='" + (pageRoot.displayedItem.homepage ?? "") + "'>"
-                                          + i18n("View Source") + "</a>"
-                                    textFormat: Text.StyledText
-                                    font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                    onLinkActivated: Qt.openUrlExternally(pageRoot.displayedItem.homepage)
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                }
-                            }
-
-                            Flow {
-                                Layout.alignment: Qt.AlignHCenter
-                                Layout.topMargin: Kirigami.Units.smallSpacing
-                                spacing: Kirigami.Units.smallSpacing
-
-                                Repeater {
-                                    model: (pageRoot.displayedItem.categories ?? "")
-                                           .split(";").filter(s => s.length > 0).slice(0, 3)
-                                    delegate: Kirigami.Chip {
-                                        text: modelData
-                                        closable: false; checkable: false
-                                    }
-                                }
-
-                                Kirigami.Chip {
-                                    text: pageRoot.displayedItem.license ?? ""
-                                    visible: (pageRoot.displayedItem.license ?? "") !== ""
-                                    closable: false; checkable: false
-                                    opacity: 0.75
-                                }
-
-                                // Source badge
-                                Kirigami.Chip {
-                                    text: (pageRoot.displayedItem.hasAmScript ?? false)
-                                          && (pageRoot.displayedItem.hasFeedData ?? false)
-                                          ? i18n("Hub + AM")
-                                          : (pageRoot.displayedItem.hasFeedData ?? false)
-                                            ? i18n("AppImage Hub")
-                                            : i18n("AM Only")
-                                    visible: (pageRoot.displayedItem.displayName ?? "") !== ""
-                                    closable: false; checkable: false
-                                    opacity: 0.6
-                                }
-                            }
+                            text: detailInner.item.displayName ?? ""
+                            level: 2
+                            elide: Text.ElideRight
                         }
 
-                        // Description card
-                        Kirigami.Card {
+                        Controls.Label {
+                            readonly property string author: detailInner.item.author ?? ""
+                            readonly property string homepage: detailInner.item.homepage ?? ""
                             Layout.fillWidth: true
-                            Layout.topMargin: Kirigami.Units.largeSpacing
-                            Layout.maximumHeight: Math.max(
-                                Kirigami.Units.gridUnit * 6,
-                                detailScrollView.availableHeight - Kirigami.Units.gridUnit * 18)
-                            visible: (pageRoot.displayedItem.description ?? "") !== ""
-
-                            contentItem: ColumnLayout {
-                                spacing: Kirigami.Units.smallSpacing
-
-                                Kirigami.Heading { text: i18n("Description"); level: 4 }
-
-                                Controls.ScrollView {
-                                    id: descriptionScroller
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    clip: true
-                                    Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
-
-                                    Controls.Label {
-                                        width: descriptionScroller.availableWidth
-                                        text: pageRoot.displayedItem.description ?? ""
-                                        wrapMode: Text.WordWrap
-                                        opacity: 0.85
-                                        textFormat: Text.StyledText
-                                    }
-                                }
+                            visible: author !== "" || homepage !== ""
+                            text: {
+                                const link = homepage !== ""
+                                    ? "<a href=\"" + homepage + "\">" + (detailInner.hasAm ? i18n("Install script") : i18n("Website")) + "</a>"
+                                    : ""
+                                return [author, link].filter(s => s !== "").join(" · ")
                             }
+                            textFormat: Text.StyledText
+                            color: Kirigami.Theme.disabledTextColor
+                            elide: Text.ElideRight
+                            onLinkActivated: (link) => Qt.openUrlExternally(link)
+                            HoverHandler { cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor }
                         }
 
-                        // Installation output console
-                        Kirigami.Card {
-                            id: logCard
+                        Controls.Label {
                             Layout.fillWidth: true
-                            Layout.topMargin: Kirigami.Units.smallSpacing
-                            Layout.preferredHeight: Kirigami.Units.gridUnit * 9
-                            visible: amStoreModel.isInstalling || logModel.count > 0
-
-                            contentItem: ColumnLayout {
-                                spacing: Kirigami.Units.smallSpacing
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-
-                                    Kirigami.Heading {
-                                        text: i18n("Installation Output")
-                                        level: 4
-                                        Layout.fillWidth: true
-                                    }
-
-                                    Controls.ToolButton {
-                                        icon.name: pageRoot.showLog ? "view-hidden" : "view-visible"
-                                        text: pageRoot.showLog ? i18n("Hide log") : i18n("Show log")
-                                        display: Controls.AbstractButton.IconOnly
-                                        onClicked: pageRoot.showLog = !pageRoot.showLog
-                                        Controls.ToolTip.text: text
-                                        Controls.ToolTip.visible: hovered
-                                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                                    }
-                                }
-
-                                // Stage progress bar
-                                Controls.ProgressBar {
-                                    Layout.fillWidth: true
-                                    visible: amStoreModel.isInstalling || amStoreModel.installStage === 5
-                                    value: amStoreModel.installStage / 5.0
-                                    Behavior on value {
-                                        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-                                    }
-                                }
-
-                                Controls.ScrollView {
-                                    id: logScrollView
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    clip: true
-                                    visible: pageRoot.showLog
-
-                                    Column {
-                                        id: logConsole
-                                        width: logScrollView.availableWidth
-                                        spacing: Math.round(Kirigami.Units.smallSpacing / 2)
-
-                                        Repeater {
-                                            model: logModel
-                                            delegate: Controls.Label {
-                                                width: parent.width
-                                                text: model.text
-                                                font.family: "monospace"
-                                                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                                wrapMode: Text.WrapAnywhere
-                                                color: pageRoot.getLogColor(model.text)
-                                            }
-                                        }
-                                    }
-
-                                    // Auto-scroll to bottom when new lines arrive
-                                    onContentHeightChanged: {
-                                        if (amStoreModel.isInstalling)
-                                            contentItem.contentY = Math.max(0, contentItem.contentHeight - height)
-                                    }
-                                }
+                            text: {
+                                const parts = (detailInner.item.categories ?? "").split(";").filter(s => s.length > 0).slice(0, 2)
+                                if (detailInner.item.license) parts.push(detailInner.item.license)
+                                const sources = []
+                                if (detailInner.item.hasFeedData) sources.push(i18n("AppImage Hub"))
+                                if (detailInner.hasAm) sources.push(i18n("AM"))
+                                if (sources.length > 0) parts.push(sources.join(", "))
+                                return parts.join(" · ")
                             }
+                            color: Kirigami.Theme.disabledTextColor
+                            elide: Text.ElideRight
                         }
-
-                        Item { height: Kirigami.Units.gridUnit }
                     }
                 }
 
-                // Sticky bottom action bar
-                ColumnLayout {
+                // Actions: primary install (or progress + Cancel), overflow menu
+                RowLayout {
                     Layout.fillWidth: true
-                    Layout.margins: Kirigami.Units.largeSpacing
                     spacing: Kirigami.Units.smallSpacing
 
-                    // Cancel — replaces action row while installing
                     Controls.Button {
-                        text: i18n("Cancel")
-                        icon.name: "process-stop"
-                        visible: amStoreModel.isInstalling
-                        onClicked: amStoreModel.cancelInstallation()
-                        Layout.fillWidth: true
+                        visible: !amStoreModel.isInstalling && (detailInner.hasAm || detailInner.hasHub)
+                        text: detailInner.primaryIsAm ? i18n("Install") : i18n("Download")
+                        icon.name: detailInner.primaryIsAm ? "document-import" : "folder-download"
+                        onClicked: pageRoot.install(!detailInner.primaryIsAm)
                     }
 
-                    // Split button: primary action + optional dropdown for second source
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-                        visible: !amStoreModel.isInstalling
+                    Controls.ProgressBar {
+                        visible: amStoreModel.isInstalling
+                        Layout.preferredWidth: Kirigami.Units.gridUnit * 8
+                        value: amStoreModel.installStage / 5.0
+                    }
 
-                        readonly property bool hasAm: pageRoot.displayedItem.hasAmScript ?? false
-                        readonly property bool hasHub: (pageRoot.displayedItem.hasFeedData ?? false)
-                                                       && (pageRoot.displayedItem.downloadUrl ?? "") !== ""
-                        readonly property bool hasBoth: hasAm && hasHub
-                        readonly property bool preferAm: pageRoot.displayedItem.preferAm ?? false
-                        readonly property bool primaryIsAm: hasBoth ? preferAm : hasAm
+                    Controls.Button {
+                        visible: amStoreModel.isInstalling
+                        text: i18n("Cancel")
+                        icon.name: "dialog-cancel"
+                        onClicked: amStoreModel.cancelInstallation()
+                    }
 
-                        Controls.Button {
-                            id: primaryBtn
-                            text: parent.primaryIsAm ? i18n("Install via AM") : i18n("Download")
-                            icon.name: parent.primaryIsAm ? "document-import" : "folder-download"
-                            Layout.fillWidth: true
-                            onClicked: {
-                                logModel.clear()
-                                pageRoot.showLog = true
-                                pageRoot.activePackage = pageRoot.displayedItem.packageName
-                                if (parent.primaryIsAm) {
-                                    amStoreModel.installApp(pageRoot.displayedItem.packageName, false)
-                                } else {
-                                    amStoreModel.installApp(pageRoot.displayedItem.packageName, true)
-                                }
-                            }
-                        }
+                    Item { Layout.fillWidth: true }
 
-                        // Dropdown arrow — only when both AM and Hub available
-                        Controls.Button {
-                            id: dropBtn
-                            icon.name: "arrow-down"
-                            visible: parent.hasBoth
-                            implicitWidth: visible ? implicitHeight : 0
-                            onClicked: splitMenu.popup(dropBtn, 0, dropBtn.height)
+                    Controls.ToolButton {
+                        id: moreButton
+                        visible: detailInner.hasBoth
+                        icon.name: "overflow-menu"
+                        text: i18n("More")
+                        display: Controls.AbstractButton.IconOnly
+                        down: moreMenu.visible
+                        onPressed: moreMenu.visible ? moreMenu.close() : moreMenu.popup(moreButton, 0, moreButton.height)
+                        Controls.ToolTip.visible: hovered && !moreMenu.visible
+                        Controls.ToolTip.text: text
+                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
 
-                            Controls.Menu {
-                                id: splitMenu
-                                Controls.MenuItem {
-                                    text: i18n("Install via AM")
-                                    icon.name: "document-import"
-                                    onTriggered: {
-                                        logModel.clear()
-                                        pageRoot.showLog = true
-                                        pageRoot.activePackage = pageRoot.displayedItem.packageName
-                                        amStoreModel.installApp(pageRoot.displayedItem.packageName, false)
-                                    }
-                                }
-                                Controls.MenuItem {
-                                    text: i18n("Download from Hub")
-                                    icon.name: "folder-download"
-                                    onTriggered: {
-                                        logModel.clear()
-                                        pageRoot.showLog = true
-                                        pageRoot.activePackage = pageRoot.displayedItem.packageName
-                                        amStoreModel.installApp(pageRoot.displayedItem.packageName, true)
-                                    }
-                                }
+                        Controls.Menu {
+                            id: moreMenu
+                            Controls.MenuItem {
+                                text: detailInner.primaryIsAm ? i18n("Download from AppImage Hub") : i18n("Install with AM")
+                                icon.name: detailInner.primaryIsAm ? "folder-download" : "document-import"
+                                enabled: !amStoreModel.isInstalling
+                                onTriggered: pageRoot.install(detailInner.primaryIsAm)
                             }
                         }
                     }
                 }
+
+                // Status line + optional log
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: logModel.count > 0
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        text: pageRoot.statusLine
+                        color: Kirigami.Theme.disabledTextColor
+                        elide: Text.ElideRight
+                    }
+
+                    Controls.ToolButton {
+                        text: pageRoot.showLog ? i18n("Hide Details") : i18n("Show Details")
+                        onClicked: pageRoot.showLog = !pageRoot.showLog
+                    }
+                }
+
+                Controls.ScrollView {
+                    id: logScrollView
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Kirigami.Units.gridUnit * 9
+                    visible: pageRoot.showLog && logModel.count > 0
+                    clip: true
+
+                    Column {
+                        width: logScrollView.availableWidth
+
+                        Repeater {
+                            model: logModel
+                            delegate: Controls.Label {
+                                width: parent.width
+                                text: model.text
+                                font.family: "monospace"
+                                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                                wrapMode: Text.WrapAnywhere
+                            }
+                        }
+                    }
+
+                    // Auto-scroll to bottom when new lines arrive
+                    onContentHeightChanged: {
+                        if (amStoreModel.isInstalling)
+                            contentItem.contentY = Math.max(0, contentItem.contentHeight - height)
+                    }
+                }
+
+                Controls.Label {
+                    Layout.fillWidth: true
+                    visible: text !== ""
+                    text: detailInner.item.description ?? ""
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.StyledText
+                }
+
+                Item { implicitHeight: Kirigami.Units.gridUnit }
             }
         }
     }

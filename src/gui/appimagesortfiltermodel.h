@@ -36,6 +36,10 @@ public:
     Q_INVOKABLE void requestLaunch(int proxyRow);
     Q_INVOKABLE void downloadUpdate(int proxyRow);
     Q_INVOKABLE QVariantMap itemData(int proxyRow) const;
+    Q_INVOKABLE QVariantMap updateSource(int proxyRow) const;
+    Q_INVOKABLE bool setUpdateSource(int proxyRow, const QString &input, const QString &type, bool prerelease);
+    Q_INVOKABLE QString environment(int proxyRow) const;
+    Q_INVOKABLE QVariantList setEnvironment(int proxyRow, const QString &text);
 
 Q_SIGNALS:
     void filterTextChanged();

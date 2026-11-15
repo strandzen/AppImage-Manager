@@ -24,34 +24,27 @@ private Q_SLOTS:
         QVERIFY(s);
     }
 
-    // ── accentBorders round-trip ──────────────────────────────────────────────
+    // ── showInstallBox round-trip (bool setting pattern) ──────────────────────
 
-    void accentBorders_defaultIsTrue()
+    void showInstallBox_roundTrip()
     {
-        // Default is true per appsettings.cpp readEntry fallback.
-        // We only check the getter returns a bool without crashing.
-        QVERIFY(s->accentBorders() == true || s->accentBorders() == false);
-    }
+        const bool original = s->showInstallBox();
+        QSignalSpy spy(s, &AppSettings::showInstallBoxChanged);
 
-    void accentBorders_roundTrip()
-    {
-        const bool original = s->accentBorders();
-        QSignalSpy spy(s, &AppSettings::accentBordersChanged);
-
-        s->setAccentBorders(!original);
-        QCOMPARE(s->accentBorders(), !original);
+        s->setShowInstallBox(!original);
+        QCOMPARE(s->showInstallBox(), !original);
         QCOMPARE(spy.count(), 1);
 
-        s->setAccentBorders(original); // restore
-        QCOMPARE(s->accentBorders(), original);
+        s->setShowInstallBox(original); // restore
+        QCOMPARE(s->showInstallBox(), original);
         QCOMPARE(spy.count(), 2);
     }
 
-    void accentBorders_noSignalOnSameValue()
+    void showInstallBox_noSignalOnSameValue()
     {
-        const bool val = s->accentBorders();
-        QSignalSpy spy(s, &AppSettings::accentBordersChanged);
-        s->setAccentBorders(val); // same value — must not emit
+        const bool val = s->showInstallBox();
+        QSignalSpy spy(s, &AppSettings::showInstallBoxChanged);
+        s->setShowInstallBox(val); // same value — must not emit
         QCOMPARE(spy.count(), 0);
     }
 

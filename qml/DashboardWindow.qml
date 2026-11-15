@@ -9,7 +9,7 @@ import appimagemanager
 
 Kirigami.ApplicationWindow {
     id: root
-    title: i18n("AppImage Dashboard")
+    title: i18n("AppImage Manager")
     width: Kirigami.Units.gridUnit * 50
     height: Kirigami.Units.gridUnit * 30
     minimumWidth: Kirigami.Units.gridUnit * 40
@@ -18,55 +18,12 @@ Kirigami.ApplicationWindow {
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
 
-    readonly property color cardBorderColor: Theme.cardBorderColor
-    property bool isSidebarCollapsed: false
-    property int activeNavIndex: 1
 
     function handleDrop(drop) {
         for (const url of drop.urls) {
             if (url.toString().toLowerCase().endsWith(".appimage"))
                 dashboardController.installFromPath(url)
         }
-    }
-
-    // ── Update check result ───────────────────────────────────────────────────
-    Connections {
-        target: listModel
-        function onUpdateCheckFinished(updatesFound, networkFailures) {
-            if (updatesFound < 0)
-                checkTimedOutDialog.open()
-            else if (networkFailures > 0 && updatesFound === 0)
-                networkErrorDialog.open()
-            else if (updatesFound === 0)
-                noUpdatesDialog.open()
-        }
-    }
-
-    Kirigami.PromptDialog {
-        id: noUpdatesDialog
-        title: i18n("No Updates Found")
-        subtitle: i18n("All your AppImages are up to date.")
-        standardButtons: Kirigami.Dialog.Ok
-        Kirigami.Theme.colorSet: Kirigami.Theme.Window
-        Kirigami.Theme.inherit: false
-    }
-
-    Kirigami.PromptDialog {
-        id: checkTimedOutDialog
-        title: i18n("Update Check Failed")
-        subtitle: i18n("The update check timed out. Check your network connection and try again.")
-        standardButtons: Kirigami.Dialog.Ok
-        Kirigami.Theme.colorSet: Kirigami.Theme.Window
-        Kirigami.Theme.inherit: false
-    }
-
-    Kirigami.PromptDialog {
-        id: networkErrorDialog
-        title: i18n("Network Error")
-        subtitle: i18n("Could not check for updates. Verify your network connection and try again.")
-        standardButtons: Kirigami.Dialog.Ok
-        Kirigami.Theme.colorSet: Kirigami.Theme.Window
-        Kirigami.Theme.inherit: false
     }
 
     // ── Dialogs ───────────────────────────────────────────────────────────────
@@ -78,11 +35,6 @@ Kirigami.ApplicationWindow {
     }
 
     UninstallDialog { id: uninstallDialog }
-
-    UpdateDialog {
-        id: updateDialog
-        onDownloadRequested: proxyModel.downloadUpdate(updateDialog.proxyRow)
-    }
 
     OnboardingDialog { id: onboardingDialog; parentWindowWidth: root.width }
 
@@ -100,219 +52,151 @@ Kirigami.ApplicationWindow {
         }
     }
 
+    // ── Navigation ────────────────────────────────────────────────────────────
+    // Two tabs (Installed, Discover) plus Settings and About, which open like pushed
+    // pages: the tabs give way to a Back button and the page title.
+    readonly property int pageInstalled: 0
+    readonly property int pageDiscover: 1
+    readonly property int pageSettings: 2
+    readonly property int pageAbout: 3
+    property int currentPage: pageInstalled
+    property int lastTab: pageInstalled
+    readonly property bool onSubPage: currentPage >= pageSettings
+
+    function showTab(page) { currentPage = page; lastTab = page }
+    function showSubPage(page) { currentPage = page }
+    function goBack() { currentPage = lastTab }
+
     // ── Main UI Layout ────────────────────────────────────────────────────────
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        // 2. Top Header Bar
-        Rectangle {
-            id: topBar
+        Controls.ToolBar {
             Layout.fillWidth: true
-            Layout.preferredHeight: Kirigami.Units.gridUnit * 2.5
-            color: Kirigami.Theme.alternateBackgroundColor
-            
-            Rectangle {
-                anchors.bottom: parent.bottom
-                width: parent.width
-                height: 1
-                color: root.cardBorderColor
-            }
 
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: Kirigami.Units.smallSpacing
-                anchors.rightMargin: Kirigami.Units.largeSpacing
-                spacing: Kirigami.Units.largeSpacing
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.smallSpacing
 
-                Controls.Button {
-                    id: sidebarToggleBtn
+                Controls.ToolButton {
+                    visible: root.onSubPage
+                    icon.name: "go-previous"
+                    text: i18n("Back")
                     display: Controls.AbstractButton.IconOnly
-                    icon.name: root.isSidebarCollapsed ? "sidebar-expand" : "sidebar-collapse"
-                    text: root.isSidebarCollapsed ? i18n("Expand Sidebar") : i18n("Collapse Sidebar")
-                    onClicked: root.isSidebarCollapsed = !root.isSidebarCollapsed
-                    
+                    onClicked: root.goBack()
                     Controls.ToolTip.visible: hovered
                     Controls.ToolTip.text: text
                     Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                    
-                    Layout.alignment: Qt.AlignVCenter
                 }
 
                 Kirigami.Heading {
-                    text: i18n("AppImage Manager")
+                    visible: root.onSubPage
                     level: 2
-                    Layout.alignment: Qt.AlignVCenter
+                    text: root.currentPage === root.pageSettings ? i18n("Settings") : i18n("About")
+                }
+
+                Controls.ToolButton {
+                    visible: !root.onSubPage
+                    icon.name: "view-list-icons"
+                    text: listModel.updateCount > 0
+                          ? i18n("Installed (%1)", listModel.updateCount)
+                          : i18n("Installed")
+                    checkable: true
+                    checked: root.currentPage === root.pageInstalled
+                    onClicked: root.showTab(root.pageInstalled)
+                    Controls.ToolTip.visible: hovered && listModel.updateCount > 0
+                    Controls.ToolTip.text: i18np("%1 update available", "%1 updates available", listModel.updateCount)
+                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                }
+
+                Controls.ToolButton {
+                    visible: !root.onSubPage
+                    icon.name: "plasma-discover"
+                    text: i18n("Discover")
+                    checkable: true
+                    checked: root.currentPage === root.pageDiscover
+                    onClicked: root.showTab(root.pageDiscover)
                 }
 
                 Item { Layout.fillWidth: true }
 
-                Controls.Button {
-                    icon.name: "document-import"
-                    text: i18n("Install from File")
+                Controls.ToolButton {
+                    visible: root.currentPage === root.pageInstalled && listModel.updateCount > 1
+                    icon.name: "system-software-update"
+                    text: i18n("Update All")
+                    onClicked: libraryPage.updateAll()
+                }
+
+                Controls.ToolButton {
+                    visible: !root.onSubPage
+                    icon.name: "list-add"
+                    text: i18n("Install from File…")
+                    display: Controls.AbstractButton.IconOnly
                     onClicked: installFileDialog.open()
+                    Controls.ToolTip.visible: hovered
+                    Controls.ToolTip.text: text
+                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                }
+
+                Controls.ToolButton {
+                    id: menuButton
+                    icon.name: "application-menu"
+                    text: i18n("Main Menu")
+                    display: Controls.AbstractButton.IconOnly
+                    down: mainMenu.visible
+                    onPressed: mainMenu.visible ? mainMenu.close() : mainMenu.popup(menuButton, 0, menuButton.height)
+                    Controls.ToolTip.visible: hovered && !mainMenu.visible
+                    Controls.ToolTip.text: text
+                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+
+                    Controls.Menu {
+                        id: mainMenu
+
+                        Controls.MenuItem {
+                            icon.name: "view-refresh"
+                            text: listModel.checkingUpdates ? i18n("Checking for Updates…") : i18n("Check for Updates")
+                            enabled: !listModel.checkingUpdates
+                            onTriggered: {
+                                root.showTab(root.pageInstalled)
+                                listModel.checkForUpdates()
+                            }
+                        }
+                        Controls.MenuSeparator {}
+                        Controls.MenuItem {
+                            icon.name: "configure"
+                            text: i18n("Settings")
+                            onTriggered: root.showSubPage(root.pageSettings)
+                        }
+                        Controls.MenuItem {
+                            icon.name: "help-about"
+                            text: i18n("About AppImage Manager")
+                            onTriggered: root.showSubPage(root.pageAbout)
+                        }
+                    }
                 }
             }
         }
 
-        // Main workspace: Left Master List + Right Content Stack
-        RowLayout {
+        StackLayout {
+            id: contentStack
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 0
+            currentIndex: root.currentPage
 
-            // 3. Navigation Master List (Left Pane)
-            Rectangle {
-                id: navPane
-                Layout.fillHeight: true
-                Layout.preferredWidth: root.isSidebarCollapsed
-                                       ? Kirigami.Units.gridUnit * 2.5
-                                       : Kirigami.Units.gridUnit * 10
-                color: Kirigami.Theme.alternateBackgroundColor
-
-                Behavior on Layout.preferredWidth {
-                    NumberAnimation {
-                        duration: Kirigami.Units.longDuration
-                        easing.type: Easing.InOutQuad
-                    }
-                }
-
-                Rectangle {
-                    anchors.right: parent.right
-                    height: parent.height
-                    width: 1
-                    color: root.cardBorderColor
-                }
-
-                ColumnLayout {
-                    anchors.fill: parent
-                    spacing: 0
-
-                    ListView {
-                        id: topNavListView
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: contentHeight
-                        Layout.topMargin: Kirigami.Units.largeSpacing
-                        clip: true
-                        interactive: false
-                        model: ListModel {
-                            ListElement { name: "Discover"; icon: "get-hot-new-stuff"; pageIndex: 0 }
-                            ListElement { name: "Installed"; icon: "view-list-details"; pageIndex: 1 }
-                        }
-                        currentIndex: (root.activeNavIndex < 2) ? root.activeNavIndex : -1
-                        delegate: navDelegateComponent
-                    }
-
-                    Item {
-                        Layout.fillHeight: true
-                    }
-
-                    ListView {
-                        id: bottomNavListView
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: contentHeight
-                        Layout.bottomMargin: Kirigami.Units.largeSpacing
-                        clip: true
-                        interactive: false
-                        model: ListModel {
-                            ListElement { name: "Settings"; icon: "configure"; pageIndex: 2 }
-                            ListElement { name: "About"; icon: "help-about"; pageIndex: 3 }
-                        }
-                        currentIndex: (root.activeNavIndex >= 2) ? (root.activeNavIndex - 2) : -1
-                        delegate: navDelegateComponent
-                    }
-                }
-
-                Component {
-                    id: navDelegateComponent
-                    
-                    Controls.ItemDelegate {
-                        id: navDelegate
-                        width: ListView.view.width
-                        height: Kirigami.Units.gridUnit * 2
-                        highlighted: ListView.isCurrentItem
-                        
-                        topInset: Kirigami.Units.largeSpacing / 2
-                        bottomInset: Kirigami.Units.largeSpacing / 2
-                        leftInset: Kirigami.Units.smallSpacing
-                        rightInset: Kirigami.Units.smallSpacing
-                        verticalPadding: Kirigami.Units.largeSpacing / 2
-
-                        contentItem: RowLayout {
-                            spacing: root.isSidebarCollapsed ? 0 : Kirigami.Units.largeSpacing
-
-                            Item {
-                                visible: root.isSidebarCollapsed
-                                Layout.fillWidth: true
-                            }
-
-                            Kirigami.Icon {
-                                source: model.icon
-                                implicitWidth: Kirigami.Units.iconSizes.smallMedium
-                                implicitHeight: Kirigami.Units.iconSizes.smallMedium
-                                Layout.alignment: Qt.AlignVCenter
-                                color: navDelegate.highlighted
-                                       ? Kirigami.Theme.highlightedTextColor
-                                       : Kirigami.Theme.textColor
-                            }
-
-                            Item {
-                                visible: root.isSidebarCollapsed
-                                Layout.fillWidth: true
-                            }
-
-                            Controls.Label {
-                                text: model.name
-                                color: navDelegate.highlighted
-                                       ? Kirigami.Theme.highlightedTextColor
-                                       : Kirigami.Theme.textColor
-                                elide: Text.ElideRight
-                                font.bold: navDelegate.highlighted
-                                Layout.fillWidth: true
-                                verticalAlignment: Text.AlignVCenter
-                                visible: !root.isSidebarCollapsed
-                                opacity: root.isSidebarCollapsed ? 0.0 : 1.0
-                                
-                                Behavior on opacity {
-                                    NumberAnimation { duration: Kirigami.Units.shortDuration }
-                                }
-                            }
-                        }
-
-                        // Collapsed Tooltip support
-                        Controls.ToolTip.visible: root.isSidebarCollapsed && hovered
-                        Controls.ToolTip.text: model.name
-                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-
-                        onClicked: {
-                            root.activeNavIndex = model.pageIndex
-                        }
-                    }
-                }
+            LibraryPage {
+                id: libraryPage
             }
 
-            // 4. Content Area (Right Pane StackLayout)
-            StackLayout {
-                id: contentStack
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                currentIndex: root.activeNavIndex
+            StorePage {
+                id: storePage
+            }
 
-                StorePage {
-                    id: storePage
-                }
+            SettingsPage {
+                id: settingsPage
+            }
 
-                LibraryPage {
-                    id: libraryPage
-                }
-
-                SettingsPage {
-                    id: settingsPage
-                }
-
-                AboutPage {
-                    id: aboutPage
-                }
+            AboutPage {
+                id: aboutPage
             }
         }
     }
@@ -321,12 +205,21 @@ Kirigami.ApplicationWindow {
     Shortcut {
         sequence: "Ctrl+F"
         onActivated: {
-            if (contentStack.currentIndex === 0 && storePage.searchField) {
+            if (root.currentPage === root.pageDiscover && storePage.searchField) {
                 storePage.searchField.forceActiveFocus()
-            } else if (contentStack.currentIndex === 1 && libraryPage.searchField) {
+            } else if (root.currentPage === root.pageInstalled && libraryPage.searchField) {
                 libraryPage.searchField.forceActiveFocus()
             }
         }
+    }
+    Shortcut {
+        sequences: [ StandardKey.Back ]
+        enabled: root.onSubPage
+        onActivated: root.goBack()
+    }
+    Shortcut {
+        sequence: "Ctrl+,"
+        onActivated: root.showSubPage(root.pageSettings)
     }
     Shortcut {
         sequences: [ StandardKey.Quit ]
@@ -345,7 +238,9 @@ Kirigami.ApplicationWindow {
 
         onDropped: (drop) => root.handleDrop(drop)
 
-        readonly property bool noInnerBox: (proxyModel.rowCount() > 0 || proxyModel.filterText !== "") && !AppSettings.showInstallBox
+        // The drop box under the Installed list highlights itself; everywhere else
+        // (other pages, empty list, box turned off) the whole window shows the drop.
+        readonly property bool noInnerBox: !libraryPage.dropBoxShown
 
         Rectangle {
             anchors.fill: parent
@@ -359,7 +254,6 @@ Kirigami.ApplicationWindow {
             level: 2
             text: i18n("Drop to install")
             visible: globalDropArea.containsDrag && parent.noInnerBox
-            color: Kirigami.Theme.highlightedTextColor
         }
     }
 }

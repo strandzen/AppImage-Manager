@@ -154,7 +154,9 @@ AppImageInfo AppImageReader::readInternal()
         return info;
     }
 
-    info.appId = QFileInfo(desktopInner).baseName();
+    // completeBaseName keeps reverse-DNS ids whole ("org.foo.Bar.desktop" → "org.foo.Bar");
+    // baseName stopped at the first dot and turned every such id into "org"/"io"/"ai".
+    info.appId = QFileInfo(desktopInner).completeBaseName();
 
     // Read .desktop file into a temporary file for KDesktopFile parsing
     const QByteArray desktopData = readFileFromAppImage(desktopInner);

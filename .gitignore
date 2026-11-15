@@ -31,3 +31,12 @@ build_*/
 
 # Packaging scripts (local workflow only — packaging/aur/ is tracked)
 packaging/local/
+
+# makepkg output from packaging/PKGBUILD (cd packaging && makepkg -si)
+packaging/src/
+packaging/pkg/
+*.pkg.tar.*
+
+# Local only: reference checkouts and AI plan backups
+comp/
+markdown/

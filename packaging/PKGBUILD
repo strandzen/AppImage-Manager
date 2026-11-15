@@ -1,0 +1,59 @@
+# Local build of this checkout, installed as a pacman package (cleanly removable):
+#   cd packaging && makepkg -si
+# Not for the AUR (see packaging/aur/ and packaging/aur-git/). It lives here rather than
+# in the repo root because makepkg uses <PKGBUILD dir>/src as its work dir, which would
+# collide with the project's src/. pkgver follows VERSION in the top-level CMakeLists.txt.
+pkgname=appimage-manager-plasma
+pkgver=2.1.0
+pkgrel=1
+pkgdesc="A lightweight KDE Plasma utility for installing, managing, and removing AppImage files (local build)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/strandzen/AppImage-Manager"
+license=('GPL-2.0-or-later')
+depends=(
+    'qt6-base'
+    'qt6-declarative'
+    'qt6-svg'
+    'kirigami'
+    'kirigami-addons'
+    'kcoreaddons'
+    'ki18n'
+    'kconfig'
+    'kio'
+    'kiconthemes'
+    'knotifications'
+    'kcrash'
+    'kdbusaddons'
+    'kstatusnotifieritem'
+    'libappimage'
+)
+makedepends=(
+    'cmake'
+    'extra-cmake-modules'
+    'ninja'
+    'qt6-tools'
+)
+optdepends=(
+    'am-git: install AppImages via the AM package manager'
+    'zsync2: delta updates (falls back to full download without it)'
+    'libcanberra: completion sound notifications'
+)
+provides=('appimagemanager')
+conflicts=('appimage-manager-plasma-git')
+
+pkgver() {
+    sed -n 's/^project(AppImageManager VERSION \([0-9.]*\).*/\1/p' "$startdir/../CMakeLists.txt"
+}
+
+build() {
+    cmake -S "$startdir/.." -B build \
+        -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DBUILD_TESTING=OFF
+    cmake --build build
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+}

@@ -19,18 +19,16 @@ class APPIMAGEMANAGER_EXPORT AppSettings : public QObject
     QML_ELEMENT
     QML_SINGLETON
 
-
     Q_PROPERTY(QString applicationsPath  READ applicationsPath  WRITE setApplicationsPath  NOTIFY applicationsPathChanged)
     Q_PROPERTY(bool    showDisclaimer    READ showDisclaimer    WRITE setShowDisclaimer    NOTIFY showDisclaimerChanged)
     Q_PROPERTY(bool    firstRun          READ firstRun          WRITE setFirstRun          NOTIFY firstRunChanged)
     Q_PROPERTY(bool    showNotifications READ showNotifications WRITE setShowNotifications NOTIFY showNotificationsChanged)
     Q_PROPERTY(int     updateFrequency   READ updateFrequency   WRITE setUpdateFrequency   NOTIFY updateFrequencyChanged)
     Q_PROPERTY(int     customUpdateDays  READ customUpdateDays  WRITE setCustomUpdateDays  NOTIFY customUpdateDaysChanged)
-    Q_PROPERTY(int     manageIconSize    READ manageIconSize    WRITE setManageIconSize    NOTIFY manageIconSizeChanged)
     Q_PROPERTY(bool    watchDownloads    READ watchDownloads    WRITE setWatchDownloads    NOTIFY watchDownloadsChanged)
     Q_PROPERTY(bool    verifySignatures  READ verifySignatures  WRITE setVerifySignatures  NOTIFY verifySignaturesChanged)
     Q_PROPERTY(bool    showInstallBox    READ showInstallBox    WRITE setShowInstallBox    NOTIFY showInstallBoxChanged)
-    Q_PROPERTY(bool    accentBorders     READ accentBorders     WRITE setAccentBorders     NOTIFY accentBordersChanged)
+    Q_PROPERTY(bool    discoverEnabled   READ discoverEnabled   WRITE setDiscoverEnabled   NOTIFY discoverEnabledChanged)
     Q_PROPERTY(QString qtVersion READ qtVersion CONSTANT)
     Q_PROPERTY(QString kdeFrameworksVersion READ kdeFrameworksVersion CONSTANT)
     Q_PROPERTY(QString libappimageVersion READ libappimageVersion CONSTANT)
@@ -66,9 +64,6 @@ public:
     int customUpdateDays() const;
     void setCustomUpdateDays(int days);
 
-    int manageIconSize() const;
-    void setManageIconSize(int size);
-
     bool watchDownloads() const;
     void setWatchDownloads(bool enabled);
 
@@ -78,8 +73,8 @@ public:
     bool showInstallBox() const;
     void setShowInstallBox(bool enabled);
 
-    bool accentBorders() const;
-    void setAccentBorders(bool enabled);
+    bool discoverEnabled() const;
+    void setDiscoverEnabled(bool enabled);
 
     Q_INVOKABLE void setApplicationsPathFromUrl(const QUrl &url);
     Q_INVOKABLE void resetToDefaults();
@@ -91,11 +86,10 @@ Q_SIGNALS:
     void showNotificationsChanged();
     void updateFrequencyChanged();
     void customUpdateDaysChanged();
-    void manageIconSizeChanged();
     void watchDownloadsChanged();
     void showInstallBoxChanged();
     void verifySignaturesChanged();
-    void accentBordersChanged();
+    void discoverEnabledChanged();
     void applicationsPathError(const QString &message);
 
 private:

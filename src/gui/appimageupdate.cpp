@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "appimageupdate.h"
-#include "../core/githubreleasechecker.h"
+#include "../core/releasechecker.h"
 #include "../core/appimageinfo.h"
+#include "../core/updatesource.h"
 #include "logging.h"
 
 #include <KLocalizedString>
@@ -10,6 +11,8 @@
 
 #include <QCryptographicHash>
 #include <QFile>
+#include <QUrl>
+#include <memory>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -19,6 +22,8 @@
 #include <QFutureWatcher>
 #include <QtConcurrent/QtConcurrent>
 
+// Watchdog per checked AppImage (checks run one at a time; each request also has its own
+// 10 s transfer timeout, so this only fires when something hangs, e.g. hashing a huge file).
 static constexpr int kCheckTimeoutMs = 30'000;
 
 AppImageUpdateManager::AppImageUpdateManager(QNetworkAccessManager *nam, QObject *parent)
@@ -29,6 +34,8 @@ AppImageUpdateManager::AppImageUpdateManager(QNetworkAccessManager *nam, QObject
     m_timeoutTimer.setInterval(kCheckTimeoutMs);
     connect(&m_timeoutTimer, &QTimer::timeout, this, [this]() {
         if (m_pendingChecks == 0) return;
+        ++m_batch;              // late results of this batch are ignored
+        m_checkQueue.clear();
         m_pendingChecks = 0;
         Q_EMIT checkingChanged();
         Q_EMIT checkFinished(-1, 0); // -1 = timed out
@@ -41,9 +48,9 @@ void AppImageUpdateManager::checkForUpdates(const QList<CheckItem> &items)
         return; // batch already in progress
 
     m_checkQueue.clear();
-    for (const CheckItem &item : items) {
-        if (item.updateInfo.startsWith(QLatin1String("gh-releases-zsync|")) ||
-            item.updateInfo.startsWith(QLatin1String("zsync|")))
+    for (CheckItem item : items) {
+        item.updateInfo = effectiveUpdateInfo(item.updateInfo, loadUpdateSource(item.filePath));
+        if (isSupportedUpdateInfo(item.updateInfo))
             m_checkQueue.enqueue(item);
     }
 
@@ -52,11 +59,11 @@ void AppImageUpdateManager::checkForUpdates(const QList<CheckItem> &items)
         return;
     }
 
+    ++m_batch;
     m_pendingChecks   = m_checkQueue.size();
     m_updatesFound    = 0;
     m_networkFailures = 0;
     Q_EMIT checkingChanged();
-    m_timeoutTimer.start();
 
     checkNextItem();
 }
@@ -67,28 +74,32 @@ void AppImageUpdateManager::checkNextItem()
         return;
 
     const CheckItem item = m_checkQueue.dequeue();
+    const quint64 batch = m_batch;
+    m_timeoutTimer.start();
 
-    if (item.updateInfo.startsWith(QLatin1String("gh-releases-zsync|"))) {
+    if (isReleaseUpdateInfo(item.updateInfo)) {
         const QString filePath = item.filePath;
-        auto *checker = new GitHubReleaseChecker(m_nam, this);
-        connect(checker, &GitHubReleaseChecker::checkFinished, this,
-                [this, filePath, checker](GitHubReleaseChecker::Result result,
-                                          const QString &ver, const QString &url) {
+        auto *checker = new ReleaseChecker(m_nam, this);
+        connect(checker, &ReleaseChecker::checkFinished, this,
+                [this, filePath, checker, batch](ReleaseChecker::Result result,
+                                                 const QString &ver, const QString &url) {
             checker->deleteLater();
-            const bool networkFailed = (result == GitHubReleaseChecker::Result::NetworkFailed);
-            if (result == GitHubReleaseChecker::Result::UpdateAvailable)
+            if (batch != m_batch)
+                return;
+            const bool networkFailed = (result == ReleaseChecker::Result::NetworkFailed);
+            if (result == ReleaseChecker::Result::UpdateAvailable)
                 Q_EMIT updateFound(filePath, ver, url);
-            finishOneCheck(result == GitHubReleaseChecker::Result::UpdateAvailable,
+            finishOneCheck(result == ReleaseChecker::Result::UpdateAvailable,
                            networkFailed);
         });
-        checker->check(item.updateInfo, item.currentVersion);
+        checker->check(filePath, item.updateInfo, item.currentVersion);
 
     } else if (item.updateInfo.startsWith(QLatin1String("zsync|"))) {
-        checkZsyncItem(item);
+        checkZsyncItem(item, batch);
     }
 }
 
-void AppImageUpdateManager::checkZsyncItem(const CheckItem &item)
+void AppImageUpdateManager::checkZsyncItem(const CheckItem &item, quint64 batch)
 {
     const QString zsyncUrl = item.updateInfo.mid(6); // strip "zsync|"
     const QString filePath = item.filePath;
@@ -98,8 +109,10 @@ void AppImageUpdateManager::checkZsyncItem(const CheckItem &item)
     request.setRawHeader("Range", "bytes=0-8191");
 
     QNetworkReply *reply = m_nam->get(request);
-    connect(reply, &QNetworkReply::finished, this, [this, reply, zsyncUrl, filePath]() {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, zsyncUrl, filePath, batch]() {
         reply->deleteLater();
+        if (batch != m_batch)
+            return;
 
         if (reply->error() != QNetworkReply::NoError) {
             finishOneCheck(false, true);
@@ -124,8 +137,10 @@ void AppImageUpdateManager::checkZsyncItem(const CheckItem &item)
 
         // Calculate local file hash asynchronously off the main GUI thread
         auto *watcher = new QFutureWatcher<QString>(this);
-        connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, filePath, zsyncUrl, remoteSha1]() {
+        connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, filePath, zsyncUrl, remoteSha1, batch]() {
             watcher->deleteLater();
+            if (batch != m_batch)
+                return;
             const QString localSha1 = watcher->result();
             if (localSha1 == remoteSha1) {
                 finishOneCheck(false);
@@ -171,10 +186,16 @@ void AppImageUpdateManager::finishOneCheck(bool foundUpdate, bool networkFailed)
 }
 
 void AppImageUpdateManager::downloadUpdate(const QString &filePath,
-                                           const QString &zsyncUrl,
+                                           const QString &url,
                                            const QString &displayName,
                                            const QString &appIconId)
 {
+    if (!QUrl(url).path().endsWith(QLatin1String(".zsync"), Qt::CaseInsensitive)) {
+        // Direct .AppImage download (release asset without a .zsync file, or a direct URL source).
+        downloadBinary(filePath, QUrl(url), {}, displayName, appIconId);
+        return;
+    }
+    const QString &zsyncUrl = url;
     const QString zsync2Path = QStandardPaths::findExecutable(QStringLiteral("zsync2"));
     if (zsync2Path.isEmpty()) {
         qCDebug(AIM_LOG) << "zsync2 not found. Falling back to full HTTP download via zsync URL:" << zsyncUrl;
@@ -204,30 +225,7 @@ void AppImageUpdateManager::downloadUpdate(const QString &filePath,
         process->deleteLater();
 
         if (exitCode == 0 && QFile::exists(newFile)) {
-            // Rename old → .bak before swap so it can be recovered if the
-            // process is killed between the two renames.
-            const QString bakFile = filePath + QStringLiteral(".bak");
-            QFile::remove(bakFile); // remove stale bak from a previous crashed update
-            if (!QFile::rename(filePath, bakFile) || !QFile::rename(newFile, filePath)) {
-                QFile::rename(bakFile, filePath); // restore original if possible
-                QFile::remove(newFile);
-                qCWarning(AIM_LOG) << "Failed to swap updated AppImage:" << filePath;
-                Q_EMIT downloadFinished(filePath, false);
-                return;
-            }
-            QFile::remove(bakFile);
-            QFile file(filePath);
-            file.setPermissions(file.permissions()
-                | QFileDevice::ExeUser | QFileDevice::ExeGroup | QFileDevice::ExeOther);
-
-            auto *n = new KNotification(QStringLiteral("updateDownloaded"),
-                                        KNotification::CloseOnTimeout, this);
-            n->setTitle(i18n("Update Completed"));
-            n->setText(i18n("%1 has been updated successfully.", displayName));
-            n->setIconName(appIconId.isEmpty() ? QStringLiteral("application-x-executable") : appIconId);
-            n->sendEvent();
-
-            Q_EMIT downloadFinished(filePath, true);
+            swapAndFinalizeDownload(filePath, newFile, displayName, appIconId);
         } else {
             if (QFile::exists(newFile))
                 QFile::remove(newFile);
@@ -288,67 +286,94 @@ void AppImageUpdateManager::startFullHttpDownload(const QString &filePath,
         const QUrl binaryUrl = QUrl(zsyncUrl).resolved(QUrl(binaryUrlStr));
         qCDebug(AIM_LOG) << "Fallback: resolved binary URL to" << binaryUrl.toString();
 
-        // Step 2: Download the binary file using standard HTTP streaming
-        const QString newFile = filePath + QStringLiteral(".new");
-        auto *file = new QFile(newFile, this);
-        if (!file->open(QIODevice::WriteOnly)) {
-            qCWarning(AIM_LOG) << "Fallback: Failed to open temp file for writing:" << newFile;
-            file->deleteLater();
+        downloadBinary(filePath, binaryUrl, remoteSha1, displayName, appIconId);
+    });
+}
+
+void AppImageUpdateManager::downloadBinary(const QString &filePath,
+                                           const QUrl &binaryUrl,
+                                           const QString &remoteSha1,
+                                           const QString &displayName,
+                                           const QString &appIconId)
+{
+    // Stream the AppImage to <file>.new, verify SHA-1 when known, then swap.
+    const QString newFile = filePath + QStringLiteral(".new");
+    auto *file = new QFile(newFile, this);
+    if (!file->open(QIODevice::WriteOnly)) {
+        qCWarning(AIM_LOG) << "Fallback: Failed to open temp file for writing:" << newFile;
+        file->deleteLater();
+        Q_EMIT downloadFinished(filePath, false);
+        return;
+    }
+
+    QNetworkRequest binRequest(binaryUrl);
+    binRequest.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
+    binRequest.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    QNetworkReply *binReply = m_nam->get(binRequest);
+    // Set when the server answers with a web page (login, error or landing page) instead of a
+    // file, so it never replaces a working AppImage.
+    auto notAnAppImage = std::make_shared<bool>(false);
+
+    // Write chunks sequentially as they arrive to keep RAM footprint low
+    connect(binReply, &QNetworkReply::readyRead, this, [binReply, file, notAnAppImage]() {
+        if (file->pos() == 0 && ReleaseChecker::isNonBinaryContentType(
+                binReply->header(QNetworkRequest::ContentTypeHeader).toString())) {
+            *notAnAppImage = true;
+            binReply->abort();
+            return;
+        }
+        if (file->write(binReply->readAll()) < 0)
+            binReply->abort(); // disk full or I/O error — abort early; finished() checks file->error()
+    });
+
+    connect(binReply, &QNetworkReply::downloadProgress, this, [this, filePath](qint64 bytesReceived, qint64 bytesTotal) {
+        if (bytesTotal > 0) {
+            int percent = static_cast<int>((bytesReceived * 100) / bytesTotal);
+            Q_EMIT downloadProgress(filePath, percent);
+        }
+    });
+
+    connect(binReply, &QNetworkReply::finished, this, [this, binReply, file, filePath, newFile, displayName, appIconId, remoteSha1, notAnAppImage]() {
+        binReply->deleteLater();
+        file->close();
+        const bool fileWriteOk = (file->error() == QFile::NoError);
+        file->deleteLater();
+
+        if (*notAnAppImage) {
+            qCWarning(AIM_LOG) << "Download for" << filePath << "returned"
+                               << binReply->header(QNetworkRequest::ContentTypeHeader).toString()
+                               << "instead of an AppImage; keeping the installed file.";
+            QFile::remove(newFile);
             Q_EMIT downloadFinished(filePath, false);
             return;
         }
 
-        QNetworkRequest binRequest(binaryUrl);
-        binRequest.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
-        binRequest.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+        if (binReply->error() != QNetworkReply::NoError || !fileWriteOk) {
+            qCWarning(AIM_LOG) << "Fallback: Binary download failed or write error:" << binReply->errorString();
+            QFile::remove(newFile);
+            Q_EMIT downloadFinished(filePath, false);
+            return;
+        }
 
-        QNetworkReply *binReply = m_nam->get(binRequest);
-        
-        // Write chunks sequentially as they arrive to keep RAM footprint low
-        connect(binReply, &QNetworkReply::readyRead, this, [binReply, file]() {
-            if (file->write(binReply->readAll()) < 0)
-                binReply->abort(); // disk full or I/O error — abort early; finished() checks file->error()
-        });
-
-        connect(binReply, &QNetworkReply::downloadProgress, this, [this, filePath](qint64 bytesReceived, qint64 bytesTotal) {
-            if (bytesTotal > 0) {
-                int percent = static_cast<int>((bytesReceived * 100) / bytesTotal);
-                Q_EMIT downloadProgress(filePath, percent);
-            }
-        });
-
-        connect(binReply, &QNetworkReply::finished, this, [this, binReply, file, filePath, newFile, displayName, appIconId, remoteSha1]() {
-            binReply->deleteLater();
-            file->close();
-            const bool fileWriteOk = (file->error() == QFile::NoError);
-            file->deleteLater();
-
-            if (binReply->error() != QNetworkReply::NoError || !fileWriteOk) {
-                qCWarning(AIM_LOG) << "Fallback: Binary download failed or write error:" << binReply->errorString();
-                QFile::remove(newFile);
-                Q_EMIT downloadFinished(filePath, false);
-                return;
-            }
-
-            // Verify SHA-1 hash if available in .zsync
-            if (!remoteSha1.isEmpty()) {
-                auto *watcher = new QFutureWatcher<QString>(this);
-                connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, filePath, newFile, displayName, appIconId, remoteSha1]() {
-                    watcher->deleteLater();
-                    const QString localSha1 = watcher->result();
-                    if (localSha1 != remoteSha1) {
-                        qCWarning(AIM_LOG) << "Fallback: Hash mismatch on downloaded file. Expected:" << remoteSha1 << "Got:" << localSha1;
-                        QFile::remove(newFile);
-                        Q_EMIT downloadFinished(filePath, false);
-                        return;
-                    }
-                    swapAndFinalizeDownload(filePath, newFile, displayName, appIconId);
-                });
-                watcher->setFuture(QtConcurrent::run(&AppImageUpdateManager::calculateFileSha1, newFile));
-            } else {
+        // Verify SHA-1 hash if available in .zsync
+        if (!remoteSha1.isEmpty()) {
+            auto *watcher = new QFutureWatcher<QString>(this);
+            connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, filePath, newFile, displayName, appIconId, remoteSha1]() {
+                watcher->deleteLater();
+                const QString localSha1 = watcher->result();
+                if (localSha1 != remoteSha1) {
+                    qCWarning(AIM_LOG) << "Fallback: Hash mismatch on downloaded file. Expected:" << remoteSha1 << "Got:" << localSha1;
+                    QFile::remove(newFile);
+                    Q_EMIT downloadFinished(filePath, false);
+                    return;
+                }
                 swapAndFinalizeDownload(filePath, newFile, displayName, appIconId);
-            }
-        });
+            });
+            watcher->setFuture(QtConcurrent::run(&AppImageUpdateManager::calculateFileSha1, newFile));
+        } else {
+            swapAndFinalizeDownload(filePath, newFile, displayName, appIconId);
+        }
     });
 }
 
@@ -364,7 +389,7 @@ void AppImageUpdateManager::swapAndFinalizeDownload(const QString &filePath,
     if (!QFile::rename(filePath, bakFile) || !QFile::rename(newFile, filePath)) {
         QFile::rename(bakFile, filePath); // restore original if possible
         QFile::remove(newFile);
-        qCWarning(AIM_LOG) << "Fallback: Failed to swap updated AppImage:" << filePath;
+        qCWarning(AIM_LOG) << "Failed to swap updated AppImage:" << filePath;
         Q_EMIT downloadFinished(filePath, false);
         return;
     }

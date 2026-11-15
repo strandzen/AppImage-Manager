@@ -8,6 +8,8 @@
 #include "../core/appimagemanager.h"
 #include "../core/appimagereader.h"
 #include "../core/appsettings.h"
+#include "../core/updatesource.h"
+#include "../core/launchenvironment.h"
 
 #include <KFormat>
 #include <KIO/CopyJob>
@@ -17,6 +19,7 @@
 #include <QDBusConnectionInterface>
 #include <QDir>
 #include <QGuiApplication>
+#include <algorithm>
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QIcon>
@@ -80,6 +83,11 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
                 n->sendEvent();
             });
 
+    // Keep updateCount in step with every change that can add, drop or clear an update.
+    connect(this, &QAbstractItemModel::dataChanged, this, &AppImageListModel::recountUpdates);
+    connect(this, &QAbstractItemModel::rowsRemoved, this, &AppImageListModel::recountUpdates);
+    connect(this, &QAbstractItemModel::modelReset,  this, &AppImageListModel::recountUpdates);
+
     // ── Update manager signals ────────────────────────────────────────────────
     connect(m_updateManager, &AppImageUpdateManager::checkingChanged,
             this, &AppImageListModel::checkingUpdatesChanged);
@@ -88,13 +96,13 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
             this, &AppImageListModel::updateCheckFinished);
 
     connect(m_updateManager, &AppImageUpdateManager::updateFound,
-            this, [this](const QString &filePath, const QString &version, const QString &zsyncUrl) {
+            this, [this](const QString &filePath, const QString &version, const QString &url) {
                 const int row = findRowByPath(filePath);
                 if (row < 0) return;
                 Item &item = m_items[row];
                 item.updateAvailable = true;
                 item.updateVersion   = version;
-                item.zsyncUrl        = zsyncUrl;
+                item.updateUrl       = url;
                 Q_EMIT dataChanged(index(row, 0), index(row, 0),
                                    {UpdateAvailableRole, UpdateVersionRole});
             });
@@ -114,6 +122,10 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
                 Item &item = m_items[row];
                 item.isUpdating = false;
                 if (success) {
+                    // Remember the release (or direct-download build) now installed, so
+                    // AppImages without a usable version string stop showing the update.
+                    if (isReleaseUpdateInfo(effectiveUpdateInfo(item.info.updateInfo, loadUpdateSource(filePath))))
+                        saveInstalledTag(filePath, item.updateVersion);
                     item.updateAvailable = false;
                     item.updateProgress  = 0;
                     loadMetadataForRow(row);
@@ -124,6 +136,16 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
                     sendError(this, i18n("Update Failed"),
                               i18n("%1 could not be updated.", item.cachedDisplayName));
             });
+}
+
+void AppImageListModel::recountUpdates()
+{
+    const int count = std::count_if(m_items.cbegin(), m_items.cend(),
+                                    [](const Item &item) { return item.updateAvailable; });
+    if (count == m_updateCount)
+        return;
+    m_updateCount = count;
+    Q_EMIT updateCountChanged();
 }
 
 // ── QAbstractListModel interface ──────────────────────────────────────────────
@@ -162,6 +184,8 @@ QVariant AppImageListModel::data(const QModelIndex &index, int role) const
     case DescriptionRole:     return item.cachedDescription;
     case DeveloperNameRole:   return item.info.developerName;
     case HomepageRole:        return item.info.homepage;
+    case SectionCategoryRole: return primaryCategory(item);
+    case SectionAddedRole:    return addedGroup(item.addedDate);
     default: return {};
     }
 }
@@ -189,7 +213,26 @@ QHash<int, QByteArray> AppImageListModel::roleNames() const
         { DescriptionRole,     "description"     },
         { DeveloperNameRole,   "developerName"   },
         { HomepageRole,        "homepage"        },
+        { SectionCategoryRole, "sectionCategory" },
+        { SectionAddedRole,    "sectionAdded"    },
     };
+}
+
+// static
+QString AppImageListModel::primaryCategory(const Item &item)
+{
+    const QString first = item.info.categories.section(QLatin1Char(';'), 0, 0, QString::SectionSkipEmpty);
+    return first.isEmpty() ? i18nc("list section for apps without a category", "Other") : first;
+}
+
+// static
+QString AppImageListModel::addedGroup(const QDateTime &added)
+{
+    const qint64 days = added.date().daysTo(QDate::currentDate());
+    if (days <= 0) return i18nc("list section", "Today");
+    if (days < 7)  return i18nc("list section", "This Week");
+    if (days < 31) return i18nc("list section", "This Month");
+    return i18nc("list section", "Earlier");
 }
 
 bool AppImageListModel::isCheckingUpdates() const
@@ -282,14 +325,13 @@ void AppImageListModel::refresh()
 
     rebuildPathIndex();
 
-    // Set pendingLoads before dispatching work. Synchronous cache hits in
+    // Set m_pendingLoads before dispatching work. Synchronous cache hits in
     // loadMetadataForRow decrement immediately; assigning afterwards would
     // overwrite their decrements and leave a stuck non-zero count.
     // staleFutures — old-gen futures still in flight; each calls finalize() once
     // reTriggers   — new futures for existing unloaded items (+ 1 stale each = staleFutures)
     // toAdd.size() — new futures for freshly inserted items
     m_pendingLoads = staleFutures + reTriggers + static_cast<int>(toAdd.size());
-    Q_EMIT pendingLoadsChanged();
 
     if (m_pendingLoads > 0) {
         if (!m_scanning) { m_scanning = true; Q_EMIT scanningChanged(); }
@@ -318,7 +360,6 @@ void AppImageListModel::loadMetadataForRow(int row)
     if (cached.isValid) {
         applyMetadata(row, cached);
         --m_pendingLoads;
-        Q_EMIT pendingLoadsChanged();
         if (m_pendingLoads == 0 && m_scanning) {
             m_scanning = false;
             Q_EMIT scanningChanged();
@@ -332,7 +373,6 @@ void AppImageListModel::loadMetadataForRow(int row)
 
         auto finalize = [this]() {
             --m_pendingLoads;
-            Q_EMIT pendingLoadsChanged();
             if (m_pendingLoads == 0 && m_scanning) {
                 m_scanning = false;
                 Q_EMIT scanningChanged();
@@ -383,7 +423,6 @@ void AppImageListModel::onFileCreated(const QString &path)
     m_pathIndex[path] = row;
 
     ++m_pendingLoads;
-    Q_EMIT pendingLoadsChanged();
     if (!m_scanning) { m_scanning = true; Q_EMIT scanningChanged(); }
     loadMetadataForRow(row);
 }
@@ -412,7 +451,6 @@ void AppImageListModel::onFileDirty(const QString &path)
     Q_EMIT dataChanged(index(row, 0), index(row, 0));
 
     ++m_pendingLoads;
-    Q_EMIT pendingLoadsChanged();
     if (!m_scanning) { m_scanning = true; Q_EMIT scanningChanged(); }
     loadMetadataForRow(row);
 }
@@ -475,7 +513,7 @@ void AppImageListModel::requestRemoveAt(int row)
 void AppImageListModel::requestLaunch(int row)
 {
     if (row < 0 || row >= m_items.size()) return;
-    if (!QProcess::startDetached(m_items.at(row).filePath, {}))
+    if (!launchWithEnvironment(m_items.at(row).filePath))
         sendError(this, i18n("Launch Failed"),
                   i18n("Could not launch %1.", m_items.at(row).cachedDisplayName));
 }
@@ -485,26 +523,93 @@ void AppImageListModel::checkForUpdates()
     QList<AppImageUpdateManager::CheckItem> items;
     items.reserve(m_items.size());
     for (const Item &item : std::as_const(m_items)) {
-        if (item.info.updateInfo.startsWith(QLatin1String("gh-releases-zsync|")) ||
-            item.info.updateInfo.startsWith(QLatin1String("zsync|"))) {
-            items.push_back({ item.filePath, item.info.updateInfo,
-                              item.info.version, item.cachedDisplayName, item.info.appId });
-        }
+        // The update manager drops items without a supported (embedded or user-set) source.
+        items.push_back({ item.filePath, item.info.updateInfo,
+                          item.info.version, item.cachedDisplayName, item.info.appId });
     }
     m_updateManager->checkForUpdates(items);
+}
+
+QVariantMap AppImageListModel::updateSource(int row) const
+{
+    if (row < 0 || row >= m_items.size()) return {};
+    const Item &item = m_items.at(row);
+    const UpdateSource source = loadUpdateSource(item.filePath);
+    QString input = source.value;
+    if (source.type == UpdateSourceType::Forgejo)
+        input = QStringLiteral("https://") + source.value;
+    return {
+        { QStringLiteral("input"), input },
+        { QStringLiteral("type"), updateSourceTypeName(source.type) },
+        { QStringLiteral("prerelease"), source.prerelease },
+        { QStringLiteral("embedded"), item.info.updateInfo },
+        { QStringLiteral("embeddedLabel"), describeUpdateInfo(item.info.updateInfo) },
+    };
+}
+
+QVariantMap AppImageListModel::describeUpdateSourceInput(const QString &input, const QString &type) const
+{
+    const UpdateSource source = parseUpdateSourceInput(input, updateSourceTypeFromName(type));
+    return {
+        { QStringLiteral("valid"), source.type != UpdateSourceType::None },
+        { QStringLiteral("type"), updateSourceTypeName(source.type) },
+        { QStringLiteral("label"), describeUpdateInfo(effectiveUpdateInfo({}, source)) },
+    };
+}
+
+QString AppImageListModel::environment(int row) const
+{
+    if (row < 0 || row >= m_items.size()) return {};
+    return loadEnvironment(m_items.at(row).filePath).join(QLatin1Char('\n'));
+}
+
+QVariantList AppImageListModel::setEnvironment(int row, const QString &text)
+{
+    if (row < 0 || row >= m_items.size()) return {};
+    const EnvironmentParse parsed = parseEnvironment(text);
+    if (!parsed.invalidLines.isEmpty()) {
+        QVariantList lines;
+        for (int line : parsed.invalidLines)
+            lines.append(line);
+        return lines;
+    }
+    const Item &item = m_items.at(row);
+    saveEnvironment(item.filePath, parsed.variables);
+    // The app menu entry carries the environment in its Exec line: rewrite it.
+    if (item.hasDesktopLink)
+        AppImageManager::createDesktopLink(item.filePath, item.info);
+    Q_EMIT dataChanged(index(row, 0), index(row, 0));
+    return {};
+}
+
+bool AppImageListModel::setUpdateSource(int row, const QString &input, const QString &type, bool prerelease)
+{
+    if (row < 0 || row >= m_items.size()) return false;
+    UpdateSource source = parseUpdateSourceInput(input, updateSourceTypeFromName(type));
+    if (source.type == UpdateSourceType::None && !input.trimmed().isEmpty())
+        return false;
+    source.prerelease = prerelease;
+
+    Item &item = m_items[row];
+    saveUpdateSource(item.filePath, source);
+    item.updateAvailable = false;
+    item.updateVersion.clear();
+    item.updateUrl.clear();
+    Q_EMIT dataChanged(index(row, 0), index(row, 0), {UpdateAvailableRole, UpdateVersionRole});
+    return true;
 }
 
 void AppImageListModel::downloadUpdate(int row)
 {
     if (row < 0 || row >= m_items.size()) return;
     Item &item = m_items[row];
-    if (item.zsyncUrl.isEmpty() || item.isUpdating) return;
+    if (item.updateUrl.isEmpty() || item.isUpdating) return;
 
     item.isUpdating     = true;
     item.updateProgress = 0;
     Q_EMIT dataChanged(index(row, 0), index(row, 0), {IsUpdatingRole, UpdateProgressRole});
 
-    m_updateManager->downloadUpdate(item.filePath, item.zsyncUrl,
+    m_updateManager->downloadUpdate(item.filePath, item.updateUrl,
                                     item.cachedDisplayName, item.info.appId);
 }
 
@@ -566,7 +671,7 @@ QVariant AppImageListModel::sortKey(int row, int field) const
     enum { Name = 0, Size = 1, Category = 5, Date = 9 };
     switch (field) {
     case Size:     return item.info.fileSize;
-    case Category: return item.info.categories;
+    case Category: return primaryCategory(item);
     case Date:     return item.addedDate;
     case Name:
     default:       return item.cachedDisplayName;
@@ -606,6 +711,9 @@ QVariantMap AppImageListModel::itemData(int row) const
         { QStringLiteral("description"),     item.cachedDescription                       },
         { QStringLiteral("developerName"),   item.info.developerName                      },
         { QStringLiteral("homepage"),        item.info.homepage                           },
+        { QStringLiteral("environment"),     loadEnvironment(item.filePath)                },
+        { QStringLiteral("updateSourceLabel"), describeUpdateInfo(
+              effectiveUpdateInfo(item.info.updateInfo, loadUpdateSource(item.filePath)))  },
     };
 }
 

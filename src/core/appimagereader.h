@@ -32,9 +32,6 @@ private:
 
     AppImageInfo readInternal();
     QByteArray readFileFromAppImage(const QString &innerPath, QString *outExt = nullptr);
-    QString findDesktopFile();
-    QString findIconFile(const QString &iconName);
-    QString findAppStreamFile();
 
     QString m_path;
 };

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "appimagemanager.h"
 #include "logging.h"
+#include "launchenvironment.h"
 
 #include <KDesktopFile>
 #include <KConfigGroup>
@@ -38,16 +39,15 @@ qint64 dirSize(const QString &path)
 
 namespace AppImageManager {
 
-// Return a stable, collision-free key for desktop/icon file naming.
-// AppImages with proper AppStream metadata supply a namespaced appId (e.g.
-// "org.videolan.vlc"); use it directly.  Others derive a slug from the clean
-// name, disambiguated by a 6-char hex hash of the original filename so that
-// two differently-named AppImages that happen to share a display name don't
+// Return a stable, collision-free key for desktop/icon file naming: a slug from
+// the clean name, disambiguated by a 6-char hex hash of the original filename so
+// that two differently-named AppImages that happen to share a display name don't
 // overwrite each other's .desktop file.
+// Always the clean-name slug plus a hash of the file name, never the appId. appIds used to be
+// truncated at the first dot (so this never used them); switching to the now-correct appIds
+// would rename every existing app menu entry and lose track of the ones users already have.
 static QString fileKey(const AppImageInfo &info)
 {
-    if (info.appId.contains(QLatin1Char('.')))
-        return info.appId;
     const QString base = info.cleanName.toLower()
                              .remove(QLatin1String(".appimage"))
                              .replace(QLatin1Char(' '), QLatin1Char('_'));
@@ -119,7 +119,7 @@ bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
 
     const QString iconField = QIcon::hasThemeIcon(info.appId) ? info.appId : (QStringLiteral("appimage_") + fileKey(info));
 
-    QString execStr = KShell::quoteArg(appImagePath);
+    QString execStr = environmentExecPrefix(loadEnvironment(appImagePath)) + KShell::quoteArg(appImagePath);
     if (!info.execArgs.isEmpty())
         execStr += QLatin1Char(' ') + info.execArgs;
 

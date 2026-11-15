@@ -61,6 +61,7 @@ public:
         LicenseRole,
         HasAmScriptRole,
         HasFeedDataRole,
+        SectionCategoryRole,  // first category, or "Other"; the list is grouped by it
     };
 
     explicit AMStoreModel(QObject *parent = nullptr);
@@ -99,7 +100,6 @@ public:
     Q_INVOKABLE void updateSource(const QString &id, const QString &name, const QString &url, const QString &type, bool enabled);
     Q_INVOKABLE void removeSource(const QString &id);
     Q_INVOKABLE void resetSourcesToDefault();
-    Q_INVOKABLE void moveSource(int fromIndex, int toIndex);
     Q_INVOKABLE void setSourcesOrder(const QStringList &idOrder);
 
 Q_SIGNALS:
@@ -135,7 +135,6 @@ private:
     static QVector<StoreApp> parseFeedJsonSync(const QByteArray &data);
     static QVector<StoreApp> parseUniversalJsonSync(const QByteArray &data);
     static QString cleanName(const QString &packageName);
-    static QString mapCategory(const QString &packageName, const QString &description);
 
     QNetworkAccessManager *m_nam;
     QNetworkReply *m_downloadReply;

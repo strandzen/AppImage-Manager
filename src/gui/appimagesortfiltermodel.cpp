@@ -129,3 +129,28 @@ QVariantMap AppImageSortFilterModel::itemData(int proxyRow) const
     if (!src) return {};
     return src->itemData(sourceRowFor(proxyRow));
 }
+
+QVariantMap AppImageSortFilterModel::updateSource(int proxyRow) const
+{
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    if (!src) return {};
+    return src->updateSource(sourceRowFor(proxyRow));
+}
+
+bool AppImageSortFilterModel::setUpdateSource(int proxyRow, const QString &input, const QString &type, bool prerelease)
+{
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    return src && src->setUpdateSource(sourceRowFor(proxyRow), input, type, prerelease);
+}
+
+QString AppImageSortFilterModel::environment(int proxyRow) const
+{
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    return src ? src->environment(sourceRowFor(proxyRow)) : QString();
+}
+
+QVariantList AppImageSortFilterModel::setEnvironment(int proxyRow, const QString &text)
+{
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    return src ? src->setEnvironment(sourceRowFor(proxyRow), text) : QVariantList();
+}

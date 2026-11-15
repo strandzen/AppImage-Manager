@@ -21,7 +21,8 @@
 //   2 — added comment, description
 //   3 — added developerName, homepage
 //   4 — migrated storage from QSettings INI to SQLite
-static constexpr int kCacheVersion = 4;
+//   5 — appId no longer truncated at the first dot (re-read every AppImage once)
+static constexpr int kCacheVersion = 5;
 
 static QString cacheDbPath()
 {

@@ -106,6 +106,10 @@ QVariant AMStoreModel::data(const QModelIndex &index, int role) const
     case LicenseRole:     return app.license;
     case HasAmScriptRole: return app.hasAmScript;
     case HasFeedDataRole: return app.hasFeedData;
+    case SectionCategoryRole: {
+        const QString first = app.categories.section(QLatin1Char(';'), 0, 0, QString::SectionSkipEmpty);
+        return first.isEmpty() ? i18nc("list section for apps without a category", "Other") : first;
+    }
     }
     return {};
 }
@@ -124,6 +128,7 @@ QHash<int, QByteArray> AMStoreModel::roleNames() const
     roles[LicenseRole]     = "license";
     roles[HasAmScriptRole] = "hasAmScript";
     roles[HasFeedDataRole] = "hasFeedData";
+    roles[SectionCategoryRole] = "sectionCategory";
     return roles;
 }
 
@@ -299,7 +304,7 @@ void AMStoreModel::addSource(const QString &name, const QString &url, const QStr
 
     m_sources.append(src);
     saveSources();
-    sync();
+    if (m_initialized) sync(); // otherwise the lazy initialize() loads them
 }
 
 void AMStoreModel::updateSource(const QString &id, const QString &name, const QString &url, const QString &type, bool enabled)
@@ -318,7 +323,7 @@ void AMStoreModel::updateSource(const QString &id, const QString &name, const QS
             src.type = type.trimmed();
             src.enabled = enabled;
             saveSources();
-            sync();
+            if (m_initialized) sync(); // otherwise the lazy initialize() loads them
             return;
         }
     }
@@ -333,15 +338,13 @@ void AMStoreModel::removeSource(const QString &id)
             QFile::remove(cacheFile);
 
             m_sources.removeAt(i);
-            if (m_storeSource == i + 1) {
-                m_storeSource = 0;
-                Q_EMIT storeSourceChanged();
-            } else if (m_storeSource > i + 1) {
-                m_storeSource--;
-                Q_EMIT storeSourceChanged();
-            }
+            // storeSource is a 1-based position in m_sources: keep it on the same catalog.
+            if (m_storeSource == i + 1)
+                setStoreSource(0);
+            else if (m_storeSource > i + 1)
+                setStoreSource(m_storeSource - 1);
             saveSources();
-            sync();
+            if (m_initialized) sync(); // otherwise the lazy initialize() loads them
             return;
         }
     }
@@ -358,26 +361,17 @@ void AMStoreModel::resetSourcesToDefault()
     m_sources.clear();
     QSettings s(QStringLiteral("io.github.appimagemanager"), QStringLiteral("AppImageManager"));
     s.remove(QStringLiteral("Store/sourcesJson"));
-    m_storeSource = 0;
-    Q_EMIT storeSourceChanged();
+    setStoreSource(0);
     loadSources();
-    sync();
-}
-
-void AMStoreModel::moveSource(int fromIndex, int toIndex)
-{
-    if (fromIndex < 0 || fromIndex >= m_sources.size() ||
-        toIndex < 0 || toIndex >= m_sources.size() ||
-        fromIndex == toIndex) {
-        return;
-    }
-    m_sources.move(fromIndex, toIndex);
-    saveSources();
-    checkAllLoaded();
+    if (m_initialized) sync(); // otherwise the lazy initialize() loads them
 }
 
 void AMStoreModel::setSourcesOrder(const QStringList &idOrder)
 {
+    // storeSource is a 1-based position in m_sources: keep it on the same catalog.
+    const QString filteredId = m_storeSource > 0 && m_storeSource <= m_sources.size()
+        ? m_sources.at(m_storeSource - 1).id : QString();
+
     QList<StoreSource> reordered;
     reordered.reserve(m_sources.size());
     for (const QString &id : idOrder) {
@@ -395,6 +389,12 @@ void AMStoreModel::setSourcesOrder(const QStringList &idOrder)
     }
     m_sources = reordered;
     saveSources();
+    if (!filteredId.isEmpty()) {
+        for (int i = 0; i < m_sources.size(); ++i) {
+            if (m_sources.at(i).id == filteredId)
+                setStoreSource(i + 1);
+        }
+    }
     checkAllLoaded();
 }
 
@@ -845,15 +845,23 @@ void AMStoreModel::applyFilter()
                 if (matchSearch && matchCategory)
                     apps.append(app);
             }
-            if (sortAscending) {
-                std::sort(apps.begin(), apps.end(), [](const StoreApp &a, const StoreApp &b) {
-                    return a.displayName.localeAwareCompare(b.displayName) < 0;
-                });
-            } else {
-                std::sort(apps.begin(), apps.end(), [](const StoreApp &a, const StoreApp &b) {
-                    return a.displayName.localeAwareCompare(b.displayName) > 0;
-                });
-            }
+            // Without a category filter: grouped by first category (the list shows category
+            // sections; apps without one go last), then by name in the chosen direction.
+            auto primary = [](const StoreApp &app) {
+                return app.categories.section(QLatin1Char(';'), 0, 0, QString::SectionSkipEmpty);
+            };
+            const bool grouped = categoryFilter.isEmpty() || categoryFilter == QStringLiteral("All");
+            std::sort(apps.begin(), apps.end(), [&primary, sortAscending, grouped](const StoreApp &a, const StoreApp &b) {
+                const QString ca = grouped ? primary(a) : QString();
+                const QString cb = grouped ? primary(b) : QString();
+                if (ca != cb) {
+                    if (ca.isEmpty() || cb.isEmpty())
+                        return cb.isEmpty();
+                    return ca.localeAwareCompare(cb) < 0;
+                }
+                const int byName = a.displayName.localeAwareCompare(b.displayName);
+                return sortAscending ? byName < 0 : byName > 0;
+            });
             return apps;
         }));
 }
@@ -888,32 +896,6 @@ QString AMStoreModel::cleanName(const QString &packageName)
     for (auto &part : parts)
         if (!part.isEmpty()) part[0] = part[0].toUpper();
     return parts.join(QLatin1Char(' '));
-}
-
-QString AMStoreModel::mapCategory(const QString &packageName, const QString &description)
-{
-    const QString s = (packageName + QLatin1Char(' ') + description).toLower();
-
-    if (s.contains(QStringLiteral("game")) || s.contains(QStringLiteral("arcade"))
-        || s.contains(QStringLiteral("emulator")))
-        return QStringLiteral("Game");
-    if (s.contains(QStringLiteral("editor")) || s.contains(QStringLiteral(" ide "))
-        || s.contains(QStringLiteral("code")) || s.contains(QStringLiteral("compiler")))
-        return QStringLiteral("Development");
-    if (s.contains(QStringLiteral("image")) || s.contains(QStringLiteral("paint"))
-        || s.contains(QStringLiteral("graphics")) || s.contains(QStringLiteral("3d")))
-        return QStringLiteral("Graphics");
-    if (s.contains(QStringLiteral("browser")) || s.contains(QStringLiteral("chat"))
-        || s.contains(QStringLiteral("internet")) || s.contains(QStringLiteral(" web ")))
-        return QStringLiteral("Network");
-    if (s.contains(QStringLiteral("office")) || s.contains(QStringLiteral("document"))
-        || s.contains(QStringLiteral("pdf")))
-        return QStringLiteral("Office");
-    if (s.contains(QStringLiteral("audio")) || s.contains(QStringLiteral("video"))
-        || s.contains(QStringLiteral("media")) || s.contains(QStringLiteral("music")))
-        return QStringLiteral("AudioVideo");
-
-    return QStringLiteral("Utility");
 }
 
 // ── Installation ───────────────────────────────────────────────────────────

@@ -8,7 +8,6 @@
 #include <QHash>
 #include <QReadWriteLock>
 #include <QString>
-#include <QStringList>
 
 // Singleton raw-icon data store shared across all QML engine instances.
 // Each AppImageIconProvider delegates writes here and reads raw bytes from here,
@@ -22,7 +21,6 @@ public:
     bool get(const QString &id, QByteArray &data, QString &ext) const;
 
     // Returns all stored keys whose string starts with prefix (for cache invalidation).
-    QStringList keysWithPrefix(const QString &prefix) const;
 
 private:
     struct Entry { QByteArray data; QString ext; };

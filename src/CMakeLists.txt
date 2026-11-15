@@ -17,6 +17,8 @@ add_library(appimagemanager_core OBJECT
     core/appimagereader.cpp
     core/appimagecache.cpp
     core/appimagemanager.cpp
+    core/updatesource.cpp
+    core/launchenvironment.cpp
     ${LOGGING_SRCS}
     ${KCFG_SRCS}
 )
@@ -48,20 +50,16 @@ set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/qml/DashboardWindow.qml
     ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/OnboardingDialog.qml
-    ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
-    ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
+    ${CMAKE_SOURCE_DIR}/qml/UpdateSourceDialog.qml
+    ${CMAKE_SOURCE_DIR}/qml/EnvironmentDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
-    ${CMAKE_SOURCE_DIR}/qml/Theme.qml
     ${CMAKE_SOURCE_DIR}/qml/LibraryPage.qml
     ${CMAKE_SOURCE_DIR}/qml/StorePage.qml
     ${CMAKE_SOURCE_DIR}/qml/SettingsPage.qml
     ${CMAKE_SOURCE_DIR}/qml/AboutPage.qml
+    ${CMAKE_SOURCE_DIR}/qml/AboutContent.qml
     ${CMAKE_SOURCE_DIR}/qml/ContributorsModel.qml
     PROPERTIES QT_RESOURCE_ALIAS ""
-)
-set_source_files_properties(
-    ${CMAKE_SOURCE_DIR}/qml/Theme.qml
-    PROPERTIES QT_QML_SINGLETON_TYPE TRUE
 )
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
     PROPERTY QT_RESOURCE_ALIAS ManageWindow.qml)
@@ -71,14 +69,12 @@ set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
     PROPERTY QT_RESOURCE_ALIAS UninstallDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/OnboardingDialog.qml
     PROPERTY QT_RESOURCE_ALIAS OnboardingDialog.qml)
-set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
-    PROPERTY QT_RESOURCE_ALIAS SettingsDialog.qml)
-set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
-    PROPERTY QT_RESOURCE_ALIAS UpdateDialog.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UpdateSourceDialog.qml
+    PROPERTY QT_RESOURCE_ALIAS UpdateSourceDialog.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/EnvironmentDialog.qml
+    PROPERTY QT_RESOURCE_ALIAS EnvironmentDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
     PROPERTY QT_RESOURCE_ALIAS AboutDialog.qml)
-set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/Theme.qml
-    PROPERTY QT_RESOURCE_ALIAS Theme.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/LibraryPage.qml
     PROPERTY QT_RESOURCE_ALIAS LibraryPage.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/StorePage.qml
@@ -87,6 +83,8 @@ set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/SettingsPage.qml
     PROPERTY QT_RESOURCE_ALIAS SettingsPage.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/AboutPage.qml
     PROPERTY QT_RESOURCE_ALIAS AboutPage.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/AboutContent.qml
+    PROPERTY QT_RESOURCE_ALIAS AboutContent.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ContributorsModel.qml
     PROPERTY QT_RESOURCE_ALIAS ContributorsModel.qml)
 
@@ -98,20 +96,20 @@ qt_add_qml_module(appimagemanager_qml
         ${CMAKE_SOURCE_DIR}/qml/DashboardWindow.qml
         ${CMAKE_SOURCE_DIR}/qml/UninstallDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/OnboardingDialog.qml
-        ${CMAKE_SOURCE_DIR}/qml/SettingsDialog.qml
-        ${CMAKE_SOURCE_DIR}/qml/UpdateDialog.qml
+        ${CMAKE_SOURCE_DIR}/qml/UpdateSourceDialog.qml
+        ${CMAKE_SOURCE_DIR}/qml/EnvironmentDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
-        ${CMAKE_SOURCE_DIR}/qml/Theme.qml
         ${CMAKE_SOURCE_DIR}/qml/LibraryPage.qml
         ${CMAKE_SOURCE_DIR}/qml/StorePage.qml
         ${CMAKE_SOURCE_DIR}/qml/SettingsPage.qml
         ${CMAKE_SOURCE_DIR}/qml/AboutPage.qml
+        ${CMAKE_SOURCE_DIR}/qml/AboutContent.qml
         ${CMAKE_SOURCE_DIR}/qml/ContributorsModel.qml
     SOURCES
         core/appsettings.h
         core/appsettings.cpp
-        core/githubreleasechecker.h
-        core/githubreleasechecker.cpp
+        core/releasechecker.h
+        core/releasechecker.cpp
         gui/appimagebackend.h
         gui/appimagebackend.cpp
         gui/appimageiconprovider.h

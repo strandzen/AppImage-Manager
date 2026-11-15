@@ -10,6 +10,7 @@ $XGETTEXT \
     src/main.cpp \
     src/core/appimagemanager.cpp \
     src/core/updatedaemon.cpp \
+    src/core/updatesource.cpp \
     src/gui/appimagebackend.cpp \
     src/gui/appimagelistmodel.cpp \
     src/gui/appimageupdate.cpp \
@@ -32,11 +33,12 @@ $XGETTEXT \
     qml/LibraryPage.qml \
     qml/StorePage.qml \
     qml/SettingsPage.qml \
-    qml/SettingsDialog.qml \
     qml/OnboardingDialog.qml \
-    qml/UpdateDialog.qml \
+    qml/UpdateSourceDialog.qml \
+    qml/EnvironmentDialog.qml \
     qml/AboutDialog.qml \
     qml/AboutPage.qml \
+    qml/AboutContent.qml \
     qml/ContributorsModel.qml \
     --keyword=i18n:1 \
     --keyword=i18nc:1c,2 \

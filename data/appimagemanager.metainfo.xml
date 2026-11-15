@@ -67,6 +67,18 @@
   </content_rating>
 
   <releases>
+    <release version="2.1.0" date="2026-11-15">
+      <description>
+        <p>A cleaner, quieter interface with Installed and Discover tabs, and more ways to update.</p>
+        <ul>
+          <li>Update sources: GitHub, Codeberg, Forgejo and Gitea repositories, a zsync file or a direct download link, detected from what you paste.</li>
+          <li>Environment variables per app, used from AppImage Manager and from the app menu.</li>
+          <li>Discover is opt-in for new installs, so no catalogs are downloaded until you turn it on.</li>
+          <li>Downloads that turn out to be web pages never replace an installed app.</li>
+          <li>Fixes for app icons, scrolling, update checks on large libraries, catalog reordering and more.</li>
+        </ul>
+      </description>
+    </release>
     <release version="2.0.1" date="2026-06-11">
       <description>
         <p>Bug fixes: corrected QSortFilterProxyModel filter invalidation (endFilterChange → invalidateFilter), fixed QML module import path for out-of-tree builds, and removed invalid stock icon tag from AppStream metadata.</p>

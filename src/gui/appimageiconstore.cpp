@@ -24,14 +24,3 @@ bool AppImageIconStore::get(const QString &id, QByteArray &data, QString &ext) c
     ext  = it->ext;
     return true;
 }
-
-QStringList AppImageIconStore::keysWithPrefix(const QString &prefix) const
-{
-    QReadLocker locker(&m_lock);
-    QStringList result;
-    for (auto it = m_icons.constBegin(); it != m_icons.constEnd(); ++it) {
-        if (it.key().startsWith(prefix))
-            result.append(it.key());
-    }
-    return result;
-}

@@ -2,22 +2,20 @@
 
 ## Building
 
-### Dependencies (Arch-based)
+### Dependencies
 
-```bash
-sudo pacman -S base-devel cmake extra-cmake-modules ninja \
-    qt6-base qt6-declarative \
-    kcoreaddons ki18n kio kiconthemes knotifications kcrash kdbusaddons kirigami \
-    libappimage libcanberra zsync2
-```
+See **Build dependencies** in [README.md](README.md#other-distributions) for Arch, Fedora, Debian/Ubuntu and openSUSE.
 
 ### Build and install
 
 ```bash
 cmake --preset dev
 cmake --build --preset dev
+ctest --test-dir build/dev --output-on-failure
 sudo cmake --install build/dev
 ```
+
+On Arch, `cd packaging && makepkg -sif` builds this checkout as a pacman package instead.
 
 To reload Dolphin after install without a full logout:
 
@@ -35,12 +33,12 @@ rm -rf build/ && cmake --preset dev && cmake --build --preset dev
 
 | Target | Type | Description |
 |--------|------|-------------|
-| `appimagemanager_core` | Object library | Pure C++, no QML. `AppImageReader`, `AppImageManager`, `AppImageInfo`, `AppSettings`, `GitHubReleaseChecker` |
-| `appimagemanager_qml` | QML module | GUI backend classes + QML files (all windows and dialogs) |
+| `appimagemanager_core` | Object library | Pure C++, no QML. `AppImageReader`, `AppImageCache`, `AppImageManager`, `AppImageInfo`, update sources, launch environment |
+| `appimagemanager_qml` | QML module | GUI backend classes (models, `AppSettings`, `ReleaseChecker`, update manager, daemon) + QML files (all windows and dialogs) |
 | `appimagemanager` (plugin) | `KAbstractFileItemActionPlugin` | Dolphin right-click integration |
-| `appimagemanager` (binary) | Executable | Standalone launcher opened by the Dolphin service menu |
+| `appimagemanager` (binary) | Executable | Dashboard, manage window for one file, or `--daemon` |
 
-**Two entry points, one codebase.** The Dolphin plugin invokes `AppImageWindow::open(path)`. The binary does the same. Both produce identical UI.
+**One binary, three modes.** The Dolphin plugin and the service menu both run `appimagemanager <path>`, which opens `AppImageWindow::open(path)`. Without arguments the binary opens the dashboard; `--daemon` runs the background update checker.
 
 **Data flow:**
 ```
@@ -51,7 +49,7 @@ AppImageWindow::open(path)
        └─ onMetadataReady → updates Q_PROPERTY → QML binds
 ```
 
-**Dashboard entry point:** `DashboardWindow::open()` is a singleton that creates its own `QQmlApplicationEngine`, `AppImageListModel`, and `AppImageSortFilterModel`. It is opened by `appimagemanager --dashboard`.
+**Dashboard entry point:** `DashboardWindow::open()` is a singleton that creates its own `QQmlApplicationEngine`, `AppImageListModel`, and `AppImageSortFilterModel`. It is opened by `appimagemanager` with no arguments.
 
 ## Project Layout
 

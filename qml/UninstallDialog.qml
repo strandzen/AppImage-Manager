@@ -123,41 +123,38 @@ Kirigami.Dialog {
 
                 Controls.Label {
                     text: i18n("Select items to remove:")
-                    font.bold: true
                     Layout.fillWidth: true
                 }
 
                 Controls.ToolButton {
                     icon.name: "dialog-information"
                     flat: true
-                    visible: dialog.corpseModel && dialog.corpseModel.rowCount() > 0
+                    visible: corpseList.count > 0
                     Controls.ToolTip.text: i18n("Leftover directories are sorted by match confidence — high-confidence entries are pre-selected. Only remove directories you are sure belong to this app.")
                     Controls.ToolTip.visible: hovered
                     Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                 }
 
-                Controls.Button {
+                Controls.ToolButton {
                     text: i18n("All")
-                    visible: dialog.corpseModel && dialog.corpseModel.rowCount() > 0
+                    visible: corpseList.count > 0
                     onClicked: dialog.corpseModel.setAllChecked(true)
                 }
-                Controls.Button {
+                Controls.ToolButton {
                     text: i18n("None")
-                    visible: dialog.corpseModel && dialog.corpseModel.rowCount() > 0
+                    visible: corpseList.count > 0
                     onClicked: dialog.corpseModel.setAllChecked(false)
                 }
             }
 
             // AppImage itself
-            Rectangle {
+            Item {
                 Layout.fillWidth: true
-                color: Kirigami.Theme.alternateBackgroundColor
-                radius: Kirigami.Units.smallSpacing
-                implicitHeight: appItemRow.implicitHeight + Kirigami.Units.smallSpacing * 2
+                implicitHeight: appItemRow.implicitHeight
 
                 RowLayout {
                     id: appItemRow
-                    anchors { fill: parent; margins: Kirigami.Units.smallSpacing }
+                    anchors.fill: parent
                     spacing: Kirigami.Units.smallSpacing
 
                     Controls.CheckBox {
@@ -186,71 +183,76 @@ Kirigami.Dialog {
             // Corpse files — split into High-confidence (pre-selected) and
             // Low-confidence (unchecked, shown under a warning disclosure).
             // The model guarantees High items are sorted before Low items.
-            ListView {
-                id: corpseList
+            // Scrolls past 12 grid units; the ScrollView shows a scrollbar beside the rows.
+            Controls.ScrollView {
                 Layout.fillWidth: true
-                implicitHeight: Math.min(contentHeight, Kirigami.Units.gridUnit * 12)
-                clip: true
-                model: dialog.corpseModel
+                Layout.preferredHeight: Math.min(corpseList.contentHeight, Kirigami.Units.gridUnit * 12)
 
-                // Section header: blank for "high", warning banner for "low".
-                section.property: "confidence"
-                section.criteria: ViewSection.FullString
-                section.delegate: Item {
-                    required property string section
-                    width: corpseList.width
-                    height: section === "low" ? lowConfidenceHeader.implicitHeight + Kirigami.Units.smallSpacing * 2 : 0
-                    visible: section === "low"
+                ListView {
+                    id: corpseList
+                    clip: true
+                    model: dialog.corpseModel
 
-                    Kirigami.InlineMessage {
-                        id: lowConfidenceHeader
-                        anchors {
-                            left: parent.left; right: parent.right
-                            verticalCenter: parent.verticalCenter
-                        }
-                        type: Kirigami.MessageType.Warning
-                        text: i18n("Possibly related — these directories may not belong to this app. Verify before removing.")
-                        showCloseButton: false
-                    }
-                }
+                    // Section header: blank for "high", warning banner for "low".
+                    section.property: "confidence"
+                    section.criteria: ViewSection.FullString
+                    section.delegate: Item {
+                        required property string section
+                        width: corpseList.width
+                        height: section === "low" ? lowConfidenceHeader.implicitHeight + Kirigami.Units.smallSpacing * 2 : 0
+                        visible: section === "low"
 
-                delegate: RowLayout {
-                    required property string filePath
-                    required property int fileSize
-                    required property bool isChecked
-                    required property string confidence
-                    required property int index
-                    width: ListView.view.width
-                    spacing: Kirigami.Units.smallSpacing
-                    opacity: confidence === "low" ? 0.75 : 1.0
-
-                    Controls.CheckBox {
-                        checked: isChecked
-                        onCheckedChanged: {
-                            dialog.backend.corpseModel.setData(
-                                dialog.backend.corpseModel.index(index, 0),
-                                checked,
-                                dialog.backend.corpseModel.checkedRole)
+                        Kirigami.InlineMessage {
+                            id: lowConfidenceHeader
+                            anchors {
+                                left: parent.left; right: parent.right
+                                verticalCenter: parent.verticalCenter
+                            }
+                            type: Kirigami.MessageType.Warning
+                            text: i18n("Possibly related — these directories may not belong to this app. Verify before removing.")
+                            showCloseButton: false
                         }
                     }
-                    ColumnLayout {
-                        spacing: Math.round(Kirigami.Units.smallSpacing / 2)
-                        Layout.fillWidth: true
-                        Controls.Label {
-                            readonly property string home: Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation)
-                            text: filePath.startsWith(home) ? "~" + filePath.slice(home.length) : filePath
-                            elide: Text.ElideRight
+
+                    delegate: RowLayout {
+                        required property string filePath
+                        required property real fileSize   // qint64: an int would wrap above 2 GiB
+                        required property bool isChecked
+                        required property string confidence
+                        required property int index
+                        width: ListView.view.width
+                        spacing: Kirigami.Units.smallSpacing
+                        opacity: confidence === "low" ? 0.75 : 1.0
+
+                        Controls.CheckBox {
+                            checked: isChecked
+                            onCheckedChanged: {
+                                dialog.backend.corpseModel.setData(
+                                    dialog.backend.corpseModel.index(index, 0),
+                                    checked,
+                                    dialog.backend.corpseModel.checkedRole)
+                            }
+                        }
+                        ColumnLayout {
+                            spacing: Math.round(Kirigami.Units.smallSpacing / 2)
                             Layout.fillWidth: true
-                            HoverHandler { id: tooltipHover }
-                            Controls.ToolTip.text: filePath
-                            Controls.ToolTip.visible: tooltipHover.hovered
-                            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                        }
-                        Controls.Label {
-                            text: dialog.backend
-                                  ? dialog.backend.formatBytes(fileSize) : ""
-                            opacity: 0.7
-                            font: Kirigami.Theme.smallFont
+                            Controls.Label {
+                                // writableLocation() returns a file:// URL, not a path.
+                                readonly property string home: Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation).toString().replace("file://", "")
+                                text: filePath.startsWith(home) ? "~" + filePath.slice(home.length) : filePath
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                                HoverHandler { id: tooltipHover }
+                                Controls.ToolTip.text: filePath
+                                Controls.ToolTip.visible: tooltipHover.hovered
+                                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                            }
+                            Controls.Label {
+                                text: dialog.backend
+                                      ? dialog.backend.formatBytes(fileSize) : ""
+                                opacity: 0.7
+                                font: Kirigami.Theme.smallFont
+                            }
                         }
                     }
                 }
@@ -263,7 +265,7 @@ Kirigami.Dialog {
 
                 Controls.Label {
                     text: dialog._totalText
-                    font.bold: true
+                    color: Kirigami.Theme.disabledTextColor
                     Layout.fillWidth: true
                 }
                 Controls.Button {
@@ -272,9 +274,7 @@ Kirigami.Dialog {
                 }
                 Controls.Button {
                     text: i18n("Move to Trash")
-                    icon.name: "trash-empty"
-                    palette.button: Kirigami.Theme.negativeTextColor
-                    palette.buttonText: Kirigami.Theme.backgroundColor
+                    icon.name: "edit-delete"
                     onClicked: confirmRemoveDialog.open()
                 }
             }

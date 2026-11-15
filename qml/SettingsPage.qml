@@ -52,17 +52,6 @@ Kirigami.Page {
         }
     }
 
-    actions: [
-        Kirigami.Action {
-            text: i18n("Restore Defaults")
-            icon.name: "document-revert"
-            onTriggered: {
-                AppSettings.resetToDefaults();
-                pathField.text = AppSettings.applicationsPath
-            }
-        }
-    ]
-
     Controls.ScrollView {
         id: scrollView
         anchors.fill: parent
@@ -84,9 +73,9 @@ Kirigami.Page {
                 showCloseButton: true
             }
 
-            // ── Card 1: Storage & Location ─────────────────────────────────────
+            // ── General ───────────────────────────────────────────────────────
             FormCard.FormHeader {
-                title: i18n("Storage & Location")
+                title: i18n("General")
             }
 
             FormCard.FormCard {
@@ -105,39 +94,29 @@ Kirigami.Page {
                         }
                         Controls.Button {
                             icon.name: "folder-open"
+                            text: i18n("Browse…")
+                            display: Controls.AbstractButton.IconOnly
                             onClicked: folderDialog.open()
-                            Controls.ToolTip.text: i18n("Browse…")
+                            Controls.ToolTip.text: text
                             Controls.ToolTip.visible: hovered
+                            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                         }
                         Controls.Button {
                             icon.name: "system-file-manager"
+                            text: i18n("Open Folder")
+                            display: Controls.AbstractButton.IconOnly
                             onClicked: Qt.openUrlExternally("file://" + AppSettings.applicationsPath)
-                            Controls.ToolTip.text: i18n("Open Folder in Dolphin")
+                            Controls.ToolTip.text: text
                             Controls.ToolTip.visible: hovered
+                            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                         }
                     }
-                }
-            }
-
-            // ── Card 2: Appearance ─────────────────────────────────────────────
-            FormCard.FormHeader {
-                title: i18n("Appearance")
-            }
-
-            FormCard.FormCard {
-                FormCard.FormComboBoxDelegate {
-                    text: i18n("Manage window icon size")
-                    model: [i18n("Small"), i18n("Medium"), i18n("Large")]
-                    currentIndex: AppSettings.manageIconSize
-                    onActivated: AppSettings.manageIconSize = currentIndex
                 }
 
                 FormCard.FormDelegateSeparator {}
 
                 FormCard.FormSwitchDelegate {
-                    id: showInstallBoxCheck
-                    text: i18n("Show drag-and-drop install zone at bottom of list")
-                    description: i18n("Displays a persistent installation target at the footer of the dashboard application list.")
+                    text: i18n("Show a drop zone below the Installed list")
                     checked: AppSettings.showInstallBox
                     onToggled: AppSettings.showInstallBox = checked
                 }
@@ -145,55 +124,10 @@ Kirigami.Page {
                 FormCard.FormDelegateSeparator {}
 
                 FormCard.FormSwitchDelegate {
-                    id: accentBordersCheck
-                    text: i18n("Show accent borders on cards and drop zones")
-                    description: i18n("Outlines visual frames and drop targets with active highlight colors instead of quiet gray outlines.")
-                    checked: AppSettings.accentBorders
-                    onToggled: AppSettings.accentBorders = checked
-                }
-            }
-
-            // ── Card 3: Behavior & Security ────────────────────────────────────
-            FormCard.FormHeader {
-                title: i18n("Behavior & Security")
-            }
-
-            FormCard.FormCard {
-                FormCard.FormSwitchDelegate {
-                    id: verifySignaturesCheck
-                    text: i18n("Verify GPG signatures before installing")
-                    description: i18n("Checks each AppImage for an embedded GPG signature. Warns on unsigned files; blocks installation of files with invalid signatures unless overridden.")
-                    checked: AppSettings.verifySignatures
-                    onToggled: AppSettings.verifySignatures = checked
-                }
-
-                FormCard.FormDelegateSeparator {}
-
-                FormCard.FormSwitchDelegate {
-                    id: showDisclaimerCheck
-                    text: i18n("Show security disclaimer")
-                    description: i18n("Displays an alert warning about unverified executable files when installing new AppImages.")
-                    checked: AppSettings.showDisclaimer
-                    onToggled: AppSettings.showDisclaimer = checked
-                }
-
-                FormCard.FormDelegateSeparator {}
-
-                FormCard.FormSwitchDelegate {
-                    id: showNotificationsCheck
-                    text: i18n("Show install/uninstall notifications")
-                    description: i18n("Fires native system popups when installation or removal actions complete successfully.")
-                    checked: AppSettings.showNotifications
-                    onToggled: AppSettings.showNotifications = checked
-                }
-
-                FormCard.FormDelegateSeparator {}
-
-                FormCard.FormSwitchDelegate {
-                    id: watchDownloadsCheck
                     text: i18n("Notify when an AppImage is downloaded")
-                    description: i18n("Monitors your Downloads folder and triggers a native KDE notification with quick installation actions.")
+                    description: i18n("Watches your Downloads folder.")
                     checked: AppSettings.watchDownloads
+                    enabled: !listModel.downloadWatcherSandboxed
                     onToggled: AppSettings.watchDownloads = checked
                 }
 
@@ -203,37 +137,40 @@ Kirigami.Page {
                     contentItem: Kirigami.InlineMessage {
                         Layout.fillWidth: true
                         type: Kirigami.MessageType.Information
-                        text: i18n("Download monitoring is unavailable because AppImage Manager is running in a sandbox.")
+                        text: i18n("Download watching is unavailable in sandboxed environments.")
                         showCloseButton: false
                     }
                 }
+
+                FormCard.FormDelegateSeparator {}
+
+                FormCard.FormSwitchDelegate {
+                    text: i18n("Notify when installs and removals finish")
+                    checked: AppSettings.showNotifications
+                    onToggled: AppSettings.showNotifications = checked
+                }
             }
 
-            // ── Card 4: Background Updates ─────────────────────────────────────
+            // ── Updates ───────────────────────────────────────────────────────
             FormCard.FormHeader {
-                title: i18n("Background Updates")
+                title: i18n("Updates")
             }
 
             FormCard.FormCard {
                 FormCard.FormComboBoxDelegate {
-                    text: i18n("Check for updates")
-                    description: i18n("Configures the frequency of background update scans for all registered AppImages on this machine.")
+                    text: i18n("Check for updates in the background")
                     model: [i18n("Never"), i18n("Daily"), i18n("Weekly"), i18n("Monthly"), i18n("Custom")]
                     currentIndex: AppSettings.updateFrequency
                     onActivated: AppSettings.updateFrequency = currentIndex
                 }
 
                 FormCard.FormDelegateSeparator {
-                    opacity: AppSettings.updateFrequency === 4 ? 1.0 : 0.0
-                    visible: opacity > 0
-                    Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
+                    visible: AppSettings.updateFrequency === 4
                 }
 
                 FormCard.FormSpinBoxDelegate {
-                    label: i18n("Custom interval (days)")
-                    opacity: AppSettings.updateFrequency === 4 ? 1.0 : 0.0
-                    visible: opacity > 0
-                    Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
+                    label: i18n("Every (days)")
+                    visible: AppSettings.updateFrequency === 4
                     from: 1
                     to: 365
                     value: AppSettings.customUpdateDays
@@ -241,12 +178,50 @@ Kirigami.Page {
                 }
             }
 
-            // ── Card 5: AppImage Sources ───────────────────────────────────────
+            // ── Security ──────────────────────────────────────────────────────
             FormCard.FormHeader {
-                title: i18n("AppImage Sources")
+                title: i18n("Security")
             }
 
             FormCard.FormCard {
+                FormCard.FormSwitchDelegate {
+                    text: i18n("Verify signatures before installing")
+                    description: i18n("Warns before installing an AppImage that is unsigned or has an invalid signature.")
+                    checked: AppSettings.verifySignatures
+                    onToggled: AppSettings.verifySignatures = checked
+                }
+
+                FormCard.FormDelegateSeparator {}
+
+                FormCard.FormSwitchDelegate {
+                    text: i18n("Show a reminder that AppImages are unverified")
+                    checked: AppSettings.showDisclaimer
+                    onToggled: AppSettings.showDisclaimer = checked
+                }
+            }
+
+            // ── Discover ──────────────────────────────────────────────────────
+            FormCard.FormHeader {
+                title: i18n("Discover")
+            }
+
+            FormCard.FormCard {
+                FormCard.FormSwitchDelegate {
+                    text: i18n("Enable Discover")
+                    description: i18n("Search and install apps from online catalogs. The catalogs are downloaded from the internet.")
+                    checked: AppSettings.discoverEnabled
+                    onToggled: AppSettings.discoverEnabled = checked
+                }
+            }
+
+            FormCard.FormHeader {
+                visible: AppSettings.discoverEnabled
+                title: i18n("Catalogs")
+            }
+
+            FormCard.FormCard {
+                visible: AppSettings.discoverEnabled
+
                 ListView {
                     id: sourcesListView
                     Layout.fillWidth: true
@@ -266,7 +241,8 @@ Kirigami.Page {
                         width: sourcesListView.width
                         spacing: 0
 
-                        property int index: index
+                        // Not named "index": a property can't bind to the delegate's own index of the same name.
+                        readonly property int itemIndex: index
 
                         Drag.active: dragMouseArea.drag.active
                         Drag.source: delegateLayout
@@ -320,7 +296,7 @@ Kirigami.Page {
                                         onReleased: {
                                             pageRoot.isDraggingSources = false
                                             delegateLayout.Drag.drop()
-                                            delegateLayout.y = index * delegateLayout.height
+                                            delegateLayout.y = delegateLayout.itemIndex * delegateLayout.height
                                             
                                             var ids = [];
                                             for (var i = 0; i < localSourcesModel.count; i++) {
@@ -339,25 +315,13 @@ Kirigami.Page {
                                     spacing: Kirigami.Units.smallSpacing / 2
                                     Controls.Label {
                                         text: model.name
-                                        font.bold: true
                                         elide: Text.ElideRight
                                         Layout.fillWidth: true
                                     }
                                     Controls.Label {
                                         text: model.url
-                                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                        opacity: 0.6
-                                        elide: Text.ElideRight
-                                        Layout.fillWidth: true
-                                    }
-                                    Controls.Label {
-                                        text: model.type === "appimagehub"
-                                              ? i18n("Format: AppImage Hub (Direct)")
-                                              : (model.type === "universal"
-                                                 ? i18n("Format: Universal JSON (Direct)")
-                                                 : i18n("Format: AM Database (Recipe)"))
-                                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                        opacity: 0.6
+                                        font: Kirigami.Theme.smallFont
+                                        color: Kirigami.Theme.disabledTextColor
                                         elide: Text.ElideRight
                                         Layout.fillWidth: true
                                     }
@@ -370,7 +334,7 @@ Kirigami.Page {
                                     }
                                 }
 
-                                Controls.Button {
+                                Controls.ToolButton {
                                     icon.name: "edit"
                                     display: Controls.AbstractButton.IconOnly
                                     onClicked: sourceDialog.openForEdit({
@@ -384,7 +348,7 @@ Kirigami.Page {
                                     Controls.ToolTip.visible: hovered
                                 }
 
-                                Controls.Button {
+                                Controls.ToolButton {
                                     icon.name: "delete"
                                     display: Controls.AbstractButton.IconOnly
                                     onClicked: amStoreModel.removeSource(model.id)
@@ -396,8 +360,8 @@ Kirigami.Page {
                             DropArea {
                                 anchors.fill: parent
                                 onEntered: (drag) => {
-                                    const fromIdx = drag.source.index
-                                    const toIdx = index
+                                    const fromIdx = drag.source.itemIndex
+                                    const toIdx = delegateLayout.itemIndex
                                     if (fromIdx !== toIdx) {
                                         localSourcesModel.move(fromIdx, toIdx, 1)
                                     }
@@ -440,8 +404,20 @@ Kirigami.Page {
                 }
             }
 
+            FormCard.FormCard {
+                Layout.topMargin: Kirigami.Units.gridUnit
+                FormCard.FormButtonDelegate {
+                    icon.name: "document-revert"
+                    text: i18n("Restore Defaults")
+                    onClicked: {
+                        AppSettings.resetToDefaults()
+                        pathField.text = AppSettings.applicationsPath
+                    }
+                }
+            }
+
             Item {
-                height: Kirigami.Units.largeSpacing
+                implicitHeight: Kirigami.Units.gridUnit
             }
         }
     }
@@ -452,6 +428,7 @@ Kirigami.Page {
 
         property bool isEdit: false
         property string sourceId: ""
+        property bool sourceEnabled: true
 
         padding: Kirigami.Units.largeSpacing
         preferredWidth: Kirigami.Units.gridUnit * 24
@@ -539,7 +516,7 @@ Kirigami.Page {
                     onClicked: {
                         const type = sourceTypeCombo.model[sourceTypeCombo.currentIndex].value
                         if (sourceDialog.isEdit) {
-                            amStoreModel.updateSource(sourceDialog.sourceId, sourceNameField.text.trim(), sourceUrlField.text.trim(), type, true)
+                            amStoreModel.updateSource(sourceDialog.sourceId, sourceNameField.text.trim(), sourceUrlField.text.trim(), type, sourceDialog.sourceEnabled)
                         } else {
                             amStoreModel.addSource(sourceNameField.text.trim(), sourceUrlField.text.trim(), type, true)
                         }
@@ -561,6 +538,7 @@ Kirigami.Page {
         function openForEdit(sourceData) {
             isEdit = true
             sourceId = sourceData.id
+            sourceEnabled = sourceData.enabled
             sourceNameField.text = sourceData.name
             sourceUrlField.text = sourceData.url
             if (sourceData.type === "am-database") {

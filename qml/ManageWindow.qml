@@ -19,13 +19,7 @@ Kirigami.ApplicationWindow {
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
 
-    readonly property int managedIconSize: [
-        Kirigami.Units.iconSizes.huge,
-        Math.round(Kirigami.Units.iconSizes.huge * 1.5),
-        Kirigami.Units.iconSizes.enormous
-    ][AppSettings.manageIconSize]
-
-    readonly property color cardBorderColor: Theme.cardBorderColor
+    readonly property int managedIconSize: Kirigami.Units.iconSizes.huge
 
     UninstallDialog { id: uninstallDialog }
 
@@ -63,17 +57,12 @@ Kirigami.ApplicationWindow {
                     MouseArea { id: infoMouseArea; anchors.fill: parent; hoverEnabled: true }
                 }
 
-                Flow {
+                Controls.Label {
                     Layout.alignment: Qt.AlignHCenter
-                    spacing: Kirigami.Units.smallSpacing
-                    Kirigami.Chip {
-                        text: i18n("Version: %1", backend.appVersion || i18n("Unknown"))
-                        closable: false; checkable: false
-                    }
-                    Kirigami.Chip {
-                        text: i18n("Size: %1", backend.appSize > 0 ? backend.formattedSize : i18n("Unknown"))
-                        closable: false; checkable: false
-                    }
+                    text: [backend.appVersion, backend.appSize > 0 ? backend.formattedSize : ""]
+                          .filter(s => s !== "").join(" · ")
+                    visible: text !== ""
+                    color: Kirigami.Theme.disabledTextColor
                 }
             }
 
@@ -87,18 +76,10 @@ Kirigami.ApplicationWindow {
             }
         }
 
-        // ── Icon drag-and-drop box ────────────────────────────────────────────
-        Rectangle {
+        // ── Icon drag-and-drop area ───────────────────────────────────────────
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: Kirigami.Theme.alternateBackgroundColor
-            radius: Kirigami.Units.smallSpacing * 2
-            border.color: root.cardBorderColor
-            border.width: folderDropArea.containsDrag ? 2 : 1
-            opacity: folderDropArea.containsDrag ? 1.0 : 0.8
-
-            Behavior on border.width { NumberAnimation { duration: Kirigami.Units.shortDuration } }
-            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
 
             RowLayout {
                 id: innerRow
@@ -169,8 +150,8 @@ Kirigami.ApplicationWindow {
                     Controls.Label {
                         text: i18n("Drag icon to install")
                         visible: !backend.isInstalled
-                        opacity: 0.5
-                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                        color: Kirigami.Theme.disabledTextColor
+                        font: Kirigami.Theme.smallFont
                         Layout.alignment: Qt.AlignHCenter
                     }
                 }
@@ -218,29 +199,19 @@ Kirigami.ApplicationWindow {
         }
 
         // ── Disclaimer (not installed) ────────────────────────────────────────
-        Rectangle {
+        Kirigami.InlineMessage {
             Layout.fillWidth: true
-            radius: Kirigami.Units.smallSpacing * 2
-            clip: true
-            color: "transparent"
             visible: !backend.isInstalled && AppSettings.showDisclaimer
-            implicitHeight: disclaimerMsg.implicitHeight
-
-            Kirigami.InlineMessage {
-                id: disclaimerMsg
-                width: parent.width
-                visible: true
-                type: Kirigami.MessageType.Warning
-                text: i18n("AppImages are unverified executables. Only install from sources you trust.")
-                showCloseButton: false
-            }
+            type: Kirigami.MessageType.Warning
+            text: i18n("AppImages are unverified executables. Only install from sources you trust.")
+            showCloseButton: false
         }
 
         // ── Remove (installed) ────────────────────────────────────────────────
         Controls.Button {
             Layout.alignment: Qt.AlignHCenter
             visible: backend.isInstalled
-            text: i18n("Remove"); icon.name: "trash-empty"
+            text: i18n("Remove…"); icon.name: "edit-delete"
             onClicked: {
                 uninstallDialog.backend = backend
                 uninstallDialog.open()

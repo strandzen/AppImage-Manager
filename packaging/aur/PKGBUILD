@@ -9,6 +9,7 @@ license=('GPL-2.0-or-later')
 depends=(
     'qt6-base'
     'qt6-declarative'
+    'qt6-svg'
     'kirigami'
     'kirigami-addons'
     'kcoreaddons'
@@ -34,6 +35,7 @@ optdepends=(
     'libcanberra: completion sound notifications'
 )
 provides=('appimagemanager')
+conflicts=('appimage-manager-plasma-git')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/strandzen/AppImage-Manager/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('b31f19b46b6bcc86f211c7e6f786c967dcc39706f169714a78eabf3ae015d956')
 

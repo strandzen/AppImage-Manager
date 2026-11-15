@@ -8,6 +8,7 @@
 #include "../core/appimagemanager.h"
 #include "../core/appimagereader.h"
 #include "../core/appsettings.h"
+#include "../core/launchenvironment.h"
 
 #include <KFormat>
 #include <KJob>
@@ -101,7 +102,7 @@ QString AppImageBackend::formatBytes(qint64 bytes) const
 
 void AppImageBackend::launchAppImage()
 {
-    if (!QProcess::startDetached(m_appImagePath, {}))
+    if (!launchWithEnvironment(m_appImagePath))
         Q_EMIT errorOccurred(i18n("Could not launch the application."));
 }
 

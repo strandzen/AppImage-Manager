@@ -110,20 +110,6 @@ void AppSettings::setCustomUpdateDays(int days)
     Q_EMIT customUpdateDaysChanged();
 }
 
-int AppSettings::manageIconSize() const
-{
-    return AppImageManagerSettings::self()->manageIconSize();
-}
-
-void AppSettings::setManageIconSize(int size)
-{
-    if (manageIconSize() == size)
-        return;
-    AppImageManagerSettings::self()->setManageIconSize(size);
-    AppImageManagerSettings::self()->save();
-    Q_EMIT manageIconSizeChanged();
-}
-
 bool AppSettings::watchDownloads() const
 {
     return AppImageManagerSettings::self()->watchDownloads();
@@ -184,20 +170,6 @@ void AppSettings::copyToClipboard(const QString &text)
     QGuiApplication::clipboard()->setText(text);
 }
 
-bool AppSettings::accentBorders() const
-{
-    return AppImageManagerSettings::self()->accentBorders();
-}
-
-void AppSettings::setAccentBorders(bool enabled)
-{
-    if (accentBorders() == enabled)
-        return;
-    AppImageManagerSettings::self()->setAccentBorders(enabled);
-    AppImageManagerSettings::self()->save();
-    Q_EMIT accentBordersChanged();
-}
-
 bool AppSettings::verifySignatures() const
 {
     return AppImageManagerSettings::self()->verifySignatures();
@@ -212,6 +184,20 @@ void AppSettings::setVerifySignatures(bool enabled)
     Q_EMIT verifySignaturesChanged();
 }
 
+bool AppSettings::discoverEnabled() const
+{
+    return AppImageManagerSettings::self()->discoverEnabled();
+}
+
+void AppSettings::setDiscoverEnabled(bool enabled)
+{
+    if (discoverEnabled() == enabled)
+        return;
+    AppImageManagerSettings::self()->setDiscoverEnabled(enabled);
+    AppImageManagerSettings::self()->save();
+    Q_EMIT discoverEnabledChanged();
+}
+
 void AppSettings::resetToDefaults()
 {
     AppImageManagerSettings::self()->setDefaults();
@@ -224,9 +210,8 @@ void AppSettings::resetToDefaults()
     Q_EMIT showNotificationsChanged();
     Q_EMIT updateFrequencyChanged();
     Q_EMIT customUpdateDaysChanged();
-    Q_EMIT manageIconSizeChanged();
     Q_EMIT watchDownloadsChanged();
     Q_EMIT showInstallBoxChanged();
-    Q_EMIT accentBordersChanged();
     Q_EMIT verifySignaturesChanged();
+    Q_EMIT discoverEnabledChanged();
 }

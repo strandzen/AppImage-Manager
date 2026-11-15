@@ -27,18 +27,18 @@
     </entry>
   </group>
   <group name="Appearance">
-    <entry name="manageIconSize" type="Int">
-      <default>2</default>
-    </entry>
     <entry name="showInstallBox" type="Bool">
-      <default>true</default>
-    </entry>
-    <entry name="accentBorders" type="Bool">
       <default>true</default>
     </entry>
   </group>
   <group name="Behavior">
     <entry name="watchDownloads" type="Bool">
+      <default>true</default>
+    </entry>
+  </group>
+  <group name="Discover">
+    <!-- Default true keeps existing installs unchanged; onboarding (new installs) starts it off. -->
+    <entry name="discoverEnabled" type="Bool">
       <default>true</default>
     </entry>
   </group>

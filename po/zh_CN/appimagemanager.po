@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: appimagemanager 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-11 23:11+0200\n"
+"POT-Creation-Date: 2026-11-14 22:45+0100\n"
 "PO-Revision-Date: 2026-05-28 00:00+0000\n"
 "Last-Translator: AppImage Manager Contributors\n"
 "Language-Team: Chinese (Simplified)\n"
@@ -16,9 +16,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: src/main.cpp:26 src/core/updatedaemon.cpp:89 src/core/updatedaemon.cpp:91
-#: src/core/updatedaemon.cpp:242 qml/ManageWindow.qml:12
-#: qml/DashboardWindow.qml:143 qml/OnboardingDialog.qml:61
+#: src/main.cpp:26 src/core/updatedaemon.cpp:90 src/core/updatedaemon.cpp:92
+#: src/core/updatedaemon.cpp:244 qml/ManageWindow.qml:12
+#: qml/DashboardWindow.qml:12
 msgid "AppImage Manager"
 msgstr "AppImage 管理器"
 
@@ -43,196 +43,247 @@ msgstr ""
 msgid "Open the dashboard window"
 msgstr ""
 
-#: src/core/appimagemanager.cpp:136
+#: src/core/appimagemanager.cpp:137
 msgid "Managed by AppImage Manager"
 msgstr "由 AppImage 管理器管理"
 
-#: src/core/updatedaemon.cpp:92 src/core/updatedaemon.cpp:243
+#: src/core/updatedaemon.cpp:93 src/core/updatedaemon.cpp:245
 msgid "No pending updates"
 msgstr ""
 
-#: src/core/updatedaemon.cpp:104
+#: src/core/updatedaemon.cpp:105
 msgid "Check for Updates Now"
 msgstr ""
 
-#: src/core/updatedaemon.cpp:108 qml/ManageWindow.qml:205
+#: src/core/updatedaemon.cpp:109 qml/ManageWindow.qml:186
 msgid "Open Dashboard"
 msgstr ""
 
-#: src/core/updatedaemon.cpp:126 src/gui/appimagelistmodel.cpp:74
+#: src/core/updatedaemon.cpp:127 src/gui/appimagelistmodel.cpp:77
 msgid "%1 downloaded"
 msgstr ""
 
-#: src/core/updatedaemon.cpp:128 src/gui/appimagelistmodel.cpp:76
+#: src/core/updatedaemon.cpp:129 src/gui/appimagelistmodel.cpp:79
 msgid "Manage"
 msgstr ""
 
-#: src/core/updatedaemon.cpp:204 qml/UpdateDialog.qml:18
+#: src/core/updatedaemon.cpp:206
 msgid "Update Available"
 msgstr ""
 
-#: src/core/updatedaemon.cpp:205
+#: src/core/updatedaemon.cpp:207
 msgid "An update is available for %1 (%2 → %3)."
 msgstr ""
 
-#: src/core/updatedaemon.cpp:210
+#: src/core/updatedaemon.cpp:212
 #, fuzzy
 msgid "Open Manager"
 msgstr "AppImage 管理器"
 
-#: src/core/updatedaemon.cpp:236
+#: src/core/updatedaemon.cpp:238
 #, fuzzy
 msgid "AppImage Updates"
 msgstr "AppImage 管理器"
 
-#: src/core/updatedaemon.cpp:237
+#: src/core/updatedaemon.cpp:239 qml/DashboardWindow.qml:108
+#: qml/LibraryPage.qml:51
 msgid "%1 update available"
 msgid_plural "%1 updates available"
 msgstr[0] ""
 
-#: src/gui/appimagebackend.cpp:105
+#: src/core/updatesource.cpp:214
+msgctxt "update source"
+msgid "GitHub · %1/%2"
+msgstr ""
+
+#: src/core/updatesource.cpp:217
+msgctxt "update source"
+msgid "Codeberg · %1/%2"
+msgstr ""
+
+#: src/core/updatesource.cpp:218
+msgctxt "update source"
+msgid "Forgejo · %1/%2/%3"
+msgstr ""
+
+#: src/core/updatesource.cpp:222
+msgctxt "update source"
+msgid "zsync · %1"
+msgstr ""
+
+#: src/core/updatesource.cpp:224
+msgctxt "update source"
+msgid "Direct download · %1"
+msgstr ""
+
+#: src/gui/appimagebackend.cpp:106
 msgid "Could not launch the application."
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:142
+#: src/gui/appimagebackend.cpp:143
 msgid "Could not create launcher entry."
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:143
+#: src/gui/appimagebackend.cpp:144
 msgid "Could not remove launcher entry."
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:236
+#: src/gui/appimagebackend.cpp:237
 msgid "AppImage installed"
 msgstr "AppImage 已安装"
 
-#: src/gui/appimagebackend.cpp:237
+#: src/gui/appimagebackend.cpp:238
 msgid "%1 was moved to Applications."
 msgstr "%1 已被移动到应用程序目录。"
 
-#: src/gui/appimagebackend.cpp:257
+#: src/gui/appimagebackend.cpp:258
 msgid "AppImage removed"
 msgstr "AppImage 已移除"
 
-#: src/gui/appimagebackend.cpp:258
+#: src/gui/appimagebackend.cpp:259
 msgid "%1 was moved to Trash."
 msgstr "%1 已被移动到回收站。"
 
-#: src/gui/appimagebackend.cpp:262
+#: src/gui/appimagebackend.cpp:263
 msgid "Restore"
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:124
+#: src/gui/appimagelistmodel.cpp:136
 #, fuzzy
 msgid "Update Failed"
 msgstr "更新"
 
-#: src/gui/appimagelistmodel.cpp:125
+#: src/gui/appimagelistmodel.cpp:137
 msgid "%1 could not be updated."
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:460
+#: src/gui/appimagelistmodel.cpp:225 src/gui/amstoremodel.cpp:111
+msgctxt "list section for apps without a category"
+msgid "Other"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:232
+msgctxt "list section"
+msgid "Today"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:233
+msgctxt "list section"
+msgid "This Week"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:234
+msgctxt "list section"
+msgid "This Month"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:235
+msgctxt "list section"
+msgid "Earlier"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:503
 msgid "Desktop Link Failed"
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:462
+#: src/gui/appimagelistmodel.cpp:505
 msgid "Could not create desktop link for %1."
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:463
+#: src/gui/appimagelistmodel.cpp:506
 msgid "Could not remove desktop link for %1."
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:479
+#: src/gui/appimagelistmodel.cpp:522
 #, fuzzy
 msgid "Launch Failed"
 msgstr "运行 %1"
 
-#: src/gui/appimagelistmodel.cpp:480
+#: src/gui/appimagelistmodel.cpp:523
 msgid "Could not launch %1."
 msgstr ""
 
-#: src/gui/appimageupdate.cpp:119
+#: src/gui/appimageupdate.cpp:122
 msgid "New version available"
 msgstr ""
 
-#: src/gui/appimageupdate.cpp:225 src/gui/appimageupdate.cpp:379
+#: src/gui/appimageupdate.cpp:234 src/gui/appimageupdate.cpp:415
 msgid "Update Completed"
 msgstr ""
 
-#: src/gui/appimageupdate.cpp:226 src/gui/appimageupdate.cpp:380
+#: src/gui/appimageupdate.cpp:235 src/gui/appimageupdate.cpp:416
 msgid "%1 has been updated successfully."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:931
+#: src/gui/amstoremodel.cpp:944
 msgid "Installation cancelled."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:934 src/gui/amstoremodel.cpp:1085
+#: src/gui/amstoremodel.cpp:947 src/gui/amstoremodel.cpp:1098
 msgid "Download cancelled."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:968
+#: src/gui/amstoremodel.cpp:981
 msgid "Error: Package metadata not found."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:986
+#: src/gui/amstoremodel.cpp:999
 msgid "AM/AppMan is not installed. Falling back to direct AppImage download..."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:989
+#: src/gui/amstoremodel.cpp:1002
 msgid "Error: AM/AppMan is required but not installed on your system."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1014
+#: src/gui/amstoremodel.cpp:1027
 msgid "Running: %1 -i %2"
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1018
+#: src/gui/amstoremodel.cpp:1031
 msgid "Error: No direct download URL available for this application."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1026
+#: src/gui/amstoremodel.cpp:1039
 msgid "Starting direct download from Hub..."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1036
+#: src/gui/amstoremodel.cpp:1049
 msgid "Error: Failed to open temporary file for writing: %1"
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1064
+#: src/gui/amstoremodel.cpp:1077
 msgid "Downloading: %1%"
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1087
+#: src/gui/amstoremodel.cpp:1100
 msgid "Download failed: %1"
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1096
+#: src/gui/amstoremodel.cpp:1109
 msgid "Download complete. Integrating application..."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1100
+#: src/gui/amstoremodel.cpp:1113
 msgid "Error: Could not overwrite existing file: %1"
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1110
+#: src/gui/amstoremodel.cpp:1123
 msgid "Error: Failed to finalize file renaming."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1129
+#: src/gui/amstoremodel.cpp:1142
 msgid "Error: Extracted AppImage metadata is invalid or file is corrupted."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1138
+#: src/gui/amstoremodel.cpp:1151
 msgid "Warning: AppImage installed, but desktop integration failed."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1140
+#: src/gui/amstoremodel.cpp:1153
 msgid "Desktop entry and icons created."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1143
+#: src/gui/amstoremodel.cpp:1156
 msgid "Installation completed successfully."
 msgstr ""
 
@@ -257,59 +308,48 @@ msgstr ""
 msgid "Manage AppImage"
 msgstr "管理 AppImage"
 
-#: qml/ManageWindow.qml:70 qml/ManageWindow.qml:74
-msgid "Unknown"
-msgstr ""
-
-#: qml/ManageWindow.qml:70
-#, fuzzy
-msgid "Version: %1"
-msgstr "版本 0.1.0"
-
-#: qml/ManageWindow.qml:74
-msgid "Size: %1"
-msgstr ""
-
-#: qml/ManageWindow.qml:85 qml/LibraryPage.qml:588 qml/AboutPage.qml:12
+#: qml/ManageWindow.qml:74 qml/DashboardWindow.qml:95 qml/LibraryPage.qml:532
+#: qml/AboutPage.qml:10
 msgid "About"
 msgstr "关于"
 
-#: qml/ManageWindow.qml:161
+#: qml/ManageWindow.qml:142
 msgid "Launch %1"
 msgstr "运行 %1"
 
-#: qml/ManageWindow.qml:170
+#: qml/ManageWindow.qml:151
 msgid "Drag icon to install"
 msgstr ""
 
-#: qml/ManageWindow.qml:211
+#: qml/ManageWindow.qml:192
 msgid "Applications"
 msgstr "应用程序"
 
-#: qml/ManageWindow.qml:234 qml/LibraryPage.qml:193 qml/LibraryPage.qml:454
+#: qml/ManageWindow.qml:206 qml/LibraryPage.qml:117 qml/LibraryPage.qml:362
 msgid ""
 "AppImages are unverified executables. Only install from sources you trust."
 msgstr "AppImage 是未经验证的可执行文件。请仅从您信任的来源安装。"
 
-#: qml/ManageWindow.qml:243 qml/LibraryPage.qml:670
-msgid "Remove"
+#: qml/ManageWindow.qml:214 qml/LibraryPage.qml:520
+#, fuzzy
+msgid "Remove…"
 msgstr "移除"
 
-#: qml/ManageWindow.qml:275
+#: qml/ManageWindow.qml:246
 msgid "Invalid Signature"
 msgstr ""
 
-#: qml/ManageWindow.qml:275
+#: qml/ManageWindow.qml:246
 msgid "No Signature Found"
 msgstr ""
 
-#: qml/ManageWindow.qml:298
+#: qml/ManageWindow.qml:269
 msgid ""
 "The GPG signature on this AppImage is <b>invalid</b>. The file may have been "
 "tampered with. Installing is strongly discouraged."
 msgstr ""
 
-#: qml/ManageWindow.qml:299
+#: qml/ManageWindow.qml:270
 #, fuzzy
 msgid ""
 "This AppImage has no GPG signature and cannot be verified. Only install from "
@@ -348,801 +388,789 @@ msgstr ""
 msgid "Select items to remove:"
 msgstr "选择要移除的项目："
 
-#: qml/UninstallDialog.qml:134
+#: qml/UninstallDialog.qml:133
 msgid ""
 "Leftover directories are sorted by match confidence — high-confidence "
 "entries are pre-selected. Only remove directories you are sure belong to "
 "this app."
 msgstr ""
 
-#: qml/UninstallDialog.qml:140
+#: qml/UninstallDialog.qml:139
 msgid "All"
 msgstr ""
 
-#: qml/UninstallDialog.qml:145
+#: qml/UninstallDialog.qml:144 qml/LibraryPage.qml:572
 msgid "None"
 msgstr ""
 
-#: qml/UninstallDialog.qml:212
+#: qml/UninstallDialog.qml:209
 msgid ""
 "Possibly related — these directories may not belong to this app. Verify "
 "before removing."
 msgstr ""
 
-#: qml/UninstallDialog.qml:270 qml/StorePage.qml:650 qml/SettingsPage.qml:529
-#: qml/UpdateDialog.qml:105
+#: qml/UninstallDialog.qml:267 qml/StorePage.qml:497 qml/SettingsPage.qml:504
 msgid "Cancel"
 msgstr "取消"
 
-#: qml/UninstallDialog.qml:274
+#: qml/UninstallDialog.qml:271
 #, fuzzy
 msgid "Move to Trash"
 msgstr "移动到回收站吗？"
 
-#: qml/DashboardWindow.qml:12
-#, fuzzy
-msgid "AppImage Dashboard"
-msgstr "AppImage 管理器"
-
-#: qml/DashboardWindow.qml:47
-msgid "No Updates Found"
-msgstr ""
-
-#: qml/DashboardWindow.qml:48
-msgid "All your AppImages are up to date."
-msgstr ""
-
-#: qml/DashboardWindow.qml:56
-msgid "Update Check Failed"
-msgstr ""
-
-#: qml/DashboardWindow.qml:57
-msgid ""
-"The update check timed out. Check your network connection and try again."
-msgstr ""
-
-#: qml/DashboardWindow.qml:65
-msgid "Network Error"
-msgstr ""
-
-#: qml/DashboardWindow.qml:66
-msgid ""
-"Could not check for updates. Verify your network connection and try again."
-msgstr ""
-
-#: qml/DashboardWindow.qml:75
+#: qml/DashboardWindow.qml:32
 #, fuzzy
 msgid "Select AppImage to Install"
 msgstr "AppImage 已安装"
 
-#: qml/DashboardWindow.qml:76
+#: qml/DashboardWindow.qml:33
 msgid "AppImage files (*.AppImage *.appimage)"
 msgstr ""
 
-#: qml/DashboardWindow.qml:76
+#: qml/DashboardWindow.qml:33
 msgid "All files (*)"
 msgstr ""
 
-#: qml/DashboardWindow.qml:132
-msgid "Expand Sidebar"
+#: qml/DashboardWindow.qml:84
+msgid "Back"
 msgstr ""
 
-#: qml/DashboardWindow.qml:132
-msgid "Collapse Sidebar"
+#: qml/DashboardWindow.qml:95 qml/DashboardWindow.qml:167
+#: qml/SettingsPage.qml:13
+msgid "Settings"
+msgstr "设置"
+
+#: qml/DashboardWindow.qml:102
+#, fuzzy
+msgid "Installed (%1)"
+msgstr "卸载 %1"
+
+#: qml/DashboardWindow.qml:103
+#, fuzzy
+msgid "Installed"
+msgstr "已安装的 AppImage"
+
+#: qml/DashboardWindow.qml:115 qml/SettingsPage.qml:205
+#, fuzzy
+msgid "Discover"
+msgstr "已安装的 AppImage"
+
+#: qml/DashboardWindow.qml:126
+#, fuzzy
+msgid "Update All"
+msgstr "更新"
+
+#: qml/DashboardWindow.qml:133 qml/LibraryPage.qml:108
+#, fuzzy
+msgid "Install from File…"
+msgstr "已安装的 AppImage"
+
+#: qml/DashboardWindow.qml:144
+msgid "Main Menu"
 msgstr ""
 
-#: qml/DashboardWindow.qml:152
-msgid "Install from File"
+#: qml/DashboardWindow.qml:157
+msgid "Checking for Updates…"
 msgstr ""
 
-#: qml/DashboardWindow.qml:360 qml/LibraryPage.qml:181 qml/LibraryPage.qml:429
+#: qml/DashboardWindow.qml:157
+msgid "Check for Updates"
+msgstr ""
+
+#: qml/DashboardWindow.qml:172 qml/AboutDialog.qml:11
+msgid "About AppImage Manager"
+msgstr "关于 AppImage 管理器"
+
+#: qml/DashboardWindow.qml:253
 msgid "Drop to install"
 msgstr ""
 
-#: qml/LibraryPage.qml:17
-msgid "Installed Applications (%1 of %2)"
+#: qml/LibraryPage.qml:43
+msgid ""
+"The update check timed out. Check your network connection and try again."
 msgstr ""
 
-#: qml/LibraryPage.qml:18
-#, fuzzy
-msgid "Installed Applications (%1)"
-msgstr "已安装的 AppImage"
+#: qml/LibraryPage.qml:46
+msgid ""
+"Could not check for updates. Check your network connection and try again."
+msgstr ""
 
-#: qml/LibraryPage.qml:18
+#: qml/LibraryPage.qml:50
 #, fuzzy
-msgid "Installed Applications"
-msgstr "已安装的 AppImage"
+msgid "All AppImages are up to date"
+msgstr "AppImage 管理器"
 
-#: qml/LibraryPage.qml:36
+#: qml/LibraryPage.qml:104
+#, fuzzy
+msgid "No AppImages yet"
+msgstr "未安装任何 AppImage"
+
+#: qml/LibraryPage.qml:105
+msgid "Drop an AppImage here, or put one in %1."
+msgstr ""
+
+#: qml/LibraryPage.qml:153
+msgid "Search"
+msgstr ""
+
+#: qml/LibraryPage.qml:160
 msgid "Sort"
 msgstr "排序"
 
-#: qml/LibraryPage.qml:41
+#: qml/LibraryPage.qml:171
 msgid "By Name"
 msgstr ""
 
-#: qml/LibraryPage.qml:47
+#: qml/LibraryPage.qml:177
 msgid "By Size"
 msgstr ""
 
-#: qml/LibraryPage.qml:53
+#: qml/LibraryPage.qml:183
 msgid "By Category"
 msgstr ""
 
-#: qml/LibraryPage.qml:59
+#: qml/LibraryPage.qml:189
 #, fuzzy
 msgid "By Date Added"
 msgstr "按添加日期"
 
-#: qml/LibraryPage.qml:67
-msgid "Checking…"
+#: qml/LibraryPage.qml:215 qml/StorePage.qml:380
+msgid "Retry"
 msgstr ""
 
-#: qml/LibraryPage.qml:67
-msgid "Check for Updates"
-msgstr ""
-
-#: qml/LibraryPage.qml:131
-#, fuzzy
-msgid "No AppImages Installed"
-msgstr "未安装任何 AppImage"
-
-#: qml/LibraryPage.qml:138
-msgid ""
-"AppImages are self-contained applications that run without installation. "
-"Drop an AppImage below, or place one in <b>%1</b> to get started."
-msgstr ""
-
-#: qml/LibraryPage.qml:226
-msgid "Search"
-msgstr ""
-
-#: qml/LibraryPage.qml:242
-msgid "Loading %1…"
-msgstr ""
-
-#: qml/LibraryPage.qml:373
+#: qml/LibraryPage.qml:299
 msgid "Update available: %1"
 msgstr ""
 
-#: qml/LibraryPage.qml:443 qml/StorePage.qml:364
+#: qml/LibraryPage.qml:339
+#, fuzzy
+msgid "Drop an AppImage to install it"
+msgstr "AppImage 已安装"
+
+#: qml/LibraryPage.qml:353 qml/StorePage.qml:361
 msgid "No results for \"%1\""
 msgstr ""
 
-#: qml/LibraryPage.qml:611
-msgid "Show in app menu"
-msgstr ""
-
-#: qml/LibraryPage.qml:621
-msgid "Added %1 to app menu"
-msgstr ""
-
-#: qml/LibraryPage.qml:622
-msgid "Removed %1 from app menu"
-msgstr ""
-
-#: qml/LibraryPage.qml:641
+#: qml/LibraryPage.qml:456
 #, fuzzy
 msgid "Launch"
 msgstr "运行 %1"
 
-#: qml/LibraryPage.qml:649
-msgid "Updating…"
-msgstr ""
-
-#: qml/LibraryPage.qml:650
-msgid "Update"
+#: qml/LibraryPage.qml:463
+#, fuzzy
+msgid "Update to %1"
 msgstr "更新"
 
-#: qml/LibraryPage.qml:656
-msgid "Update to version %1"
-msgstr ""
-
-#: qml/LibraryPage.qml:657
-msgid "No update available"
-msgstr ""
-
-#: qml/StorePage.qml:11
+#: qml/LibraryPage.qml:473
 #, fuzzy
-msgid "Discover AppImages"
+msgid "Updating to %1…"
+msgstr "更新"
+
+#: qml/LibraryPage.qml:483 qml/StorePage.qml:508
+msgid "More"
+msgstr ""
+
+#: qml/LibraryPage.qml:495
+msgid "Show in App Menu"
+msgstr ""
+
+#: qml/LibraryPage.qml:501
+msgid "Added %1 to the app menu"
+msgstr ""
+
+#: qml/LibraryPage.qml:502
+msgid "Removed %1 from the app menu"
+msgstr ""
+
+#: qml/LibraryPage.qml:507
+#, fuzzy
+msgid "Update Source…"
+msgstr "AppImage 已移除"
+
+#: qml/LibraryPage.qml:513
+msgid "Environment Variables…"
+msgstr ""
+
+#: qml/LibraryPage.qml:551
+msgid "Details"
+msgstr ""
+
+#: qml/LibraryPage.qml:570
+#, fuzzy
+msgid "Version"
+msgstr "版本 0.1.0"
+
+#: qml/LibraryPage.qml:570
+msgid "Unknown"
+msgstr ""
+
+#: qml/LibraryPage.qml:571
+msgid "Size"
+msgstr ""
+
+#: qml/LibraryPage.qml:572 qml/StorePage.qml:219
+msgid "Category"
+msgstr ""
+
+#: qml/LibraryPage.qml:573
+msgid "Added"
+msgstr ""
+
+#: qml/LibraryPage.qml:574 qml/SettingsPage.qml:156
+#, fuzzy
+msgid "Updates"
+msgstr "更新"
+
+#: qml/LibraryPage.qml:574
+#, fuzzy
+msgid "No update source"
+msgstr "AppImage 已移除"
+
+#: qml/LibraryPage.qml:575 qml/LibraryPage.qml:591
+msgid "Environment"
+msgstr ""
+
+#: qml/LibraryPage.qml:575
+msgid "Default"
+msgstr ""
+
+#: qml/LibraryPage.qml:576
+msgid "File"
+msgstr ""
+
+#: qml/LibraryPage.qml:604
+msgid "Environment saved. It applies the next time the app starts."
+msgstr ""
+
+#: qml/LibraryPage.qml:610
+msgid ""
+"Using the built-in update source. Check for updates to look for a new "
+"version."
+msgstr ""
+
+#: qml/LibraryPage.qml:611
+msgid "Update source saved. Check for updates to look for a new version."
+msgstr ""
+
+#: qml/StorePage.qml:36
+msgid "Discover is turned off"
+msgstr ""
+
+#: qml/StorePage.qml:37
+msgid ""
+"Discover lets you search app catalogs such as AppImage Hub and install apps "
+"from them. It downloads the catalogs from the internet, so it stays off "
+"until you turn it on."
+msgstr ""
+
+#: qml/StorePage.qml:40
+msgid "Turn On Discover"
+msgstr ""
+
+#: qml/StorePage.qml:101
+#, fuzzy
+msgid "Installation completed."
 msgstr "已安装的 AppImage"
 
-#: qml/StorePage.qml:83
-msgid "✓ Installation completed successfully!"
-msgstr ""
-
-#: qml/StorePage.qml:84
-msgid "✗ Installation failed."
-msgstr ""
-
-#: qml/StorePage.qml:86
-msgid "Installed %1 successfully"
-msgstr ""
-
-#: qml/StorePage.qml:88
+#: qml/StorePage.qml:102
 #, fuzzy
-msgid "Failed to install %1"
+msgid "Installation failed."
+msgstr "已安装的 AppImage"
+
+#: qml/StorePage.qml:104
+#, fuzzy
+msgid "Installed %1"
 msgstr "卸载 %1"
 
-#: qml/StorePage.qml:139
+#: qml/StorePage.qml:107
+#, fuzzy
+msgid "Could not install %1"
+msgstr "卸载 %1"
+
+#: qml/StorePage.qml:158
 msgid "Search apps"
 msgstr ""
 
-#: qml/StorePage.qml:147
+#: qml/StorePage.qml:165
+msgid "Sort and Filter"
+msgstr ""
+
+#: qml/StorePage.qml:177
 msgid "Sort A–Z"
 msgstr ""
 
-#: qml/StorePage.qml:147
+#: qml/StorePage.qml:183
 msgid "Sort Z–A"
 msgstr ""
 
-#: qml/StorePage.qml:158
-msgid "Filter by category"
+#: qml/StorePage.qml:193 qml/UpdateSourceDialog.qml:121
+msgid "Source"
 msgstr ""
 
-#: qml/StorePage.qml:163
-msgid "Category: All"
-msgstr ""
-
-#: qml/StorePage.qml:164
-msgid "Category: %1"
-msgstr ""
-
-#: qml/StorePage.qml:170
-msgid "All Categories"
-msgstr ""
-
-#: qml/StorePage.qml:194
-msgid "Filter by source"
-msgstr ""
-
-#: qml/StorePage.qml:201
-msgid "Source: %1"
-msgstr ""
-
-#: qml/StorePage.qml:203
-msgid "Source: All"
-msgstr ""
-
-#: qml/StorePage.qml:210
+#: qml/StorePage.qml:196
 msgid "All Sources"
 msgstr ""
 
-#: qml/StorePage.qml:250
-msgid "Gathering from sources…"
+#: qml/StorePage.qml:222
+msgid "All Categories"
 msgstr ""
 
-#: qml/StorePage.qml:365
-msgid "Try a different search term or switch to \"All\" sources"
+#: qml/StorePage.qml:262 qml/StorePage.qml:365
+msgid "Clear Filters"
 msgstr ""
 
-#: qml/StorePage.qml:372
+#: qml/StorePage.qml:362
+msgid "No apps match these filters"
+msgstr ""
+
+#: qml/StorePage.qml:377
 msgid "Could not load app catalog"
 msgstr ""
 
-#: qml/StorePage.qml:373
+#: qml/StorePage.qml:378
 msgid "Check your network connection and try again."
 msgstr ""
 
-#: qml/StorePage.qml:375
-msgid "Retry"
+#: qml/StorePage.qml:449
+#, fuzzy
+msgid "Install script"
+msgstr "已安装的 AppImage"
+
+#: qml/StorePage.qml:449
+msgid "Website"
 msgstr ""
 
-#: qml/StorePage.qml:479
-msgid "Install Recipe Script:"
-msgstr ""
-
-#: qml/StorePage.qml:480
-msgid "Source:"
-msgstr ""
-
-#: qml/StorePage.qml:487
-msgid "View Source"
-msgstr ""
-
-#: qml/StorePage.qml:520
-msgid "Hub + AM"
-msgstr ""
-
-#: qml/StorePage.qml:522
+#: qml/StorePage.qml:466
 #, fuzzy
 msgid "AppImage Hub"
 msgstr " (AppImage)"
 
-#: qml/StorePage.qml:523
-msgid "AM Only"
+#: qml/StorePage.qml:467
+msgid "AM"
 msgstr ""
 
-#: qml/StorePage.qml:543
-msgid "Description"
-msgstr ""
+#: qml/StorePage.qml:484
+#, fuzzy
+msgid "Install"
+msgstr "已安装的 AppImage"
 
-#: qml/StorePage.qml:578
-msgid "Installation Output"
-msgstr ""
-
-#: qml/StorePage.qml:585
-msgid "Hide log"
-msgstr ""
-
-#: qml/StorePage.qml:585
-msgid "Show log"
-msgstr ""
-
-#: qml/StorePage.qml:672 qml/StorePage.qml:698
-msgid "Install via AM"
-msgstr ""
-
-#: qml/StorePage.qml:672
+#: qml/StorePage.qml:484
 msgid "Download"
 msgstr ""
 
-#: qml/StorePage.qml:708
-msgid "Download from Hub"
+#: qml/StorePage.qml:519
+#, fuzzy
+msgid "Download from AppImage Hub"
+msgstr " (AppImage)"
+
+#: qml/StorePage.qml:519
+#, fuzzy
+msgid "Install with AM"
+msgstr "已安装的 AppImage"
+
+#: qml/StorePage.qml:542
+msgid "Hide Details"
 msgstr ""
 
-#: qml/SettingsPage.qml:13 qml/SettingsDialog.qml:13
-msgid "Settings"
-msgstr "设置"
+#: qml/StorePage.qml:542
+msgid "Show Details"
+msgstr ""
 
-#: qml/SettingsPage.qml:45 qml/SettingsDialog.qml:22
-#: qml/OnboardingDialog.qml:159
+#: qml/SettingsPage.qml:45 qml/OnboardingDialog.qml:93
 msgid "Cannot create folder: %1"
 msgstr ""
 
-#: qml/SettingsPage.qml:57 qml/SettingsDialog.qml:231
-msgid "Restore Defaults"
+#: qml/SettingsPage.qml:78
+msgid "General"
 msgstr ""
 
-#: qml/SettingsPage.qml:89 qml/SettingsDialog.qml:57
-msgid "Storage & Location"
-msgstr ""
-
-#: qml/SettingsPage.qml:98 qml/SettingsDialog.qml:66
+#: qml/SettingsPage.qml:87
 msgid "Applications folder:"
 msgstr "应用程序文件夹："
 
-#: qml/SettingsPage.qml:109 qml/SettingsDialog.qml:77
-#: qml/OnboardingDialog.qml:142
+#: qml/SettingsPage.qml:97 qml/OnboardingDialog.qml:73
 msgid "Browse…"
 msgstr ""
 
-#: qml/SettingsPage.qml:115 qml/SettingsDialog.qml:83
-msgid "Open Folder in Dolphin"
+#: qml/SettingsPage.qml:106
+#, fuzzy
+msgid "Open Folder"
+msgstr "AppImage 管理器"
+
+#: qml/SettingsPage.qml:119
+msgid "Show a drop zone below the Installed list"
 msgstr ""
 
-#: qml/SettingsPage.qml:124 qml/SettingsDialog.qml:92
-msgid "Appearance"
-msgstr ""
-
-#: qml/SettingsPage.qml:129 qml/SettingsDialog.qml:97
-msgid "Manage window icon size"
-msgstr ""
-
-#: qml/SettingsPage.qml:130 qml/SettingsDialog.qml:98
-msgid "Small"
-msgstr ""
-
-#: qml/SettingsPage.qml:130 qml/SettingsDialog.qml:98
-msgid "Medium"
-msgstr ""
-
-#: qml/SettingsPage.qml:130 qml/SettingsDialog.qml:98
-msgid "Large"
-msgstr ""
-
-#: qml/SettingsPage.qml:139 qml/SettingsDialog.qml:107
-msgid "Show drag-and-drop install zone at bottom of list"
-msgstr ""
-
-#: qml/SettingsPage.qml:140 qml/SettingsDialog.qml:108
-msgid ""
-"Displays a persistent installation target at the footer of the dashboard "
-"application list."
-msgstr ""
-
-#: qml/SettingsPage.qml:149 qml/SettingsDialog.qml:117
-msgid "Show accent borders on cards and drop zones"
-msgstr ""
-
-#: qml/SettingsPage.qml:150 qml/SettingsDialog.qml:118
-msgid ""
-"Outlines visual frames and drop targets with active highlight colors instead "
-"of quiet gray outlines."
-msgstr ""
-
-#: qml/SettingsPage.qml:158 qml/SettingsDialog.qml:126
-msgid "Behavior & Security"
-msgstr ""
-
-#: qml/SettingsPage.qml:164 qml/SettingsDialog.qml:132
-msgid "Verify GPG signatures before installing"
-msgstr ""
-
-#: qml/SettingsPage.qml:165 qml/SettingsDialog.qml:133
-msgid ""
-"Checks each AppImage for an embedded GPG signature. Warns on unsigned files; "
-"blocks installation of files with invalid signatures unless overridden."
-msgstr ""
-
-#: qml/SettingsPage.qml:174 qml/SettingsDialog.qml:142
-msgid "Show security disclaimer"
-msgstr "显示安全免责声明"
-
-#: qml/SettingsPage.qml:175 qml/SettingsDialog.qml:143
-msgid ""
-"Displays an alert warning about unverified executable files when installing "
-"new AppImages."
-msgstr ""
-
-#: qml/SettingsPage.qml:184 qml/SettingsDialog.qml:152
-msgid "Show install/uninstall notifications"
-msgstr ""
-
-#: qml/SettingsPage.qml:185 qml/SettingsDialog.qml:153
-msgid ""
-"Fires native system popups when installation or removal actions complete "
-"successfully."
-msgstr ""
-
-#: qml/SettingsPage.qml:194 qml/SettingsDialog.qml:162
+#: qml/SettingsPage.qml:127 qml/OnboardingDialog.qml:104
 msgid "Notify when an AppImage is downloaded"
 msgstr ""
 
-#: qml/SettingsPage.qml:195 qml/SettingsDialog.qml:163
-msgid ""
-"Monitors your Downloads folder and triggers a native KDE notification with "
-"quick installation actions."
+#: qml/SettingsPage.qml:128
+msgid "Watches your Downloads folder."
 msgstr ""
 
-#: qml/SettingsPage.qml:206 qml/SettingsDialog.qml:174
-msgid ""
-"Download monitoring is unavailable because AppImage Manager is running in a "
-"sandbox."
+#: qml/SettingsPage.qml:140
+msgid "Download watching is unavailable in sandboxed environments."
 msgstr ""
 
-#: qml/SettingsPage.qml:214 qml/SettingsDialog.qml:182
-msgid "Background Updates"
+#: qml/SettingsPage.qml:148
+msgid "Notify when installs and removals finish"
 msgstr ""
 
-#: qml/SettingsPage.qml:219 qml/SettingsDialog.qml:187
-msgid "Check for updates"
+#: qml/SettingsPage.qml:161
+msgid "Check for updates in the background"
 msgstr ""
 
-#: qml/SettingsPage.qml:220 qml/SettingsDialog.qml:188
-msgid ""
-"Configures the frequency of background update scans for all registered "
-"AppImages on this machine."
-msgstr ""
-
-#: qml/SettingsPage.qml:221 qml/SettingsDialog.qml:189
+#: qml/SettingsPage.qml:162
 msgid "Never"
 msgstr ""
 
-#: qml/SettingsPage.qml:221 qml/SettingsDialog.qml:189
+#: qml/SettingsPage.qml:162
 msgid "Daily"
 msgstr ""
 
-#: qml/SettingsPage.qml:221 qml/SettingsDialog.qml:189
+#: qml/SettingsPage.qml:162
 msgid "Weekly"
 msgstr ""
 
-#: qml/SettingsPage.qml:221 qml/SettingsDialog.qml:189
+#: qml/SettingsPage.qml:162
 msgid "Monthly"
 msgstr ""
 
-#: qml/SettingsPage.qml:221 qml/SettingsDialog.qml:189
+#: qml/SettingsPage.qml:162
 msgid "Custom"
 msgstr ""
 
-#: qml/SettingsPage.qml:233 qml/SettingsDialog.qml:199
-msgid "Custom interval (days)"
+#: qml/SettingsPage.qml:172
+msgid "Every (days)"
 msgstr ""
 
-#: qml/SettingsPage.qml:246
-#, fuzzy
-msgid "AppImage Sources"
-msgstr "AppImage 已移除"
+#: qml/SettingsPage.qml:183
+msgid "Security"
+msgstr ""
 
-#: qml/SettingsPage.qml:332
+#: qml/SettingsPage.qml:188
+msgid "Verify signatures before installing"
+msgstr ""
+
+#: qml/SettingsPage.qml:189
+msgid ""
+"Warns before installing an AppImage that is unsigned or has an invalid "
+"signature."
+msgstr ""
+
+#: qml/SettingsPage.qml:197
+msgid "Show a reminder that AppImages are unverified"
+msgstr ""
+
+#: qml/SettingsPage.qml:210
+msgid "Enable Discover"
+msgstr ""
+
+#: qml/SettingsPage.qml:211
+msgid ""
+"Search and install apps from online catalogs. The catalogs are downloaded "
+"from the internet."
+msgstr ""
+
+#: qml/SettingsPage.qml:219
+msgid "Catalogs"
+msgstr ""
+
+#: qml/SettingsPage.qml:307
 msgid "Drag to reorder source priority"
 msgstr ""
 
-#: qml/SettingsPage.qml:355
-msgid "Format: AppImage Hub (Direct)"
-msgstr ""
-
-#: qml/SettingsPage.qml:357
-msgid "Format: Universal JSON (Direct)"
-msgstr ""
-
-#: qml/SettingsPage.qml:358
-msgid "Format: AM Database (Recipe)"
-msgstr ""
-
-#: qml/SettingsPage.qml:383 qml/SettingsPage.qml:451
+#: qml/SettingsPage.qml:346 qml/SettingsPage.qml:426
 msgid "Edit Source"
 msgstr ""
 
-#: qml/SettingsPage.qml:391
+#: qml/SettingsPage.qml:354
 msgid "Delete Source"
 msgstr ""
 
-#: qml/SettingsPage.qml:425
+#: qml/SettingsPage.qml:388
 msgid "Add Source…"
 msgstr ""
 
-#: qml/SettingsPage.qml:435
+#: qml/SettingsPage.qml:398
 msgid "Reset Sources"
 msgstr ""
 
-#: qml/SettingsPage.qml:451
+#: qml/SettingsPage.qml:410
+msgid "Restore Defaults"
+msgstr ""
+
+#: qml/SettingsPage.qml:426
 msgid "Add Source"
 msgstr ""
 
-#: qml/SettingsPage.qml:468
+#: qml/SettingsPage.qml:443
 msgid "Name:"
 msgstr ""
 
-#: qml/SettingsPage.qml:474
+#: qml/SettingsPage.qml:449
 msgid "e.g. My Repo"
 msgstr ""
 
-#: qml/SettingsPage.qml:483
+#: qml/SettingsPage.qml:458
 msgid "Feed URL:"
 msgstr ""
 
-#: qml/SettingsPage.qml:489
+#: qml/SettingsPage.qml:464
 msgid "e.g. https://example.com/feed.json"
 msgstr ""
 
-#: qml/SettingsPage.qml:492
+#: qml/SettingsPage.qml:467
 msgid "Must be a valid HTTP/HTTPS URL"
 msgstr ""
 
-#: qml/SettingsPage.qml:504
+#: qml/SettingsPage.qml:479
 msgid "Format Type:"
 msgstr ""
 
-#: qml/SettingsPage.qml:512
+#: qml/SettingsPage.qml:487
 msgid "AppImage Hub JSON (Direct Download)"
 msgstr ""
 
-#: qml/SettingsPage.qml:513
+#: qml/SettingsPage.qml:488
 msgid "AM Database Text (Recipe Script)"
 msgstr ""
 
-#: qml/SettingsPage.qml:514
+#: qml/SettingsPage.qml:489
 msgid "Universal JSON Feed (Direct Download)"
 msgstr ""
 
-#: qml/SettingsPage.qml:535
+#: qml/SettingsPage.qml:510 qml/UpdateSourceDialog.qml:62
+#: qml/EnvironmentDialog.qml:28
 msgid "Save"
 msgstr ""
 
-#: qml/SettingsPage.qml:535
+#: qml/SettingsPage.qml:510
 msgid "Add"
 msgstr ""
 
-#: qml/SettingsPage.qml:579 qml/SettingsDialog.qml:263
-#: qml/OnboardingDialog.qml:321
+#: qml/SettingsPage.qml:554 qml/OnboardingDialog.qml:148
 #, fuzzy
 msgid "Select Applications Folder"
 msgstr "应用程序文件夹："
 
-#: qml/SettingsDialog.qml:238
-msgid "Restore Defaults?"
-msgstr ""
-
-#: qml/SettingsDialog.qml:239
-msgid ""
-"All settings will be reset to their default values. This cannot be undone."
-msgstr ""
-
-#: qml/SettingsDialog.qml:254
-msgid "Close"
-msgstr ""
-
-#: qml/OnboardingDialog.qml:13
+#: qml/OnboardingDialog.qml:14
 #, fuzzy
 msgid "Welcome to AppImage Manager"
 msgstr "关于 AppImage 管理器"
 
-#: qml/OnboardingDialog.qml:75
-msgid ""
-"A native KDE utility to seamlessly install, update, and manage your AppImage "
-"applications. Keep your software organized and integrated directly with your "
-"desktop environment."
-msgstr ""
-
-#: qml/OnboardingDialog.qml:90
-#, fuzzy
-msgid "Applications Folder"
-msgstr "应用程序文件夹："
-
-#: qml/OnboardingDialog.qml:96
-msgid ""
-"AppImages are stored and monitored in a centralized directory. Applications "
-"placed in this folder will automatically be integrated into your system menu."
-msgstr ""
-
-#: qml/OnboardingDialog.qml:127
-#, fuzzy
-msgid "Applications Folder:"
-msgstr "应用程序文件夹："
-
-#: qml/OnboardingDialog.qml:175
-msgid "Desktop Integration"
-msgstr ""
-
-#: qml/OnboardingDialog.qml:196
-msgid "Dolphin Integration"
-msgstr ""
-
-#: qml/OnboardingDialog.qml:200
-#, fuzzy
-msgid ""
-"Right-click any AppImage file in Dolphin and select 'Manage AppImage' to "
-"inspect, sign-check, install, or uninstall it."
-msgstr "右键单击 AppImage 文件并选择“管理 AppImage”进行安装。"
-
-#: qml/OnboardingDialog.qml:225
-msgid "Downloads Folder Watcher"
-msgstr ""
-
-#: qml/OnboardingDialog.qml:229
-msgid ""
-"AppImage Manager can watch your Downloads folder and trigger system "
-"notifications to instantly integrate new AppImages."
-msgstr ""
-
-#: qml/OnboardingDialog.qml:240
-msgid "Monitor Downloads folder"
-msgstr ""
-
-#: qml/OnboardingDialog.qml:255
-msgid "You're All Set!"
-msgstr ""
-
-#: qml/OnboardingDialog.qml:268
-msgid ""
-"You are ready to manage your AppImages. You can check for updates, browse "
-"store applications in 'Discover', or configure advanced options like updates "
-"frequency in the sidebar."
-msgstr ""
-
-#: qml/OnboardingDialog.qml:285
-msgid "Skip Onboarding"
-msgstr ""
-
-#: qml/OnboardingDialog.qml:297
-msgid "Back"
-msgstr ""
-
-#: qml/OnboardingDialog.qml:304
+#: qml/OnboardingDialog.qml:36
 msgid "Get Started"
 msgstr ""
 
-#: qml/OnboardingDialog.qml:304
-msgid "Next"
+#: qml/OnboardingDialog.qml:46
+msgid ""
+"Install, update and remove AppImages. You can change these choices later in "
+"Settings."
 msgstr ""
 
-#: qml/UpdateDialog.qml:18
+#: qml/OnboardingDialog.qml:58
 #, fuzzy
-msgid "Update — %1"
+msgid "Applications folder"
+msgstr "应用程序文件夹："
+
+#: qml/OnboardingDialog.qml:116
+msgid "Enable Discover to search online app catalogs"
+msgstr ""
+
+#: qml/OnboardingDialog.qml:138
+#, fuzzy
+msgid "Tip: right-click an AppImage in Dolphin and choose Manage AppImage."
+msgstr "右键单击 AppImage 文件并选择“管理 AppImage”进行安装。"
+
+#: qml/UpdateSourceDialog.qml:34
+msgid "Detect Automatically"
+msgstr ""
+
+#: qml/UpdateSourceDialog.qml:35
+msgid "GitHub Repository"
+msgstr ""
+
+#: qml/UpdateSourceDialog.qml:36
+msgid "Codeberg, Forgejo or Gitea Repository"
+msgstr ""
+
+#: qml/UpdateSourceDialog.qml:37
+msgid "zsync File"
+msgstr ""
+
+#: qml/UpdateSourceDialog.qml:38
+msgid "Direct Download"
+msgstr ""
+
+#: qml/UpdateSourceDialog.qml:41
+#, fuzzy
+msgid "Update Source — %1"
 msgstr "更新"
 
-#: qml/UpdateDialog.qml:52
-msgid "Current version"
-msgstr ""
-
-#: qml/UpdateDialog.qml:73
-msgid "New version"
-msgstr ""
-
-#: qml/UpdateDialog.qml:89
-msgid "If zsync2 is not installed, the full AppImage will be downloaded."
-msgstr ""
-
-#: qml/UpdateDialog.qml:110
-msgid "Download Update"
-msgstr ""
-
-#: qml/AboutDialog.qml:11
-msgid "About AppImage Manager"
-msgstr "关于 AppImage 管理器"
-
-#: qml/AboutDialog.qml:65 qml/AboutPage.qml:54
+#: qml/UpdateSourceDialog.qml:41
 #, fuzzy
-msgid "AppImage Manager %1"
-msgstr "AppImage 管理器"
+msgid "Update Source"
+msgstr "AppImage 已移除"
 
-#: qml/AboutDialog.qml:71 qml/AboutPage.qml:60
-msgid "A lightweight AppImage manager for KDE Plasma 6."
-msgstr "适用于 KDE Plasma 6 的轻量级 AppImage 管理器。"
-
-#: qml/AboutDialog.qml:116 qml/AboutPage.qml:88
-msgid "License"
+#: qml/UpdateSourceDialog.qml:51
+msgid "Use Built-in"
 msgstr ""
 
-#: qml/AboutDialog.qml:121 qml/AboutPage.qml:93
-msgid "GPL v2 or later"
+#: qml/UpdateSourceDialog.qml:114
+msgid "Built-in source: %1"
 msgstr ""
 
-#: qml/AboutDialog.qml:176 qml/AboutPage.qml:124
-msgid "Contribute"
+#: qml/UpdateSourceDialog.qml:115
+msgid ""
+"This AppImage has no built-in update source. Enter where it is released."
 msgstr ""
 
-#: qml/AboutDialog.qml:220 qml/AboutPage.qml:156
-msgid "Report an Issue"
+#: qml/UpdateSourceDialog.qml:126
+msgid "owner/repo, a repository URL, or a download URL"
 msgstr ""
 
-#: qml/AboutDialog.qml:244
-msgid "Libraries in use"
+#: qml/UpdateSourceDialog.qml:147
+msgid "Empty: use the built-in source"
 msgstr ""
 
-#: qml/AboutDialog.qml:251 qml/AboutPage.qml:190
-msgid "Copy to Clipboard"
+#: qml/UpdateSourceDialog.qml:149
+msgid "Not a repository or download URL"
 msgstr ""
 
-#: qml/AboutDialog.qml:258 qml/AboutPage.qml:198
-msgid "Environment details copied to clipboard."
+#: qml/UpdateSourceDialog.qml:154
+msgid "Type: %1"
 msgstr ""
 
-#: qml/AboutDialog.qml:288 qml/AboutPage.qml:213
-msgid "Qt %1"
+#: qml/UpdateSourceDialog.qml:182
+msgid "Include pre-releases"
 msgstr ""
 
-#: qml/AboutDialog.qml:292 qml/AboutPage.qml:215
-msgid "Cross-platform application development framework."
+#: qml/UpdateSourceDialog.qml:190
+msgid ""
+"That cannot be used as an update source. Enter owner/repo, a repository URL, "
+"or a download URL."
 msgstr ""
 
-#: qml/AboutDialog.qml:326 qml/AboutPage.qml:238
-msgid "KDE Frameworks %1"
+#: qml/UpdateSourceDialog.qml:201
+msgid ""
+"The release file matching this computer's architecture is downloaded. Delta "
+"updates are used when the release also publishes a .zsync file."
 msgstr ""
 
-#: qml/AboutDialog.qml:330 qml/AboutPage.qml:240
-msgid "Collection of libraries created by the KDE Community to extend Qt."
+#: qml/UpdateSourceDialog.qml:203
+msgid ""
+"The file is downloaded again whenever the server reports a newer build. Web "
+"pages are refused."
 msgstr ""
 
-#: qml/AboutDialog.qml:368 qml/AboutPage.qml:265
-msgid "SquashFS extraction module used for reading AppImage configurations."
+#: qml/EnvironmentDialog.qml:18
+msgid "Environment Variables — %1"
 msgstr ""
 
-#: qml/AboutDialog.qml:381 qml/AboutPage.qml:276
-msgid "Contributors"
+#: qml/EnvironmentDialog.qml:18
+msgid "Environment Variables"
 msgstr ""
 
-#: qml/AboutPage.qml:32
+#: qml/EnvironmentDialog.qml:47
+msgid "Line %2 is not KEY=value or repeats a name."
+msgid_plural "Lines %2 are not KEY=value or repeat a name."
+msgstr[0] ""
+
+#: qml/EnvironmentDialog.qml:70
+msgid ""
+"One KEY=value per line. Used when the app is launched from here and from the "
+"app menu."
+msgstr ""
+
+#: qml/AboutContent.qml:22
 #, fuzzy
 msgid "Application Info"
 msgstr "应用程序"
 
-#: qml/AboutPage.qml:72
+#: qml/AboutContent.qml:44
+#, fuzzy
+msgid "AppImage Manager %1"
+msgstr "AppImage 管理器"
+
+#: qml/AboutContent.qml:50
+msgid "A lightweight AppImage manager for KDE Plasma 6."
+msgstr "适用于 KDE Plasma 6 的轻量级 AppImage 管理器。"
+
+#: qml/AboutContent.qml:62
 msgid "Project Details"
 msgstr ""
 
-#: qml/AboutPage.qml:174
+#: qml/AboutContent.qml:78
+msgid "License"
+msgstr ""
+
+#: qml/AboutContent.qml:83
+msgid "GPL v2 or later"
+msgstr ""
+
+#: qml/AboutContent.qml:114
+msgid "Contribute"
+msgstr ""
+
+#: qml/AboutContent.qml:146
+msgid "Report an Issue"
+msgstr ""
+
+#: qml/AboutContent.qml:164
 msgid "Libraries in Use"
 msgstr ""
 
-#: qml/AboutPage.qml:182
+#: qml/AboutContent.qml:172
 msgid "Copy environment details to clipboard"
 msgstr ""
 
-#: qml/AboutPage.qml:223
+#: qml/AboutContent.qml:180
+msgid "Copy to Clipboard"
+msgstr ""
+
+#: qml/AboutContent.qml:188
+msgid "Environment details copied to clipboard."
+msgstr ""
+
+#: qml/AboutContent.qml:203
+msgid "Qt %1"
+msgstr ""
+
+#: qml/AboutContent.qml:205
+msgid "Cross-platform application development framework."
+msgstr ""
+
+#: qml/AboutContent.qml:213
 msgid "Visit Qt Website"
 msgstr ""
 
-#: qml/AboutPage.qml:248
+#: qml/AboutContent.qml:228
+msgid "KDE Frameworks %1"
+msgstr ""
+
+#: qml/AboutContent.qml:230
+msgid "Collection of libraries created by the KDE Community to extend Qt."
+msgstr ""
+
+#: qml/AboutContent.qml:238
 msgid "Visit KDE Website"
 msgstr ""
 
-#: qml/AboutPage.qml:334
+#: qml/AboutContent.qml:255
+msgid "SquashFS extraction module used for reading AppImage configurations."
+msgstr ""
+
+#: qml/AboutContent.qml:266
+msgid "Contributors"
+msgstr ""
+
+#: qml/AboutContent.qml:324
 msgid "Email Contributor"
 msgstr ""
 
-#: qml/AboutPage.qml:341
+#: qml/AboutContent.qml:331
 msgid "Visit Profile"
 msgstr ""
 
@@ -1157,6 +1185,29 @@ msgstr ""
 #: qml/ContributorsModel.qml:74
 msgid "Contributor"
 msgstr ""
+
+#, fuzzy
+#~ msgid "AppImage Dashboard"
+#~ msgstr "AppImage 管理器"
+
+#, fuzzy
+#~ msgid "Installed Applications (%1)"
+#~ msgstr "已安装的 AppImage"
+
+#, fuzzy
+#~ msgid "Installed Applications"
+#~ msgstr "已安装的 AppImage"
+
+#~ msgid "Show security disclaimer"
+#~ msgstr "显示安全免责声明"
+
+#, fuzzy
+#~ msgid "Applications Folder"
+#~ msgstr "应用程序文件夹："
+
+#, fuzzy
+#~ msgid "Applications Folder:"
+#~ msgstr "应用程序文件夹："
 
 #~ msgid "Manage AppImage files in KDE Plasma"
 #~ msgstr "在 KDE Plasma 中管理 AppImage 文件"

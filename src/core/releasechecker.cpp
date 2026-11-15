@@ -1,0 +1,353 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
+#include "releasechecker.h"
+#include "appimageinfo.h"
+#include "updatesource.h"
+
+#include <QDateTime>
+#include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QRegularExpression>
+#include <QSysInfo>
+#include <QVersionNumber>
+#include <QXmlStreamReader>
+#include "logging.h"
+
+ReleaseChecker::ReleaseChecker(QNetworkAccessManager *nam, QObject *parent)
+    : QObject(parent)
+    , m_nam(nam)
+{
+}
+
+void ReleaseChecker::check(const QString &filePath, const QString &embeddedUpdateInfo,
+                           const QString &currentVersion)
+{
+    const UpdateSource source = loadUpdateSource(filePath);
+    const QString info = effectiveUpdateInfo(embeddedUpdateInfo, source);
+    m_parts = info.split(QLatin1Char('|'));
+    m_filePath = filePath;
+    m_fileName = QFileInfo(filePath).fileName();
+    m_currentVersion = currentVersion;
+    m_installedTag = source.installedTag;
+    const QString kind = m_parts.value(0);
+
+    if (kind == QLatin1String("gh-releases-zsync") && m_parts.size() >= 3) {
+        // /releases/latest never returns a pre-release; the list does, newest first.
+        checkReleases(QUrl(source.prerelease
+            ? QStringLiteral("https://api.github.com/repos/%1/%2/releases?per_page=10").arg(m_parts.at(1), m_parts.at(2))
+            : QStringLiteral("https://api.github.com/repos/%1/%2/releases/latest").arg(m_parts.at(1), m_parts.at(2))), true);
+    } else if (kind == QLatin1String("forgejo-releases") && m_parts.size() >= 4) {
+        // Forgejo/Gitea mirror GitHub's release JSON (tag_name, assets[].browser_download_url).
+        const QString base = QStringLiteral("https://%1/api/v1/repos/%2/%3/releases").arg(m_parts.at(1), m_parts.at(2), m_parts.at(3));
+        checkReleases(QUrl(source.prerelease ? base + QStringLiteral("?limit=10") : base + QStringLiteral("/latest")), false);
+    } else if (kind == QLatin1String("direct") && m_parts.size() >= 2) {
+        checkDirect(QUrl(info.section(QLatin1Char('|'), 1)));
+    } else {
+        Q_EMIT checkFinished(Result::Failed, {}, {});
+    }
+}
+
+void ReleaseChecker::checkReleases(const QUrl &url, bool github)
+{
+    QNetworkRequest request(url);
+    request.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
+    request.setRawHeader("Accept", github ? "application/vnd.github+json" : "application/json");
+    request.setTransferTimeout(10'000);
+
+    QNetworkReply *reply = m_nam->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, github]() {
+        reply->deleteLater();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            if (github) {
+                qCDebug(AIM_LOG) << "GitHub API check failed (" << reply->errorString() << "). Falling back to Atom RSS feed...";
+                checkAtomFeed();
+            } else {
+                qCWarning(AIM_LOG) << "Release check failed for" << m_fileName << ":" << reply->errorString();
+                Q_EMIT checkFinished(Result::NetworkFailed, {}, {});
+            }
+            return;
+        }
+
+        const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+        QJsonObject release;
+        if (doc.isObject()) {
+            release = doc.object();
+        } else {
+            for (const QJsonValue &val : doc.array()) {
+                if (!val.toObject().value(QLatin1String("draft")).toBool()) {
+                    release = val.toObject();
+                    break;
+                }
+            }
+        }
+
+        const QString tag = release.value(QLatin1String("tag_name")).toString();
+        if (tag.isEmpty()) {
+            Q_EMIT checkFinished(Result::Failed, {}, {});
+            return;
+        }
+
+        const QString pattern = github ? m_parts.value(4) : QString();
+        const QJsonArray assets = release.value(QLatin1String("assets")).toArray();
+        QString url = pickAsset(assets, pattern, m_fileName, QSysInfo::currentCpuArchitecture());
+        if (url.isEmpty() && !pattern.isEmpty()) // stale pattern: fall back to name heuristics
+            url = pickAsset(assets, {}, m_fileName, QSysInfo::currentCpuArchitecture());
+        finishWithTag(tag, url);
+    });
+}
+
+bool ReleaseChecker::isNonBinaryContentType(const QString &contentType)
+{
+    const QString type = contentType.section(QLatin1Char(';'), 0, 0).trimmed().toLower();
+    return type.startsWith(QLatin1String("text/"))
+        || type == QLatin1String("application/json")
+        || type == QLatin1String("application/xml")
+        || type == QLatin1String("application/xhtml+xml");
+}
+
+// A direct download has no version; the server's Last-Modified (or ETag) identifies the build.
+// The marker doubles as the shown "version" and is stored as installedTag after an update.
+void ReleaseChecker::checkDirect(const QUrl &url)
+{
+    QNetworkRequest request(url);
+    request.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setTransferTimeout(10'000);
+
+    QNetworkReply *reply = m_nam->head(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, url]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) {
+            qCWarning(AIM_LOG) << "Direct download check failed for" << m_fileName << ":" << reply->errorString();
+            Q_EMIT checkFinished(Result::NetworkFailed, {}, {});
+            return;
+        }
+
+        const QString contentType = reply->header(QNetworkRequest::ContentTypeHeader).toString();
+        if (isNonBinaryContentType(contentType)) {
+            qCWarning(AIM_LOG) << "The update URL for" << m_fileName << "returned" << contentType
+                               << "instead of an AppImage. Set a direct download URL.";
+            Q_EMIT checkFinished(Result::Failed, {}, {});
+            return;
+        }
+
+        const QDateTime modified = reply->header(QNetworkRequest::LastModifiedHeader).toDateTime().toUTC();
+        QString marker;
+        if (modified.isValid()) {
+            marker = modified.toString(QStringLiteral("yyyy-MM-dd HH:mm"));
+        } else {
+            QString etag = QString::fromLatin1(reply->rawHeader("ETag"));
+            etag.remove(QStringLiteral("W/")).remove(QLatin1Char('"'));
+            if (!etag.isEmpty())
+                marker = QStringLiteral("build ") + etag.left(8);
+        }
+        if (marker.isEmpty()) {
+            qCWarning(AIM_LOG) << "The update URL for" << m_fileName << "sends neither Last-Modified nor ETag; cannot tell builds apart.";
+            Q_EMIT checkFinished(Result::Failed, {}, {});
+            return;
+        }
+
+        bool newer;
+        if (!m_installedTag.isEmpty()) {
+            newer = marker != m_installedTag;
+        } else {
+            // Never updated from this URL: compare with the local file when possible.
+            const QFileInfo local(m_filePath);
+            newer = !(modified.isValid() && local.exists() && local.lastModified().toUTC() >= modified);
+        }
+
+        if (newer)
+            Q_EMIT checkFinished(Result::UpdateAvailable, marker, url.toString());
+        else
+            Q_EMIT checkFinished(Result::UpToDate, {}, {});
+    });
+}
+
+void ReleaseChecker::finishWithTag(const QString &tag, const QString &url)
+{
+    const QString remoteVer = normalizeVersion(tag);
+    const QString localVer = normalizeVersion(m_currentVersion);
+
+    bool newer;
+    if (!m_installedTag.isEmpty() && normalizeVersion(m_installedTag) == remoteVer)
+        newer = false; // this exact release was installed by our last update
+    else if (QVersionNumber::fromString(localVer).isNull())
+        newer = true;  // installed version unknown; installedTag tracks it after one update
+    else
+        newer = isNewerVersion(remoteVer, localVer);
+
+    if (!newer) {
+        Q_EMIT checkFinished(Result::UpToDate, {}, {});
+        return;
+    }
+    if (url.isEmpty()) {
+        qCDebug(AIM_LOG) << "Release" << tag << "has no matching AppImage asset for" << m_fileName;
+        Q_EMIT checkFinished(Result::Failed, {}, {});
+        return;
+    }
+    Q_EMIT checkFinished(Result::UpdateAvailable, remoteVer, url);
+}
+
+void ReleaseChecker::checkAtomFeed()
+{
+    const QString url = QStringLiteral("https://github.com/%1/%2/releases.atom")
+                            .arg(m_parts.at(1), m_parts.at(2));
+
+    QNetworkRequest request((QUrl(url)));
+    request.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setTransferTimeout(10'000);
+
+    QNetworkReply *reply = m_nam->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            qCWarning(AIM_LOG) << "GitHub Atom feed fallback also failed:" << reply->errorString();
+            Q_EMIT checkFinished(Result::NetworkFailed, {}, {});
+            return;
+        }
+
+        const QByteArray xmlData = reply->readAll();
+        QXmlStreamReader xml(xmlData);
+
+        QString latestTag;
+        bool inEntry = false;
+
+        while (!xml.atEnd() && !xml.hasError()) {
+            const auto token = xml.readNext();
+
+            if (token == QXmlStreamReader::StartElement) {
+                const auto name = xml.name();
+                if (name == QLatin1String("entry")) {
+                    inEntry = true;
+                } else if (name == QLatin1String("title") && inEntry) {
+                    latestTag = xml.readElementText().trimmed();
+                    break; // the first entry is the latest release!
+                }
+            } else if (token == QXmlStreamReader::EndElement) {
+                if (xml.name() == QLatin1String("entry")) {
+                    inEntry = false;
+                }
+            }
+        }
+
+        if (latestTag.isEmpty()) {
+            qCWarning(AIM_LOG) << "GitHub Atom feed fallback: could not find latest release tag in feed";
+            Q_EMIT checkFinished(Result::Failed, {}, {});
+            return;
+        }
+
+        // Construct standard zsync URL if filename pattern exists (usually parts.at(4))
+        // Format of gh-releases-zsync: gh-releases-zsync|owner|repo|latest|pattern
+        QString zsyncUrl;
+        if (m_parts.size() >= 5 && !m_parts.at(4).isEmpty()) {
+            QString pattern = m_parts.at(4);
+            if (pattern.contains(QLatin1Char('*'))) {
+                pattern.replace(QLatin1Char('*'), latestTag);
+            }
+            zsyncUrl = QStringLiteral("https://github.com/%1/%2/releases/download/%3/%4")
+                           .arg(m_parts.at(1), m_parts.at(2), latestTag, pattern);
+        }
+
+        qCDebug(AIM_LOG) << "GitHub Atom feed fallback: latest tag:" << latestTag << "zsync URL:" << zsyncUrl;
+        finishWithTag(latestTag, zsyncUrl);
+    });
+}
+
+// ── Asset selection (ported from Shelly's selectReleaseAssetUrl) ─────────────
+
+// Lower-cased file name without extension and without version tokens, so
+// "Foo-1.2.3-x86_64.AppImage" and "foo-1.3.0-x86_64.AppImage.zsync" compare equal.
+static QString nameKey(QString name)
+{
+    if (name.endsWith(QLatin1String(".zsync"), Qt::CaseInsensitive))
+        name.chop(6);
+    if (name.endsWith(QLatin1String(".appimage"), Qt::CaseInsensitive))
+        name.chop(9);
+    static const QRegularExpression separators(QStringLiteral("[-_\\s]+"));
+    static const QRegularExpression version(QStringLiteral("^[vV]?\\d+(\\.\\d+)+$"));
+    QStringList kept;
+    for (const QString &token : name.split(separators, Qt::SkipEmptyParts)) {
+        if (!version.match(token).hasMatch())
+            kept.append(token.toLower());
+    }
+    return kept.join(QLatin1Char('-'));
+}
+
+bool ReleaseChecker::matchesArchitecture(const QString &assetName, const QString &cpuArch)
+{
+    static const QList<QStringList> groups = {
+        { QStringLiteral("x86_64"), QStringLiteral("amd64"), QStringLiteral("x64") },
+        { QStringLiteral("aarch64"), QStringLiteral("arm64"), QStringLiteral("armv8") },
+        { QStringLiteral("i386"), QStringLiteral("i686"), QStringLiteral("x86") },
+        { QStringLiteral("armhf"), QStringLiteral("armv7l"), QStringLiteral("arm") },
+    };
+    // Whole tokens only: "arm" must not match "Swarm" or "arm64", nor "x86" match "x86_64".
+    const auto mentions = [&assetName](const QString &alias) {
+        const QRegularExpression token(QStringLiteral("(?<![a-z0-9])%1(?![a-z0-9]|_64)")
+                                           .arg(QRegularExpression::escape(alias)),
+                                       QRegularExpression::CaseInsensitiveOption);
+        return token.match(assetName).hasMatch();
+    };
+    QStringList target = { cpuArch };
+    for (const QStringList &group : groups) {
+        if (group.contains(cpuArch))
+            target = group;
+    }
+    for (const QString &alias : std::as_const(target)) {
+        if (mentions(alias))
+            return true;
+    }
+    // Names that mention no architecture at all are assumed to fit.
+    for (const QStringList &group : groups) {
+        for (const QString &alias : group) {
+            if (!target.contains(alias) && mentions(alias))
+                return false;
+        }
+    }
+    return true;
+}
+
+QString ReleaseChecker::pickAsset(const QJsonArray &assets, const QString &pattern,
+                                        const QString &localFileName, const QString &cpuArch)
+{
+    const QRegularExpression glob = pattern.isEmpty() ? QRegularExpression()
+        : QRegularExpression(QRegularExpression::wildcardToRegularExpression(pattern),
+                             QRegularExpression::CaseInsensitiveOption);
+    const QString localKey = nameKey(localFileName);
+
+    for (const QLatin1String suffix : { QLatin1String(".zsync"), QLatin1String(".appimage") }) {
+        QStringList urls;
+        QStringList keys;
+        for (const QJsonValue &val : assets) {
+            const QJsonObject asset = val.toObject();
+            const QString name = asset.value(QLatin1String("name")).toString();
+            const QString url = asset.value(QLatin1String("browser_download_url")).toString();
+            if (url.isEmpty() || !name.endsWith(suffix, Qt::CaseInsensitive))
+                continue;
+            // A pattern names the .zsync file; its .AppImage sibling matches too.
+            if (!pattern.isEmpty() && !glob.match(name).hasMatch()
+                && !glob.match(name + QLatin1String(".zsync")).hasMatch())
+                continue;
+            if (!matchesArchitecture(name, cpuArch))
+                continue;
+            urls.append(url);
+            keys.append(nameKey(name));
+        }
+        if (urls.size() == 1)
+            return urls.first();
+        if (urls.size() > 1) {
+            const int first = keys.indexOf(localKey);
+            if (first >= 0 && keys.lastIndexOf(localKey) == first)
+                return urls.at(first);
+            return {}; // ambiguous: several builds and none clearly ours
+        }
+    }
+    return {};
+}

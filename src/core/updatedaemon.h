@@ -37,5 +37,5 @@ private:
     KStatusNotifierItem *m_trayIcon = nullptr;
 
     QThreadPool           m_readerPool;
-    QQueue<AppImageInfo>  m_updateQueue;
+    QQueue<std::pair<QString, AppImageInfo>> m_updateQueue; // (file path, metadata)
 };
