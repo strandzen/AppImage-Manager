@@ -41,6 +41,19 @@ target_include_directories(tst_updatesource PRIVATE
     ${CMAKE_BINARY_DIR}/src
 )
 
+# ── tst_desktoplink ───────────────────────────────────────────────────────────
+# App menu entries: own-id naming, entries other software wrote, duplicate cleanup.
+# Runs in QStandardPaths test mode (~/.qttest), never the real applications dir.
+ecm_add_test(tst_desktoplink.cpp
+    TEST_NAME tst_desktoplink
+    LINK_LIBRARIES Qt6::Test appimagemanager_core KF6::CoreAddons KF6::ConfigCore
+    NAME_PREFIX "appimagemanager-"
+)
+target_include_directories(tst_desktoplink PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}/src
+)
+
 # ── tst_appimagelistmodel ─────────────────────────────────────────────────────
 # Drives a real AppImageListModel + AppImageSortFilterModel against a tempdir
 # of zero-byte stubs. Covers scanning state, row insert/remove, sort/filter,

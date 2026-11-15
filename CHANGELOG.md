@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Apps showed up twice in the app menu when they (or a launcher such as ArtCraft Launcher) add their own menu entry: AppImage Manager added a second one beside it. It now recognises any entry that starts the AppImage, names its own entry after the app's id (for example `ai.storyteller.figcraft.desktop`) so an app that registers itself replaces it instead of adding another, and removes its own duplicates on the next start. Keeping the app's entry also keeps its file associations and taskbar icon matching. Turning off "Show in App Menu" removes every entry for the AppImage (ones written by other software go to the Trash).
+
 ## 2.1.0 - 2026-11-15
 
 ### Added

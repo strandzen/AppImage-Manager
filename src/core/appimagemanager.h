@@ -27,7 +27,12 @@ namespace AppImageManager {
 
     bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info);
     bool removeDesktopLink(const QString &appImagePath, const AppImageInfo &info);
+    // True when any visible entry in ~/.local/share/applications starts the AppImage,
+    // including ones the app or its vendor launcher wrote itself.
     bool isDesktopLinkEnabled(const QString &appImagePath, const AppImageInfo &info);
+    // Removes our own appimage_* entries that duplicate another entry for the same AppImage.
+    // Returns true when something was removed.
+    bool removeDuplicateDesktopLinks(const QString &appImagePath, const AppImageInfo &info);
 
     // Blocking — call via QtConcurrent::run.
     // Returns entries sorted High confidence first, Low confidence second.

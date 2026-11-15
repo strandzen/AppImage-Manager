@@ -465,7 +465,9 @@ void AppImageListModel::applyMetadata(int row, const AppImageInfo &info)
     Item &item          = m_items[row];
     item.info           = info;
     item.info.originalName = QFileInfo(path).fileName();
-    item.hasDesktopLink = AppImageManager::isDesktopLinkEnabled(path, info);
+    // Drop our own entry when the app (or its launcher) wrote one for the same AppImage.
+    AppImageManager::removeDuplicateDesktopLinks(path, item.info);
+    item.hasDesktopLink = AppImageManager::isDesktopLinkEnabled(path, item.info);
     item.metadataLoaded = true;
     item.cachedFormattedSize = formatBytes(info.fileSize);
     item.cachedDisplayName   = computeDisplayName(item);

@@ -14,8 +14,12 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QDateTime>
 #include <QIcon>
+#include <QMultiHash>
+#include <QMutex>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QSet>
 #include <QStandardPaths>
 #include <QUrl>
@@ -35,17 +39,75 @@ qint64 dirSize(const QString &path)
     return total;
 }
 
+QString applicationsDir()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
+}
+
+// The program an Exec= line starts, skipping a leading `env [-opts] KEY=value…`.
+QString execTarget(const QString &exec)
+{
+    KShell::Errors error = KShell::NoError;
+    const QStringList args = KShell::splitArgs(exec, KShell::NoOptions, &error);
+    if (error != KShell::NoError || args.isEmpty())
+        return {};
+    qsizetype i = 0;
+    if (QFileInfo(args.at(0)).fileName() == QLatin1String("env")) {
+        ++i;
+        while (i < args.size() && (args.at(i).startsWith(QLatin1Char('-')) || args.at(i).contains(QLatin1Char('='))))
+            ++i;
+    }
+    return i < args.size() ? QDir::cleanPath(args.at(i)) : QString();
+}
+
+// Visible menu entries in ~/.local/share/applications, by the program they start. Other
+// software (an app registering itself, a vendor launcher) may have written entries for
+// our AppImages; this is how we notice them. Rebuilt when the directory changes.
+QMutex s_indexMutex;
+QDateTime s_indexStamp;
+QMultiHash<QString, QString> s_index;
+
+QStringList entriesLaunching(const QString &appImagePath)
+{
+    QMutexLocker locker(&s_indexMutex);
+    const QDateTime stamp = QFileInfo(applicationsDir()).lastModified();
+    if (!stamp.isValid() || stamp != s_indexStamp) {
+        s_index.clear();
+        const QDir dir(applicationsDir());
+        for (const QFileInfo &fi : dir.entryInfoList({ QStringLiteral("*.desktop") }, QDir::Files)) {
+            KDesktopFile df(fi.absoluteFilePath());
+            const KConfigGroup grp = df.desktopGroup();
+            if (grp.readEntry("Hidden", false) || grp.readEntry("NoDisplay", false))
+                continue;
+            const QString target = execTarget(grp.readEntry("Exec", QString()));
+            if (!target.isEmpty())
+                s_index.insert(target, fi.absoluteFilePath());
+        }
+        s_indexStamp = stamp;
+    }
+    return s_index.values(QDir::cleanPath(appImagePath));
+}
+
+void invalidateEntryIndex()
+{
+    QMutexLocker locker(&s_indexMutex);
+    s_indexStamp = QDateTime();
+}
+
+void refreshMenuCaches()
+{
+    AppImageManager::rebuildSycoca();
+    QProcess::startDetached(QStringLiteral("update-desktop-database"), { applicationsDir() });
+}
+
 } // anonymous namespace
 
 namespace AppImageManager {
 
-// Return a stable, collision-free key for desktop/icon file naming: a slug from
-// the clean name, disambiguated by a 6-char hex hash of the original filename so
+// Return a stable, collision-free key for icon and fallback desktop file naming: a slug
+// from the clean name, disambiguated by a 6-char hex hash of the original filename so
 // that two differently-named AppImages that happen to share a display name don't
-// overwrite each other's .desktop file.
-// Always the clean-name slug plus a hash of the file name, never the appId. appIds used to be
-// truncated at the first dot (so this never used them); switching to the now-correct appIds
-// would rename every existing app menu entry and lose track of the ones users already have.
+// overwrite each other's files.
 static QString fileKey(const AppImageInfo &info)
 {
     const QString base = info.cleanName.toLower()
@@ -58,6 +120,8 @@ static QString fileKey(const AppImageInfo &info)
                              .left(6);
     return base + QLatin1Char('_') + hash;
 }
+
+static QString legacyDesktopFilePath(const AppImageInfo &info);
 
 KIO::CopyJob *installAppImage(const QUrl &source, const QString &applicationsDir)
 {
@@ -93,8 +157,31 @@ KIO::CopyJob *installAppImage(const QUrl &source, const QString &applicationsDir
 
 bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
 {
+    QString execStr = environmentExecPrefix(loadEnvironment(appImagePath)) + KShell::quoteArg(appImagePath);
+    if (!info.execArgs.isEmpty())
+        execStr += QLatin1Char(' ') + info.execArgs;
+
     const QString desktopPath = desktopFilePath(info);
     const QString iconPath = iconFilePath(info);
+
+    // Another entry (written by the app or its launcher under another name) already starts
+    // this AppImage: use it instead of adding a second one, only keeping its Exec current.
+    if (!QFile::exists(desktopPath)) {
+        for (const QString &entry : entriesLaunching(appImagePath)) {
+            if (QFileInfo(entry).fileName().startsWith(QLatin1String("appimage_")))
+                continue;
+            KDesktopFile df(entry);
+            KConfigGroup grp = df.desktopGroup();
+            grp.writeEntry(QStringLiteral("Exec"), execStr);
+            if (grp.hasKey("TryExec"))
+                grp.writeEntry(QStringLiteral("TryExec"), appImagePath);
+            df.sync();
+            invalidateEntryIndex();
+            removeDuplicateDesktopLinks(appImagePath, info);
+            refreshMenuCaches();
+            return true;
+        }
+    }
 
     if (!QDir().mkpath(QFileInfo(desktopPath).absolutePath())) {
         qCWarning(AIM_LOG) << "createDesktopLink: cannot create .desktop directory" << QFileInfo(desktopPath).absolutePath();
@@ -119,10 +206,8 @@ bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
 
     const QString iconField = QIcon::hasThemeIcon(info.appId) ? info.appId : (QStringLiteral("appimage_") + fileKey(info));
 
-    QString execStr = environmentExecPrefix(loadEnvironment(appImagePath)) + KShell::quoteArg(appImagePath);
-    if (!info.execArgs.isEmpty())
-        execStr += QLatin1Char(' ') + info.execArgs;
-
+    // When the app already wrote this file (same desktop id), its other keys (MimeType,
+    // StartupWMClass, translations, Keywords) are kept.
     KDesktopFile df(desktopPath);
     KConfigGroup grp = df.desktopGroup();
     grp.writeEntry(QStringLiteral("Type"),       QStringLiteral("Application"));
@@ -132,13 +217,17 @@ bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
     grp.writeEntry(QStringLiteral("Terminal"),   false);
     grp.writeEntry(QStringLiteral("Categories"),
                    info.categories.isEmpty() ? QStringLiteral("Utility;") : info.categories);
-    grp.writeEntry(QStringLiteral("Comment"),
-                   i18n("Managed by AppImage Manager"));
+    if (!grp.hasKey("Comment"))
+        grp.writeEntry(QStringLiteral("Comment"), i18n("Managed by AppImage Manager"));
+    if (grp.hasKey("TryExec"))
+        grp.writeEntry(QStringLiteral("TryExec"), appImagePath);
     df.sync();
     if (!QFile::exists(desktopPath)) {
         qCWarning(AIM_LOG) << "createDesktopLink: KDesktopFile::sync did not produce" << desktopPath;
         return false;
     }
+    invalidateEntryIndex();
+    removeDuplicateDesktopLinks(appImagePath, info); // e.g. our pre-2.1.1 appimage_* file
 
     rebuildSycoca();
     // kbuildsycoca6 covers Plasma's service catalog; also update the XDG
@@ -153,25 +242,34 @@ bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
     return true;
 }
 
-bool removeDesktopLink(const QString & /*appImagePath*/, const AppImageInfo &info)
+bool removeDesktopLink(const QString &appImagePath, const AppImageInfo &info)
 {
-    const QString desktopPath = desktopFilePath(info);
+    // Every visible entry that starts the AppImage, so it really leaves the menu. Our own
+    // files are deleted; entries other software wrote go to the Trash.
+    QStringList entries = entriesLaunching(appImagePath);
+    for (const QString &own : { desktopFilePath(info), legacyDesktopFilePath(info) }) {
+        if (QFile::exists(own) && !entries.contains(own))
+            entries.append(own);
+    }
     const QString iconPath = iconFilePath(info);
     bool ok = true;
 
-    if (QFile::exists(desktopPath) && !QFile::remove(desktopPath)) {
-        qCWarning(AIM_LOG) << "removeDesktopLink: cannot remove" << desktopPath;
-        ok = false;
+    for (const QString &entry : std::as_const(entries)) {
+        const bool ours = QFileInfo(entry).fileName().startsWith(QLatin1String("appimage_"))
+                          || entry == desktopFilePath(info);
+        if (!(ours ? QFile::remove(entry) : QFile::moveToTrash(entry))) {
+            qCWarning(AIM_LOG) << "removeDesktopLink: cannot remove" << entry;
+            ok = false;
+        }
     }
     if (QFile::exists(iconPath) && !QFile::remove(iconPath)) {
         qCWarning(AIM_LOG) << "removeDesktopLink: cannot remove" << iconPath;
         ok = false;
     }
+    invalidateEntryIndex();
 
     if (ok) {
-        rebuildSycoca();
-        QProcess::startDetached(QStringLiteral("update-desktop-database"),
-            { QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation) });
+        refreshMenuCaches();
         QProcess::startDetached(QStringLiteral("update-icon-caches"),
             { QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
               + QStringLiteral("/icons/hicolor") });
@@ -184,9 +282,11 @@ void rebuildSycoca()
     QProcess::startDetached(QStringLiteral("kbuildsycoca6"), {});
 }
 
-bool isDesktopLinkEnabled(const QString & /*appImagePath*/, const AppImageInfo &info)
+bool isDesktopLinkEnabled(const QString &appImagePath, const AppImageInfo &info)
 {
-    return QFile::exists(desktopFilePath(info));
+    // Any visible entry that starts this AppImage counts, whoever wrote it.
+    return QFile::exists(desktopFilePath(info)) || QFile::exists(legacyDesktopFilePath(info))
+        || !entriesLaunching(appImagePath).isEmpty();
 }
 
 QList<CorpseEntry> findCorpses(const AppImageInfo &info)
@@ -252,10 +352,87 @@ KJob *removeItems(const QUrl &appImageUrl,
     return KIO::trash(allUrls);
 }
 
+// Our menu entry before 2.1.1, and still the fallback name: appimage_<slug>_<hash>.desktop.
+static QString legacyDesktopFilePath(const AppImageInfo &info)
+{
+    return applicationsDir() + QStringLiteral("/appimage_") + fileKey(info) + QStringLiteral(".desktop");
+}
+
+// The app's own desktop id (its bundled .desktop name, e.g. ai.storyteller.figcraft) when it
+// is reverse-DNS. Using it means an app that also registers itself writes the same file
+// instead of a second entry, and the taskbar matches the app's windows to the entry. Not
+// used when an installed system package already has that id: ours would hide it.
+static QString ownDesktopId(const AppImageInfo &info)
+{
+    static const QRegularExpression reverseDns(QStringLiteral("^[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)+$"));
+    if (!reverseDns.match(info.appId).hasMatch())
+        return {};
+    const QString file = info.appId + QStringLiteral(".desktop");
+    for (const QString &found : QStandardPaths::locateAll(QStandardPaths::ApplicationsLocation, file)) {
+        if (QFileInfo(found).absolutePath() != QFileInfo(applicationsDir()).absoluteFilePath())
+            return {};
+    }
+    return info.appId;
+}
+
 QString desktopFilePath(const AppImageInfo &info)
 {
-    const QString appsDir = QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
-    return appsDir + QStringLiteral("/appimage_") + fileKey(info) + QStringLiteral(".desktop");
+    const QString id = ownDesktopId(info);
+    return id.isEmpty() ? legacyDesktopFilePath(info)
+                        : applicationsDir() + QLatin1Char('/') + id + QStringLiteral(".desktop");
+}
+
+bool removeDuplicateDesktopLinks(const QString &appImagePath, const AppImageInfo &info)
+{
+    // Only our own appimage_* files are ever removed. If an entry someone else wrote (the app
+    // itself, a vendor launcher) starts the AppImage, ours go; otherwise one of ours stays.
+    const auto isOurs = [](const QString &entry) {
+        return QFileInfo(entry).fileName().startsWith(QLatin1String("appimage_"));
+    };
+    const QStringList launchers = entriesLaunching(appImagePath);
+    const bool foreignExists = std::any_of(launchers.cbegin(), launchers.cend(),
+                                           [&isOurs](const QString &e) { return !isOurs(e); });
+    QStringList ours;
+    for (const QString &entry : launchers) {
+        if (isOurs(entry))
+            ours.append(entry);
+    }
+    const QString legacy = legacyDesktopFilePath(info);
+    if (QFile::exists(legacy) && !ours.contains(legacy))
+        ours.append(legacy); // starts an old path (moved folder), still ours for this AppImage
+
+    QStringList toRemove;
+    if (foreignExists) {
+        toRemove = ours;
+    } else if (ours.size() > 1) {
+        const QString keep = ours.contains(desktopFilePath(info)) ? desktopFilePath(info) : ours.first();
+        for (const QString &entry : std::as_const(ours)) {
+            if (entry != keep)
+                toRemove.append(entry);
+        }
+    }
+
+    bool removed = false;
+    for (const QString &entry : std::as_const(toRemove)) {
+        if (QFile::remove(entry)) {
+            qCInfo(AIM_LOG) << "Removed duplicate app menu entry" << entry;
+            removed = true;
+        }
+    }
+    if (!removed)
+        return false;
+
+    invalidateEntryIndex();
+    // The icon is ours too; drop it unless a remaining entry still uses it.
+    const QString iconName = QStringLiteral("appimage_") + fileKey(info);
+    const QStringList remaining = entriesLaunching(appImagePath);
+    const bool iconUsed = std::any_of(remaining.cbegin(), remaining.cend(), [&iconName](const QString &e) {
+        return KDesktopFile(e).desktopGroup().readEntry("Icon", QString()) == iconName;
+    });
+    if (!iconUsed)
+        QFile::remove(iconFilePath(info));
+    refreshMenuCaches();
+    return true;
 }
 
 QString iconFilePath(const AppImageInfo &info)
