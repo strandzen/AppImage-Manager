@@ -14,11 +14,7 @@ This is version 2.1.0. I mostly test it on my own machine on Arch, so other dist
 > [!NOTE]
 > This project built with heavy AI assistance. It is an independent project and is not affiliated with or endorsed by KDE or KDE e.V.
 
-## Screenshots
-
-![Installed](assets/installed.png)
-![Discover](assets/discover.png)
-![Drag to install](assets/drag-to-install.png)
+## Screenshots - Coming Soon
 
 ## Features
 
