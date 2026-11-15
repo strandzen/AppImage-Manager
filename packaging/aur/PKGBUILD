@@ -1,6 +1,6 @@
 # Maintainer: strandzen <strandzen@gmail.com>
 pkgname=appimage-manager-plasma
-pkgver=2.0.1
+pkgver=2.1.0
 pkgrel=1
 pkgdesc="A lightweight KDE Plasma utility for installing, managing, and removing AppImage files"
 arch=('x86_64' 'aarch64')
@@ -37,7 +37,7 @@ optdepends=(
 provides=('appimagemanager')
 conflicts=('appimage-manager-plasma-git')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/strandzen/AppImage-Manager/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('b31f19b46b6bcc86f211c7e6f786c967dcc39706f169714a78eabf3ae015d956')
+sha256sums=('dcbdf5c97762b5e03b9c4ad7a3cfb615039460101ba3b3c59097248e3af7f8c0')
 
 build() {
     cmake \
