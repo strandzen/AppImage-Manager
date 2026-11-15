@@ -40,3 +40,4 @@ packaging/pkg/
 # Local only: reference checkouts and AI plan backups
 comp/
 markdown/
+Todo.md
