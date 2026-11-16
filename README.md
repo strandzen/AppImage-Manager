@@ -19,12 +19,15 @@ This is version 2.1.0. I mostly test it on my own machine on Arch, so other dist
 ## Features
 
 - Install an AppImage by dragging it onto the window, with the + button, or from Dolphin's right-click menu. AppImages in Downloads are moved, others (from a USB stick, say) are copied.
+- Installing an app you already have? The install window tells you which version is installed and whether yours is newer or older, then lets you replace it (its update source, environment variables and app menu entry carry over), keep both, or cancel.
 - Add an app to your app menu, or take it out again, with one click.
-- All your AppImages in one list, with their icon, version, size, categories and description. Search, sort by name, size, category or date added, and see them grouped when sorted by category or date.
+- All your AppImages in one list, each with its update state: up to date, a new version, no update source, or a failed check (and why). Apps with an update come first. Search, sort by name, size, category, date added or status.
+- An overview while no app is selected: how many apps are up to date, have updates or no update source, and when they were last checked. Click a line to see just those apps.
 - Check all AppImages for updates at once, then update one or all of them. Updates use zsync when `zsync2` is installed, so only the changed parts are downloaded.
 - Set where an AppImage is released when it doesn't say so itself: paste a repository, a zsync link or a download link and the kind is detected. Pre-releases are optional, the file for your CPU is picked for you, and a download that turns out to be a web page is refused.
 - Environment variables per app, for example `WEBKIT_DISABLE_DMABUF_RENDERER=1` for an app that shows a blank window. They apply when you start the app from AppImage Manager and from the app menu.
-- Background update checks with a tray icon and notifications, daily, weekly, monthly or every few days.
+- Background update checks, daily, weekly, monthly or every few days. They pick up where they left off after a restart or suspend, wait while you are offline, and notify you once per new version.
+- A system tray entry that shows how many updates are waiting. Click it for an overview of your AppImages and their update state, with Check Now and Update All; right-click for the menu. On Plasma it is a tray widget that opens like any other tray popup.
 - A notification when an AppImage lands in your Downloads folder, with a button to manage it.
 - Discover: browse and install apps from AppImage Hub and the AM database, or your own catalogs. It's off until you turn it on, so nothing is downloaded from catalogs unless you want it.
 - Remove an app and choose which of its leftover settings and cache folders go with it. Everything goes to the Trash, nothing is deleted outright.
@@ -35,6 +38,7 @@ This is version 2.1.0. I mostly test it on my own machine on Arch, so other dist
 
 - KDE Plasma 6 (Qt 6.9 or newer and KDE Frameworks 6).
 - `libappimage`, to read AppImages without mounting them.
+- Recommended: `layer-shell-qt` (part of Plasma), so the tray window opens next to the tray on Wayland.
 - Optional: `zsync2` for smaller update downloads, `gpg` for signature checks, and [am](https://github.com/ivan-hc/AM) to install apps from the AM database in Discover.
 
 ## Installation
@@ -76,7 +80,7 @@ Arch:
 sudo pacman -S base-devel cmake extra-cmake-modules ninja \
     qt6-base qt6-declarative qt6-svg \
     kcoreaddons ki18n kconfig kio kiconthemes knotifications kcrash kdbusaddons \
-    kirigami kirigami-addons kstatusnotifieritem gnupg
+    kirigami kirigami-addons kstatusnotifieritem layer-shell-qt gnupg
 paru -S libappimage        # optional: zsync2 am-git
 ```
 
@@ -87,7 +91,7 @@ sudo dnf install gcc-c++ cmake extra-cmake-modules ninja-build \
     qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtsvg-devel \
     kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kconfig-devel kf6-kio-devel kf6-kiconthemes-devel \
     kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kstatusnotifieritem-devel \
-    kf6-kirigami-devel kf6-kirigami-addons-devel libappimage-devel gnupg2
+    kf6-kirigami-devel kf6-kirigami-addons-devel layer-shell-qt-devel libappimage-devel gnupg2
 ```
 
 Debian and Ubuntu (24.04 or newer):
@@ -98,7 +102,7 @@ sudo apt install build-essential cmake extra-cmake-modules ninja-build \
     libkf6coreaddons-dev libkf6i18n-dev libkf6config-dev libkf6kio-dev libkf6iconthemes-dev \
     libkf6notifications-dev libkf6crash-dev libkf6dbusaddons-dev libkf6statusnotifieritem-dev \
     qml6-module-org-kde-kirigami qml6-module-org-kde-kirigamiaddons \
-    libappimage-dev gnupg2
+    liblayershellqtinterface-dev libappimage-dev gnupg2
 ```
 
 openSUSE Tumbleweed:
@@ -108,7 +112,7 @@ sudo zypper in gcc-c++ cmake extra-cmake-modules ninja \
     qt6-base-devel qt6-declarative-devel qt6-svg-devel \
     kf6-kcoreaddons-devel kf6-ki18n-devel kf6-kconfig-devel kf6-kio-devel kf6-kiconthemes-devel \
     kf6-knotifications-devel kf6-kcrash-devel kf6-kdbusaddons-devel kf6-kstatusnotifieritem-devel \
-    kf6-kirigami-devel kf6-kirigami-addons-devel libappimage-devel gpg2
+    kf6-kirigami-devel kf6-kirigami-addons-devel layer-shell-qt6-devel libappimage-devel gpg2
 ```
 
 </details>
@@ -125,8 +129,9 @@ kquitapp6 dolphin && dolphin &
 
 The first time you open AppImage Manager, one page asks for your Applications folder, whether to notify you about downloads, and whether to turn on Discover. You can change all of it later in Settings.
 
-- **Install:** drag an AppImage onto the window or the drop box under the list, click +, or right-click the file in Dolphin and choose **Manage AppImage**.
-- **Update:** open the menu (☰) and choose **Check for Updates**. Apps with an update get a dot and an **Update to …** button; with several, **Update All** appears in the toolbar.
+- **Install:** drag an AppImage onto the window or the drop box under the list, click +, or right-click the file in Dolphin and choose **Manage AppImage**. If the app is already installed, the window says which version you have and asks whether to replace it or keep both.
+- **Update:** click ⟳ in the toolbar (or ☰ → **Check for Updates**). A note at the bottom counts the AppImages as they are checked, then shows the result. Apps with an update move to the top of the list with their new version in green, and get an **Update to …** button; with several, **Update All** appears in the toolbar.
+- **Tray:** click the AppImage Manager entry in the system tray for an overview of your AppImages and their update state; click an app to open it here. Middle-click checks for updates; right-click shows the menu.
 - **More options:** select an app and click ⋯ for **Show in App Menu**, **Update Source…**, **Environment Variables…** and **Remove…**.
 
 ### Keys
@@ -147,19 +152,20 @@ The first time you open AppImage Manager, one page asks for your Applications fo
 |---|---|
 | `appimagemanager` | Opens the main window |
 | `appimagemanager /path/to/app.AppImage` | Opens the install window for that file |
-| `appimagemanager --daemon` | Runs the background update checker (starts at login by itself) |
+| `appimagemanager --settings` | Opens the main window on Settings |
+| `appimagemanager --select /path/to/app.AppImage` | Opens the main window with that AppImage selected |
+| `appimagemanager --daemon` | Runs the background update checker and tray icon (starts at login by itself) |
 
 ## Settings
 
-Open them from the menu (☰), or with Ctrl+,.
+Open them from the menu (☰), or with Ctrl+,. The pages are listed on the left:
 
-- **General:** the Applications folder, the drop box under the list, and notifications
+- **General:** the Applications folder, the drop box under the list, the overview, and notifications
 - **Updates:** how often to check in the background
 - **Security:** signature checks and the reminder that AppImages aren't verified
-- **Discover:** turn it on or off
-- **Catalogs:** which app catalogs Discover searches, in which order, and your own
+- **Discover:** turn it on or off, and which app catalogs it searches, in which order, including your own
 
-**Restore Defaults** is at the bottom.
+**Restore Defaults** is under the list of pages.
 
 ## Troubleshooting
 

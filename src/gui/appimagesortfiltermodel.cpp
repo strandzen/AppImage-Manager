@@ -15,9 +15,10 @@ void AppImageSortFilterModel::setFilterText(const QString &text)
 {
     if (m_filterText == text)
         return;
+    beginFilterChange();
     m_filterText = text;
+    endFilterChange(Direction::Rows);
     Q_EMIT filterTextChanged();
-    invalidateFilter();
 }
 
 void AppImageSortFilterModel::setSortField(int field)
@@ -29,17 +30,27 @@ void AppImageSortFilterModel::setSortField(int field)
     invalidate();
 }
 
-void AppImageSortFilterModel::setSortOrder(Qt::SortOrder order)
+void AppImageSortFilterModel::setStatusFilter(int state)
 {
-    if (m_sortOrder == order)
+    if (m_statusFilter == state)
         return;
-    m_sortOrder = order;
-    Q_EMIT sortOrderChanged();
-    sort(0, m_sortOrder);
+    beginFilterChange();
+    m_statusFilter = state;
+    endFilterChange(Direction::Rows);
+    Q_EMIT statusFilterChanged();
 }
 
 bool AppImageSortFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
+    if (m_statusFilter >= 0) {
+        auto *list = qobject_cast<AppImageListModel *>(sourceModel());
+        const bool match = list && (m_statusFilter == int(UpdateState::UpdateAvailable)
+                                        ? list->hasPendingUpdate(sourceRow)
+                                        : list->updateStateForRow(sourceRow) == m_statusFilter
+                                              && !list->hasPendingUpdate(sourceRow));
+        if (!match)
+            return false;
+    }
     if (m_filterText.isEmpty())
         return true;
     const QAbstractItemModel *src = sourceModel();
@@ -59,8 +70,19 @@ bool AppImageSortFilterModel::lessThan(const QModelIndex &left, const QModelInde
     const int lrow = left.row();
     const int rrow = right.row();
 
+    // Updates first under every sort (their own "Updates available" section); by status the
+    // whole order is the update state.
+    const int lrank = src->statusRank(lrow);
+    const int rrank = src->statusRank(rrow);
+    if (m_sortField == SortByStatus) {
+        if (lrank != rrank)
+            return lrank < rrank;
+    } else if ((lrank == 0) != (rrank == 0)) {
+        return lrank == 0;
+    }
+
     // Skip the role dispatch in data() — pull primary keys directly off the Item.
-    if (m_sortField != SortByName) {
+    if (m_sortField != SortByName && m_sortField != SortByStatus) {
         const QVariant a = src->sortKey(lrow, m_sortField);
         const QVariant b = src->sortKey(rrow, m_sortField);
         switch (m_sortField) {
@@ -88,6 +110,16 @@ bool AppImageSortFilterModel::lessThan(const QModelIndex &left, const QModelInde
 
     return src->displayNameForRow(lrow)
               .compare(src->displayNameForRow(rrow), Qt::CaseInsensitive) < 0;
+}
+
+int AppImageSortFilterModel::rowForPath(const QString &path) const
+{
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    const int sourceRow = src ? src->rowForPath(path) : -1;
+    if (sourceRow < 0)
+        return -1;
+    const QModelIndex proxy = mapFromSource(src->index(sourceRow, 0));
+    return proxy.isValid() ? proxy.row() : -1;
 }
 
 int AppImageSortFilterModel::sourceRowFor(int proxyRow) const

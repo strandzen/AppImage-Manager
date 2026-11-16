@@ -15,27 +15,31 @@ class APPIMAGEMANAGER_EXPORT AppImageSortFilterModel : public QSortFilterProxyMo
 
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
     Q_PROPERTY(int sortField READ sortField WRITE setSortField NOTIFY sortFieldChanged)
-    Q_PROPERTY(Qt::SortOrder sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
+    // Shows only rows in this UpdateState (checkresults.h); -1 shows all. UpdateAvailable also
+    // shows rows being updated. Set from the overview.
+    Q_PROPERTY(int statusFilter READ statusFilter WRITE setStatusFilter NOTIFY statusFilterChanged)
 
 public:
-    enum SortField { SortByName = 0, SortBySize = 1, SortByCategory = 5, SortByDate = 9 };
+    enum SortField { SortByName = 0, SortBySize = 1, SortByCategory = 5, SortByDate = 9, SortByStatus = 10 };
     Q_ENUM(SortField)
 
     explicit AppImageSortFilterModel(QObject *parent = nullptr);
 
     QString filterText() const { return m_filterText; }
     int sortField() const { return m_sortField; }
-    Qt::SortOrder sortOrder() const { return m_sortOrder; }
+    int statusFilter() const { return m_statusFilter; }
+    void setStatusFilter(int state);
 
     void setFilterText(const QString &text);
     void setSortField(int field);
-    void setSortOrder(Qt::SortOrder order);
 
     Q_INVOKABLE void toggleDesktopLink(int proxyRow, bool enable);
     Q_INVOKABLE void requestRemoveAt(int proxyRow);
     Q_INVOKABLE void requestLaunch(int proxyRow);
     Q_INVOKABLE void downloadUpdate(int proxyRow);
     Q_INVOKABLE QVariantMap itemData(int proxyRow) const;
+    // Proxy row of the AppImage at `path`, or -1 (not loaded yet, or filtered out).
+    Q_INVOKABLE int rowForPath(const QString &path) const;
     Q_INVOKABLE QVariantMap updateSource(int proxyRow) const;
     Q_INVOKABLE bool setUpdateSource(int proxyRow, const QString &input, const QString &type, bool prerelease);
     Q_INVOKABLE QString environment(int proxyRow) const;
@@ -44,7 +48,7 @@ public:
 Q_SIGNALS:
     void filterTextChanged();
     void sortFieldChanged();
-    void sortOrderChanged();
+    void statusFilterChanged();
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
@@ -55,5 +59,5 @@ private:
 
     QString m_filterText;
     int m_sortField = SortByName;
-    Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
+    int m_statusFilter = -1;
 };

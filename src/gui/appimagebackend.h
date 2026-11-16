@@ -35,6 +35,11 @@ class AppImageBackend : public QObject
     Q_PROPERTY(CorpseModel* corpseModel READ corpseModel     CONSTANT)
     Q_PROPERTY(bool isFindingCorpses  READ isFindingCorpses  NOTIFY busyChanged)
     Q_PROPERTY(bool isRemovingItems   READ isRemovingItems   NOTIFY busyChanged)
+    // Another copy of this app already in Applications (see ExistingState).
+    Q_PROPERTY(int     existingState    READ existingState    NOTIFY existingChanged)
+    Q_PROPERTY(QString existingVersion  READ existingVersion  NOTIFY existingChanged)
+    // The installed copy has this file's name: installing next to it is not possible.
+    Q_PROPERTY(bool    existingSameFile READ existingSameFile NOTIFY existingChanged)
 
 public:
     explicit AppImageBackend(const QString &appImagePath,
@@ -56,6 +61,19 @@ public:
     CorpseModel *corpseModel()  const { return m_corpseModel; }
     bool     isFindingCorpses() const { return m_isFindingCorpses; }
     bool     isRemovingItems()  const { return m_isRemovingItems; }
+    int      existingState()    const { return m_existingState; }
+    QString  existingVersion()  const { return m_existingInfo.version; }
+    bool     existingSameFile() const { return m_existingSameFile; }
+
+    // This file compared with the copy already installed.
+    enum ExistingState {
+        NotInstalled   = 0,
+        ThisNewer      = 1,
+        SameVersion    = 2,
+        ThisOlder      = 3,
+        VersionUnknown = 4,  // a version is missing or the two can't be compared
+    };
+    Q_ENUM(ExistingState)
 
     // Mirror of SignatureState enum for QML access.
     // Values must stay in sync with appimageinfo.h::SignatureState.
@@ -74,6 +92,7 @@ Q_SIGNALS:
     void installedChanged();
     void desktopLinkChanged();
     void busyChanged();
+    void existingChanged();
     void uninstallFinished();
     void errorOccurred(const QString &message);
     // Emitted after beginInstall() finishes the async signature check.
@@ -82,7 +101,9 @@ Q_SIGNALS:
     void signatureCheckReady(int state);
 
 public Q_SLOTS:
-    void beginInstall();  // starts async sig-check, then emits signatureCheckReady
+    // Starts the async sig-check, then emits signatureCheckReady. replace: the installed
+    // copy (existingState) goes to the Trash and its settings move to this file.
+    void beginInstall(bool replace = false);
     void doInstall();     // performs the actual KIO install job (call after signatureCheckReady)
     void launchAppImage();
     void toggleDesktopLink(bool enable);
@@ -98,6 +119,9 @@ private Q_SLOTS:
 
 private:
     void startMetadataLoad();
+    void findInstalledCopy();
+    void startInstallJob();
+    bool finishReplace();
     void onRemoveJobFinished(KJob *job, const QList<QUrl> &trashedUrls);
 
     QString m_appImagePath;
@@ -112,4 +136,11 @@ private:
     bool m_hasDesktopLink   = false;
     bool m_isFindingCorpses = false;
     bool m_isRemovingItems  = false;
+
+    QString      m_existingPath;
+    AppImageInfo m_existingInfo;
+    int          m_existingState    = NotInstalled;
+    bool         m_existingSameFile = false;
+    bool         m_replace          = false;
+    bool         m_oldHadLink       = false;
 };

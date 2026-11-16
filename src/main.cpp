@@ -38,15 +38,24 @@ int main(int argc, char *argv[])
 
     KCrash::initialize();
 
+    // Also used to read the arguments a second dashboard invocation forwards (activateRequested).
+    const auto setupParser = [](QCommandLineParser &p) {
+        p.addPositionalArgument(
+            QStringLiteral("file"),
+            i18n("AppImage file to manage. If omitted, opens the dashboard."),
+            QStringLiteral("[file]"));
+        p.addOption(QCommandLineOption(QStringLiteral("daemon"),    i18n("Run in background as an update daemon")));
+        p.addOption(QCommandLineOption(QStringLiteral("dashboard"), i18n("Open the dashboard window")));
+        p.addOption(QCommandLineOption(QStringLiteral("settings"),  i18n("Open the dashboard on its Settings page")));
+        p.addOption(QCommandLineOption(QStringLiteral("select"),
+                                       i18n("Open the dashboard with this installed AppImage selected"),
+                                       QStringLiteral("path")));
+    };
+
     QCommandLineParser parser;
     parser.setApplicationDescription(about.shortDescription());
     about.setupCommandLine(&parser);
-    parser.addPositionalArgument(
-        QStringLiteral("file"),
-        i18n("AppImage file to manage. If omitted, opens the dashboard."),
-        QStringLiteral("[file]"));
-    parser.addOption(QCommandLineOption(QStringLiteral("daemon"),    i18n("Run in background as an update daemon")));
-    parser.addOption(QCommandLineOption(QStringLiteral("dashboard"), i18n("Open the dashboard window")));
+    setupParser(parser);
     parser.process(app);
     about.processCommandLine(&parser);
 
@@ -67,8 +76,13 @@ int main(int argc, char *argv[])
 
     if (isDashboard) {
         QObject::connect(&service, &KDBusService::activateRequested,
-                         &app, [](const QStringList &, const QString &) {
-            DashboardWindow::open();  // raises the existing instance
+                         &app, [setupParser](const QStringList &arguments, const QString &) {
+            QCommandLineParser forwarded;
+            setupParser(forwarded);
+            forwarded.parse(arguments);
+            // Raises the existing instance, on the requested page.
+            DashboardWindow::open(forwarded.isSet(QStringLiteral("settings")) ? QStringLiteral("settings") : QString(),
+                                  forwarded.value(QStringLiteral("select")));
         });
     }
 
@@ -81,7 +95,8 @@ int main(int argc, char *argv[])
     if (isFileMode)
         AppImageWindow::open(args.first());
     else
-        DashboardWindow::open();
+        DashboardWindow::open(parser.isSet(QStringLiteral("settings")) ? QStringLiteral("settings") : QString(),
+                              parser.value(QStringLiteral("select")));
 
     return app.exec();
 }

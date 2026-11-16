@@ -25,6 +25,7 @@ depends=(
     'kcrash'
     'kdbusaddons'
     'kstatusnotifieritem'
+    'layer-shell-qt'
     'libappimage'
 )
 makedepends=(

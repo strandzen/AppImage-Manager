@@ -4,8 +4,8 @@
 
 #include "appimagemanager_qml_export.h"
 
+#include <QJSEngine>
 #include <QObject>
-#include <QWindow>  // Qt 6.11 moc needs the full type for Q_INVOKABLE pointer args
 #include <QtQml/qqmlregistration.h>
 
 class QQmlEngine;
@@ -28,6 +28,7 @@ class APPIMAGEMANAGER_EXPORT AppSettings : public QObject
     Q_PROPERTY(bool    watchDownloads    READ watchDownloads    WRITE setWatchDownloads    NOTIFY watchDownloadsChanged)
     Q_PROPERTY(bool    verifySignatures  READ verifySignatures  WRITE setVerifySignatures  NOTIFY verifySignaturesChanged)
     Q_PROPERTY(bool    showInstallBox    READ showInstallBox    WRITE setShowInstallBox    NOTIFY showInstallBoxChanged)
+    Q_PROPERTY(bool    showOverview      READ showOverview      WRITE setShowOverview      NOTIFY showOverviewChanged)
     Q_PROPERTY(bool    discoverEnabled   READ discoverEnabled   WRITE setDiscoverEnabled   NOTIFY discoverEnabledChanged)
     Q_PROPERTY(QString qtVersion READ qtVersion CONSTANT)
     Q_PROPERTY(QString kdeFrameworksVersion READ kdeFrameworksVersion CONSTANT)
@@ -36,7 +37,13 @@ class APPIMAGEMANAGER_EXPORT AppSettings : public QObject
 
 public:
     // QML singleton factory — always returns the same C++ instance across all engines.
-    static AppSettings *create(QQmlEngine *, QJSEngine *) { return instance(); }
+    // C++ ownership: QML otherwise deletes a factory's object with its engine, and this one is
+    // a function-local static (closing the dashboard aborted with "free(): invalid size").
+    static AppSettings *create(QQmlEngine *, QJSEngine *)
+    {
+        QJSEngine::setObjectOwnership(instance(), QJSEngine::CppOwnership);
+        return instance();
+    }
     static AppSettings *instance();
 
     QString qtVersion() const;
@@ -73,6 +80,9 @@ public:
     bool showInstallBox() const;
     void setShowInstallBox(bool enabled);
 
+    bool showOverview() const;
+    void setShowOverview(bool enabled);
+
     bool discoverEnabled() const;
     void setDiscoverEnabled(bool enabled);
 
@@ -88,6 +98,7 @@ Q_SIGNALS:
     void customUpdateDaysChanged();
     void watchDownloadsChanged();
     void showInstallBoxChanged();
+    void showOverviewChanged();
     void verifySignaturesChanged();
     void discoverEnabledChanged();
     void applicationsPathError(const QString &message);

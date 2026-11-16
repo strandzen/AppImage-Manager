@@ -157,7 +157,10 @@ KIO::CopyJob *installAppImage(const QUrl &source, const QString &applicationsDir
 
 bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
 {
+    // A literal % must be %% in Exec= (else it starts a field code like %U); the app's own
+    // execArgs keep theirs.
     QString execStr = environmentExecPrefix(loadEnvironment(appImagePath)) + KShell::quoteArg(appImagePath);
+    execStr.replace(QLatin1Char('%'), QStringLiteral("%%"));
     if (!info.execArgs.isEmpty())
         execStr += QLatin1Char(' ') + info.execArgs;
 

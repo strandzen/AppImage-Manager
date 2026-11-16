@@ -17,6 +17,7 @@
 #include <KNotification>
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
+#include <QDBusMessage>
 #include <QDir>
 #include <QGuiApplication>
 #include <algorithm>
@@ -25,7 +26,6 @@
 #include <QIcon>
 #include <QNetworkAccessManager>
 #include <QProcess>
-#include <QCryptographicHash>
 #include <QThread>
 #include <QtConcurrent/QtConcurrent>
 
@@ -89,22 +89,57 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
     connect(this, &QAbstractItemModel::modelReset,  this, &AppImageListModel::recountUpdates);
 
     // ── Update manager signals ────────────────────────────────────────────────
+    // Check results are shared with the background daemon through the state config; it
+    // announces new ones with UpdatesChanged.
+    m_results = loadCheckResults();
+    m_lastCheck = loadLastCheck();
+    QDBusConnection::sessionBus().connect(QStringLiteral("io.github.appimagemanager.Daemon"),
+                                          QStringLiteral("/Daemon"),
+                                          QStringLiteral("io.github.appimagemanager.Daemon1"),
+                                          QStringLiteral("UpdatesChanged"),
+                                          this, SLOT(reloadStoredResults()));
+
     connect(m_updateManager, &AppImageUpdateManager::checkingChanged,
             this, &AppImageListModel::checkingUpdatesChanged);
 
-    connect(m_updateManager, &AppImageUpdateManager::checkFinished,
-            this, &AppImageListModel::updateCheckFinished);
+    connect(m_updateManager, &AppImageUpdateManager::checkProgress, this, [this](int done, int total) {
+        m_checkDone = done;
+        m_checkTotal = total;
+        Q_EMIT checkProgressChanged();
+    });
+    connect(m_updateManager, &AppImageUpdateManager::checkFinished, this, [this](int found, int failures) {
+        // Share the results (the tray shows them too). A check that reached nothing does not
+        // count as a check.
+        if (found >= 0) {
+            storeResults();
+            if (!(m_checkTotal > 0 && failures >= m_checkTotal)) {
+                m_lastCheck = QDateTime::currentDateTimeUtc();
+                saveLastCheck(m_lastCheck);
+            }
+            notifyDaemon();
+            Q_EMIT stateSummaryChanged();
+        }
+        Q_EMIT updateCheckFinished(found, failures);
+    });
 
     connect(m_updateManager, &AppImageUpdateManager::updateFound,
             this, [this](const QString &filePath, const QString &version, const QString &url) {
                 const int row = findRowByPath(filePath);
                 if (row < 0) return;
                 Item &item = m_items[row];
-                item.updateAvailable = true;
                 item.updateVersion   = version;
                 item.updateUrl       = url;
-                Q_EMIT dataChanged(index(row, 0), index(row, 0),
-                                   {UpdateAvailableRole, UpdateVersionRole});
+                // itemChecked follows and sets the state.
+            });
+    connect(m_updateManager, &AppImageUpdateManager::itemChecked, this,
+            [this](const QString &filePath, AppImageUpdateManager::CheckResult result, const QString &reason) {
+                const int row = findRowByPath(filePath);
+                if (row < 0 || m_items.at(row).isUpdating) return;
+                setRowState(row, result == AppImageUpdateManager::CheckResult::UpdateAvailable
+                                     ? int(UpdateState::UpdateAvailable)
+                                 : result == AppImageUpdateManager::CheckResult::UpToDate
+                                     ? int(UpdateState::UpToDate) : int(UpdateState::Failed),
+                            reason);
             });
 
     connect(m_updateManager, &AppImageUpdateManager::downloadProgress,
@@ -126,12 +161,21 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
                     // AppImages without a usable version string stop showing the update.
                     if (isReleaseUpdateInfo(effectiveUpdateInfo(item.info.updateInfo, loadUpdateSource(filePath))))
                         saveInstalledTag(filePath, item.updateVersion);
-                    item.updateAvailable = false;
+                    // Up to date at the version just installed (matched when the file is re-read).
+                    const QString installed = normalizeVersion(item.updateVersion);
+                    item.updateState     = int(UpdateState::UpToDate);
+                    item.updateReason.clear();
                     item.updateProgress  = 0;
+                    const CheckResult result{ UpdateState::UpToDate, {}, {}, installed, {} };
+                    m_results.insert(item.info.originalName, result);
+                    saveCheckResult(item.info.originalName, result);
+                    notifyDaemon();
+                    ++m_pendingLoads; // loadMetadataForRow decrements it
                     loadMetadataForRow(row);
                 }
                 Q_EMIT dataChanged(index(row, 0), index(row, 0),
-                                   {IsUpdatingRole, UpdateAvailableRole, UpdateProgressRole});
+                                   {IsUpdatingRole, UpdateAvailableRole, UpdateStateRole, UpdateProgressRole,
+                                    ListSectionRole});
                 if (!success)
                     sendError(this, i18n("Update Failed"),
                               i18n("%1 could not be updated.", item.cachedDisplayName));
@@ -140,12 +184,190 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
 
 void AppImageListModel::recountUpdates()
 {
-    const int count = std::count_if(m_items.cbegin(), m_items.cend(),
-                                    [](const Item &item) { return item.updateAvailable; });
-    if (count == m_updateCount)
+    int updates = 0, upToDate = 0, failed = 0, notChecked = 0, noSource = 0;
+    qint64 size = 0;
+    for (const Item &item : std::as_const(m_items)) {
+        size += item.info.fileSize;
+        switch (static_cast<UpdateState>(item.updateState)) {
+        case UpdateState::UpdateAvailable: ++updates; break;
+        case UpdateState::UpToDate:        ++upToDate; break;
+        case UpdateState::Failed:          ++failed; break;
+        case UpdateState::NoSource:        ++noSource; break;
+        default:                           ++notChecked; break;
+        }
+    }
+    if (upToDate != m_upToDateCount || failed != m_failedCount || notChecked != m_notCheckedCount
+        || noSource != m_noSourceCount || size != m_totalSize) {
+        m_upToDateCount = upToDate;
+        m_failedCount = failed;
+        m_notCheckedCount = notChecked;
+        m_noSourceCount = noSource;
+        m_totalSize = size;
+        Q_EMIT stateSummaryChanged();
+    }
+    if (updates == m_updateCount)
         return;
-    m_updateCount = count;
+    const bool sectionsChange = (updates == 0) != (m_updateCount == 0);
+    m_updateCount = updates;
     Q_EMIT updateCountChanged();
+    // The other rows get (or lose) their "Installed" heading below "Updates available".
+    if (sectionsChange && !m_items.isEmpty())
+        Q_EMIT dataChanged(index(0, 0), index(m_items.size() - 1, 0), {ListSectionRole});
+}
+
+// static
+bool AppImageListModel::hasUpdate(const Item &item)
+{
+    return item.updateState == int(UpdateState::UpdateAvailable);
+}
+
+QString AppImageListModel::totalSizeText() const
+{
+    return formatBytes(m_totalSize);
+}
+
+QString AppImageListModel::lastCheckTime() const
+{
+    return formatCheckTime(m_lastCheck);
+}
+
+void AppImageListModel::setSectionMode(int mode)
+{
+    if (mode == m_sectionMode)
+        return;
+    m_sectionMode = mode;
+    Q_EMIT sectionModeChanged();
+    if (!m_items.isEmpty())
+        Q_EMIT dataChanged(index(0, 0), index(m_items.size() - 1, 0), {ListSectionRole});
+}
+
+int AppImageListModel::statusRank(int row) const
+{
+    if (row < 0 || row >= m_items.size())
+        return 5;
+    const Item &item = m_items.at(row);
+    if (hasUpdate(item) || item.isUpdating)
+        return 0;
+    switch (static_cast<UpdateState>(item.updateState)) {
+    case UpdateState::Failed:     return 1;
+    case UpdateState::UpToDate:   return 2;
+    case UpdateState::NoSource:   return 4;
+    default:                      return 3;
+    }
+}
+
+bool AppImageListModel::hasPendingUpdate(int row) const
+{
+    return row >= 0 && row < m_items.size() && (hasUpdate(m_items.at(row)) || m_items.at(row).isUpdating);
+}
+
+int AppImageListModel::updateStateForRow(int row) const
+{
+    return row >= 0 && row < m_items.size() ? m_items.at(row).updateState : 0;
+}
+
+// The stored result for this file and version, or what follows from its update source.
+void AppImageListModel::applyStoredResult(Item &item) const
+{
+    if (!item.metadataLoaded || item.isUpdating)
+        return;
+    item.updateReason.clear();
+    if (!isSupportedUpdateInfo(effectiveUpdateInfo(item.info.updateInfo, loadUpdateSource(item.filePath)))) {
+        item.updateState = int(UpdateState::NoSource);
+        return;
+    }
+    const auto it = m_results.constFind(item.info.originalName);
+    if (it != m_results.cend() && it->versionAtCheck == normalizeVersion(item.info.version)) {
+        item.updateState = int(it->state);
+        item.updateVersion = it->newVersion;
+        item.updateUrl = it->url;
+        item.updateReason = it->reason;
+    } else {
+        item.updateState = int(UpdateState::NotChecked);
+    }
+}
+
+void AppImageListModel::setRowState(int row, int state, const QString &reason)
+{
+    Item &item = m_items[row];
+    item.updateState = state;
+    item.updateReason = state == int(UpdateState::Failed) ? reason : QString();
+    Q_EMIT dataChanged(index(row, 0), index(row, 0),
+                       {UpdateStateRole, UpdateReasonRole, UpdateAvailableRole, UpdateVersionRole, ListSectionRole});
+}
+
+void AppImageListModel::storeResults()
+{
+    QHash<QString, CheckResult> results;
+    for (const Item &item : std::as_const(m_items)) {
+        if (!item.metadataLoaded)
+            continue;
+        results.insert(item.info.originalName,
+                       { static_cast<UpdateState>(item.updateState), item.updateVersion, item.updateUrl,
+                         normalizeVersion(item.info.version), item.updateReason });
+    }
+    saveCheckResults(results);
+    m_results = loadCheckResults(); // only the stored states
+}
+
+// Tells the background daemon (if running) to re-read the shared results.
+void AppImageListModel::notifyDaemon()
+{
+    QDBusConnection bus = QDBusConnection::sessionBus();
+    if (!bus.isConnected() || !bus.interface()
+        || !bus.interface()->isServiceRegistered(QStringLiteral("io.github.appimagemanager.Daemon")))
+        return;
+    bus.asyncCall(QDBusMessage::createMethodCall(QStringLiteral("io.github.appimagemanager.Daemon"),
+                                                 QStringLiteral("/Daemon"),
+                                                 QStringLiteral("io.github.appimagemanager.Daemon1"),
+                                                 QStringLiteral("ReloadState")));
+}
+
+void AppImageListModel::reloadStoredResults()
+{
+    m_results = loadCheckResults();
+    m_lastCheck = loadLastCheck();
+    for (Item &item : m_items)
+        applyStoredResult(item);
+    if (!m_items.isEmpty())
+        Q_EMIT dataChanged(index(0, 0), index(m_items.size() - 1, 0),
+                           {UpdateStateRole, UpdateReasonRole, UpdateAvailableRole, UpdateVersionRole, ListSectionRole});
+    Q_EMIT stateSummaryChanged();
+}
+
+// Several AppImages of the same app (same appId): all but the newest version are marked.
+void AppImageListModel::updateOlderCopies()
+{
+    QHash<QString, QList<int>> byApp;
+    for (int row = 0; row < m_items.size(); ++row) {
+        const Item &item = m_items.at(row);
+        if (item.metadataLoaded && !item.info.appId.isEmpty())
+            byApp[item.info.appId].append(row);
+    }
+    QHash<int, QString> olderOf;
+    for (const QList<int> &rows : std::as_const(byApp)) {
+        if (rows.size() < 2)
+            continue;
+        int newest = rows.first();
+        for (int row : rows) {
+            const Item &a = m_items.at(row);
+            const Item &b = m_items.at(newest);
+            if (isNewerVersion(normalizeVersion(a.info.version), normalizeVersion(b.info.version))
+                || (a.info.version == b.info.version && a.addedDate > b.addedDate))
+                newest = row;
+        }
+        for (int row : rows) {
+            if (row != newest)
+                olderOf.insert(row, m_items.at(newest).cachedDisplayName);
+        }
+    }
+    for (int row = 0; row < m_items.size(); ++row) {
+        const QString older = olderOf.value(row);
+        if (m_items.at(row).olderCopyOf != older) {
+            m_items[row].olderCopyOf = older;
+            Q_EMIT dataChanged(index(row, 0), index(row, 0), {OlderCopyOfRole});
+        }
+    }
 }
 
 // ── QAbstractListModel interface ──────────────────────────────────────────────
@@ -175,7 +397,7 @@ QVariant AppImageListModel::data(const QModelIndex &index, int role) const
     case AddedDateRole:       return item.addedDate;
     case DisplayNameRole:     return item.cachedDisplayName;
     case IconSourceRole:      return item.cachedIconSource;
-    case UpdateAvailableRole: return item.updateAvailable;
+    case UpdateAvailableRole: return hasUpdate(item);
     case UpdateVersionRole:   return item.updateVersion;
     case IsUpdatingRole:      return item.isUpdating;
     case UpdateProgressRole:  return item.updateProgress;
@@ -184,8 +406,13 @@ QVariant AppImageListModel::data(const QModelIndex &index, int role) const
     case DescriptionRole:     return item.cachedDescription;
     case DeveloperNameRole:   return item.info.developerName;
     case HomepageRole:        return item.info.homepage;
-    case SectionCategoryRole: return primaryCategory(item);
+    case SectionCategoryRole: return categoryLabel(item);
     case SectionAddedRole:    return addedGroup(item.addedDate);
+    case UpdateStateRole:     return item.updateState;
+    case UpdateReasonRole:    return item.updateReason;
+    case OlderCopyOfRole:     return item.olderCopyOf;
+    case ListSectionRole:     return listSection(item);
+    case CategoryLabelRole:   return categoryLabel(item);
     default: return {};
     }
 }
@@ -215,14 +442,68 @@ QHash<int, QByteArray> AppImageListModel::roleNames() const
         { HomepageRole,        "homepage"        },
         { SectionCategoryRole, "sectionCategory" },
         { SectionAddedRole,    "sectionAdded"    },
+        { UpdateStateRole,     "updateState"     },
+        { UpdateReasonRole,    "updateReason"    },
+        { OlderCopyOfRole,     "olderCopyOf"     },
+        { ListSectionRole,     "listSection"     },
+        { CategoryLabelRole,   "categoryLabel"   },
     };
 }
 
 // static
-QString AppImageListModel::primaryCategory(const Item &item)
+// The first freedesktop main category in plain words ("Graphics", "Internet"); additional and
+// vendor (X-…) categories are skipped unless there is nothing else.
+QString AppImageListModel::categoryLabel(const Item &item)
 {
-    const QString first = item.info.categories.section(QLatin1Char(';'), 0, 0, QString::SectionSkipEmpty);
-    return first.isEmpty() ? i18nc("list section for apps without a category", "Other") : first;
+    static const QList<std::pair<QString, KLocalizedString>> mainCategories = {
+        { QStringLiteral("AudioVideo"),  ki18nc("app category", "Multimedia") },
+        { QStringLiteral("Audio"),       ki18nc("app category", "Audio") },
+        { QStringLiteral("Video"),       ki18nc("app category", "Video") },
+        { QStringLiteral("Development"), ki18nc("app category", "Development") },
+        { QStringLiteral("Education"),   ki18nc("app category", "Education") },
+        { QStringLiteral("Game"),        ki18nc("app category", "Games") },
+        { QStringLiteral("Graphics"),    ki18nc("app category", "Graphics") },
+        { QStringLiteral("Network"),     ki18nc("app category", "Internet") },
+        { QStringLiteral("Office"),      ki18nc("app category", "Office") },
+        { QStringLiteral("Science"),     ki18nc("app category", "Science") },
+        { QStringLiteral("Settings"),    ki18nc("app category", "Settings") },
+        { QStringLiteral("System"),      ki18nc("app category", "System") },
+        { QStringLiteral("Utility"),     ki18nc("app category", "Utilities") },
+    };
+    const QStringList categories = item.info.categories.split(QLatin1Char(';'), Qt::SkipEmptyParts);
+    for (const QString &category : categories) {
+        for (const auto &[name, label] : mainCategories) {
+            if (category == name)
+                return label.toString();
+        }
+    }
+    for (const QString &category : categories) {
+        if (!category.startsWith(QLatin1String("X-")))
+            return category;
+    }
+    return i18nc("list section for apps without a category", "Other");
+}
+
+QString AppImageListModel::listSection(const Item &item) const
+{
+    const bool pending = hasUpdate(item) || item.isUpdating;
+    if (m_sectionMode == 3) {
+        if (pending)
+            return i18nc("list section", "Updates available");
+        switch (static_cast<UpdateState>(item.updateState)) {
+        case UpdateState::Failed:   return i18nc("list section", "Check failed");
+        case UpdateState::UpToDate: return i18nc("list section", "Up to date");
+        case UpdateState::NoSource: return i18nc("list section", "No update source");
+        default:                    return i18nc("list section", "Not checked yet");
+        }
+    }
+    if (pending)
+        return i18nc("list section", "Updates available");
+    switch (m_sectionMode) {
+    case 1:  return categoryLabel(item);
+    case 2:  return addedGroup(item.addedDate);
+    default: return m_updateCount > 0 ? i18nc("list section, below Updates available", "Installed") : QString();
+    }
 }
 
 // static
@@ -436,6 +717,7 @@ void AppImageListModel::onFileDeleted(const QString &path)
     m_items.removeAt(row);
     endRemoveRows();
     rebuildPathIndex();
+    updateOlderCopies();
 }
 
 void AppImageListModel::onFileDirty(const QString &path)
@@ -473,13 +755,17 @@ void AppImageListModel::applyMetadata(int row, const AppImageInfo &info)
     item.cachedDisplayName   = computeDisplayName(item);
     item.cachedIconSource    = computeIconSource(item);
     item.cachedDescription   = info.description;
+    applyStoredResult(item);
 
     Q_EMIT dataChanged(index(row, 0), index(row, 0), {
         IconSourceRole, DisplayNameRole, CleanNameRole, AppNameRole,
         VersionRole, FormattedSizeRole, AppSizeRole, HasDesktopLinkRole,
         MetadataLoadedRole, CategoriesRole, CommentRole, DescriptionRole,
-        DeveloperNameRole, HomepageRole
+        DeveloperNameRole, HomepageRole, UpdateStateRole, UpdateReasonRole,
+        UpdateAvailableRole, UpdateVersionRole, ListSectionRole, CategoryLabelRole,
+        SectionCategoryRole
     });
+    updateOlderCopies();
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -594,10 +880,15 @@ bool AppImageListModel::setUpdateSource(int row, const QString &input, const QSt
 
     Item &item = m_items[row];
     saveUpdateSource(item.filePath, source);
-    item.updateAvailable = false;
+    // The old result belongs to the old source: forget it (not checked yet, or no source).
     item.updateVersion.clear();
     item.updateUrl.clear();
-    Q_EMIT dataChanged(index(row, 0), index(row, 0), {UpdateAvailableRole, UpdateVersionRole});
+    m_results.remove(item.info.originalName);
+    saveCheckResult(item.info.originalName, {});
+    applyStoredResult(item);
+    Q_EMIT dataChanged(index(row, 0), index(row, 0),
+                       {UpdateStateRole, UpdateReasonRole, UpdateAvailableRole, UpdateVersionRole, ListSectionRole});
+    notifyDaemon();
     return true;
 }
 
@@ -673,7 +964,7 @@ QVariant AppImageListModel::sortKey(int row, int field) const
     enum { Name = 0, Size = 1, Category = 5, Date = 9 };
     switch (field) {
     case Size:     return item.info.fileSize;
-    case Category: return primaryCategory(item);
+    case Category: return categoryLabel(item);
     case Date:     return item.addedDate;
     case Name:
     default:       return item.cachedDisplayName;
@@ -704,7 +995,11 @@ QVariantMap AppImageListModel::itemData(int row) const
         { QStringLiteral("formattedSize"),   item.cachedFormattedSize                     },
         { QStringLiteral("addedDate"),       item.addedDate                               },
         { QStringLiteral("displayName"),     item.cachedDisplayName                       },
-        { QStringLiteral("updateAvailable"), item.updateAvailable                         },
+        { QStringLiteral("updateAvailable"), hasUpdate(item)                              },
+        { QStringLiteral("updateState"),     item.updateState                             },
+        { QStringLiteral("updateReason"),    item.updateReason                            },
+        { QStringLiteral("olderCopyOf"),     item.olderCopyOf                             },
+        { QStringLiteral("categoryLabel"),   categoryLabel(item)                          },
         { QStringLiteral("updateVersion"),   item.updateVersion                           },
         { QStringLiteral("isUpdating"),      item.isUpdating                              },
         { QStringLiteral("updateProgress"),  item.updateProgress                          },

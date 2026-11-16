@@ -64,6 +64,16 @@ Kirigami.ApplicationWindow {
     readonly property bool onSubPage: currentPage >= pageSettings
 
     function showTab(page) { currentPage = page; lastTab = page }
+
+    // From DashboardWindow::open(): `appimagemanager --settings` / `--select <path>` (the tray uses these).
+    function openRequest(page, path) {
+        if (page === "settings") {
+            showSubPage(pageSettings)
+        } else if (path) {
+            showTab(pageInstalled)
+            libraryPage.selectPath(path)
+        }
+    }
     function showSubPage(page) { currentPage = page }
     function goBack() { currentPage = lastTab }
 
@@ -125,6 +135,19 @@ Kirigami.ApplicationWindow {
                     icon.name: "system-software-update"
                     text: i18n("Update All")
                     onClicked: libraryPage.updateAll()
+                }
+
+                Controls.ToolButton {
+                    visible: root.currentPage === root.pageInstalled
+                    icon.name: "view-refresh"
+                    text: i18n("Check for Updates")
+                    display: Controls.AbstractButton.IconOnly
+                    enabled: !listModel.checkingUpdates
+                    onClicked: listModel.checkForUpdates()
+                    Controls.ToolTip.visible: hovered
+                    Controls.ToolTip.text: listModel.lastCheckTime !== ""
+                        ? i18n("Check for Updates (last checked %1)", listModel.lastCheckTime) : text
+                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                 }
 
                 Controls.ToolButton {
@@ -199,6 +222,14 @@ Kirigami.ApplicationWindow {
                 id: aboutPage
             }
         }
+    }
+
+    // "Checking for updates (3/13)", then the result; above everything, at the bottom.
+    UpdateCheckToast {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Kirigami.Units.gridUnit * 2
+        z: 100
     }
 
     // ── Global shortcuts ──────────────────────────────────────────────────

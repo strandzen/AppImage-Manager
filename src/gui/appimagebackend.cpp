@@ -8,7 +8,9 @@
 #include "../core/appimagemanager.h"
 #include "../core/appimagereader.h"
 #include "../core/appsettings.h"
+#include "../core/checkresults.h"
 #include "../core/launchenvironment.h"
+#include "../core/updatesource.h"
 
 #include <KFormat>
 #include <KJob>
@@ -79,6 +81,75 @@ void AppImageBackend::onMetadataReady(const AppImageInfo &info)
     Q_EMIT infoChanged();
     Q_EMIT desktopLinkChanged();
     Q_EMIT metadataLoadedChanged();
+
+    if (!m_isInstalled)
+        findInstalledCopy();
+}
+
+namespace {
+struct InstalledCopy {
+    QString path;
+    AppImageInfo info;
+};
+}
+
+// The copy of this app already in Applications: a file with the same name (installing would
+// overwrite it), else the newest copy with the same app id (or, without ids, the same name).
+// Blocking; the reader is cache-backed, so this is quick for a library the dashboard has seen.
+static InstalledCopy installedCopy(const QString &dir, const QString &selfPath, const AppImageInfo &self)
+{
+    const QString ownName = QFileInfo(selfPath).fileName();
+    InstalledCopy best;
+    const QFileInfoList files = QDir(dir).entryInfoList(kAppImageFilters(), QDir::Files);
+    for (const QFileInfo &file : files) {
+        const QString path = file.absoluteFilePath();
+        if (path == QFileInfo(selfPath).absoluteFilePath())
+            continue;
+        const AppImageInfo info = AppImageReader(path).read();
+        if (file.fileName() == ownName)
+            return { path, info };
+        if (!info.isValid)
+            continue;
+        const bool sameApp = (!self.appId.isEmpty() && !info.appId.isEmpty())
+            ? info.appId == self.appId
+            : !self.appName.isEmpty() && info.appName.compare(self.appName, Qt::CaseInsensitive) == 0;
+        if (sameApp && (best.path.isEmpty()
+                        || isNewerVersion(normalizeVersion(info.version), normalizeVersion(best.info.version))))
+            best = { path, info };
+    }
+    return best;
+}
+
+void AppImageBackend::findInstalledCopy()
+{
+    auto *watcher = new QFutureWatcher<InstalledCopy>(this);
+    connect(watcher, &QFutureWatcher<InstalledCopy>::finished, this, [this, watcher]() {
+        watcher->deleteLater();
+        const InstalledCopy copy = watcher->result();
+        if (copy.path.isEmpty())
+            return;
+        m_existingPath = copy.path;
+        m_existingInfo = copy.info;
+        m_existingSameFile = QFileInfo(copy.path).fileName() == QFileInfo(m_appImagePath).fileName();
+
+        const QString mine = normalizeVersion(m_info.version);
+        const QString theirs = normalizeVersion(copy.info.version);
+        if (mine.isEmpty() || theirs.isEmpty())
+            m_existingState = VersionUnknown;
+        else if (mine == theirs)
+            m_existingState = SameVersion;
+        else if (isNewerVersion(mine, theirs))
+            m_existingState = ThisNewer;
+        else if (isNewerVersion(theirs, mine))
+            m_existingState = ThisOlder;
+        else
+            m_existingState = VersionUnknown;
+        Q_EMIT existingChanged();
+    });
+    watcher->setFuture(QtConcurrent::run([dir = AppSettings::instance()->applicationsPath(),
+                                          path = m_appImagePath, info = m_info]() {
+        return installedCopy(dir, path, info);
+    }));
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -106,8 +177,10 @@ void AppImageBackend::launchAppImage()
         Q_EMIT errorOccurred(i18n("Could not launch the application."));
 }
 
-void AppImageBackend::beginInstall()
+void AppImageBackend::beginInstall(bool replace)
 {
+    m_replace = replace && m_existingState != NotInstalled;
+
     if (!AppSettings::instance()->verifySignatures()) {
         // Verification disabled — skip straight to install.
         doInstall();
@@ -125,6 +198,26 @@ void AppImageBackend::beginInstall()
 }
 
 void AppImageBackend::doInstall()
+{
+    if (m_replace && m_existingSameFile) {
+        // The installed copy has this name: it goes to the Trash (with its menu entry) first.
+        m_oldHadLink = AppImageManager::isDesktopLinkEnabled(m_existingPath, m_existingInfo);
+        KJob *job = AppImageManager::removeItems(QUrl::fromLocalFile(m_existingPath), m_existingInfo, {});
+        connect(job, &KJob::result, this, [this](KJob *j) {
+            if (j->error()) {
+                qCWarning(AIM_LOG) << "Replace failed:" << j->errorString();
+                Q_EMIT errorOccurred(j->errorString());
+                return;
+            }
+            startInstallJob();
+        });
+        job->start();
+        return;
+    }
+    startInstallJob();
+}
+
+void AppImageBackend::startInstallJob()
 {
     auto *job = AppImageManager::installAppImage(QUrl::fromLocalFile(m_appImagePath),
                                                 AppSettings::instance()->applicationsPath());
@@ -221,7 +314,8 @@ void AppImageBackend::onInstallJobFinished(KJob *job)
                    + QLatin1Char('/')
                    + QFileInfo(m_appImagePath).fileName();
     m_isInstalled = true;
-    m_hasDesktopLink = AppImageManager::createDesktopLink(m_appImagePath, m_info);
+    const bool link = m_replace ? finishReplace() : true;
+    m_hasDesktopLink = link && AppImageManager::createDesktopLink(m_appImagePath, m_info);
     Q_EMIT installedChanged();
     Q_EMIT desktopLinkChanged();
 
@@ -239,6 +333,38 @@ void AppImageBackend::onInstallJobFinished(KJob *job)
                              QStringLiteral("application-x-executable"),
                              KNotification::CloseOnTimeout);
     }
+}
+
+// After installing over another copy: its settings (keyed by file name) move to this file and
+// it goes to the Trash. Returns whether it was in the app menu, so this one is too.
+bool AppImageBackend::finishReplace()
+{
+    const QString oldName = QFileInfo(m_existingPath).fileName();
+    saveCheckResult(oldName, {});  // the result was for the replaced version
+
+    if (m_existingSameFile) {
+        saveInstalledTag(m_appImagePath, {});  // belonged to the replaced build
+        return m_oldHadLink;
+    }
+
+    const UpdateSource source = loadUpdateSource(m_existingPath);
+    saveUpdateSource(m_appImagePath, source);  // the installed tag is not carried
+    saveUpdateSource(m_existingPath, {});
+    saveEnvironment(m_appImagePath, loadEnvironment(m_existingPath));
+    saveEnvironment(m_existingPath, {});
+
+    // removeItems() drops the old menu entry; it must go before ours is written, as both
+    // can be the same app-id file.
+    const bool hadLink = AppImageManager::isDesktopLinkEnabled(m_existingPath, m_existingInfo);
+    KJob *job = AppImageManager::removeItems(QUrl::fromLocalFile(m_existingPath), m_existingInfo, {});
+    connect(job, &KJob::result, this, [this](KJob *j) {
+        if (j->error()) {
+            qCWarning(AIM_LOG) << "Could not trash the replaced copy:" << j->errorString();
+            Q_EMIT errorOccurred(j->errorString());
+        }
+    });
+    job->start();
+    return hadLink;
 }
 
 void AppImageBackend::onRemoveJobFinished(KJob *job, const QList<QUrl> &trashedUrls)

@@ -11,11 +11,14 @@ $XGETTEXT \
     src/core/appimagemanager.cpp \
     src/core/updatedaemon.cpp \
     src/core/updatesource.cpp \
+    src/core/checkresults.cpp \
+    src/core/releasechecker.cpp \
     src/gui/appimagebackend.cpp \
     src/gui/appimagelistmodel.cpp \
     src/gui/appimageupdate.cpp \
     src/gui/amstoremodel.cpp \
     src/gui/dashboardwindow.cpp \
+    src/gui/traymodel.cpp \
     src/plugin/appimageactionplugin.cpp \
     --keyword=i18n:1 \
     --keyword=i18nc:1c,2 \
@@ -40,6 +43,8 @@ $XGETTEXT \
     qml/AboutPage.qml \
     qml/AboutContent.qml \
     qml/ContributorsModel.qml \
+    qml/TrayWindow.qml \
+    qml/UpdateCheckToast.qml \
     --keyword=i18n:1 \
     --keyword=i18nc:1c,2 \
     --keyword=i18np:1,2 \
@@ -47,5 +52,16 @@ $XGETTEXT \
     --language=JavaScript \
     --from-code=UTF-8 \
     --add-comments=TRANSLATORS: \
+    --join-existing \
+    -o $podir/appimagemanager.pot
+
+# The tray widget runs in plasmashell and uses this catalog explicitly (i18nd).
+$XGETTEXT \
+    data/plasmoid/contents/ui/main.qml \
+    --keyword=i18nd:2 \
+    --keyword=i18ndc:2c,3 \
+    --keyword=i18ndp:2,3 \
+    --language=JavaScript \
+    --from-code=UTF-8 \
     --join-existing \
     -o $podir/appimagemanager.pot

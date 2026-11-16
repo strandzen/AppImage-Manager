@@ -2,7 +2,43 @@
 
 ## Unreleased
 
+### Added
+- On Plasma, a system tray widget: it opens as a normal panel popup (the panel stays visible, Plasma's look), shows the update count on its icon, and is hidden among the tray's extra items when nothing needs a look. On other desktops a tray icon with its own window does the same.
+- Tray overview: click the tray entry for an overview of your AppImages and their update state (update available, up to date, no update source, check failed), when they were last checked (the tooltip also says when the next check is due), with Check Now, Update All, and buttons for the main window and Settings. Clicking an app opens the main window with it selected. Middle-click checks for updates.
+- The tray icon shows the number of waiting updates, and its tooltip says when it last checked and will check next.
+- A Check for Updates button (⟳) in the main window's toolbar.
+- While updates are checked, a note at the bottom of the main window counts up ("Checking for updates (3/13)") and then shows the result, so a long check no longer looks stuck.
+- `appimagemanager --settings` and `--select <path>` open the main window on Settings or with an AppImage selected.
+- The install window says when the app is already installed, and whether this file is newer, older or the same version. Dropping it on Applications then asks: Replace (the installed copy goes to the Trash, its update source, environment variables and app menu entry move to the new one), Keep Both, or Cancel.
+
+### Added (overview)
+- Every app in the Installed list says where it stands: "Up to date", "No update source", "Check failed" (with a warning icon; the reason on hover), or the new version in green ("1.17.0 → 5.14.0") instead of a dot.
+- Apps with an update are listed first, under "Updates available", whatever the sort. The new "By Status" sort groups the whole list by update state.
+- An overview next to the list while no app is selected: how many AppImages, their total size, how many have updates, are up to date, failed or have no update source (click one to show only those), and when updates were last checked, with Check Now and Update All. It can be turned off in Settings → General.
+- Details say what the last check found ("Up to date · checked 14:02", "Check failed: Repository not found"), offer "Set Update Source…" when there is none, and show whether the app is in the app menu.
+- The ⟳ button's tooltip says when updates were last checked.
+- Two AppImages of the same app: the older one is marked "Older copy of …".
+
+### Changed
+- The main window and the tray share check results: what one checked, the other shows, including the reason a check failed.
+- Categories are shown in plain words ("Graphics", "Internet") instead of the raw list ("Graphics, 2DGraphics, VectorGraphics, X-Design").
+- Updates in progress show a progress bar in the list row.
+- The tray lists apps with updates first and folds the ones without an update source into "Not tracked (n)".
+- Update checks run in parallel (six at a time) instead of one after another, so checking many AppImages takes a fraction of the time.
+- Settings are laid out like a KDE settings page: General, Updates, Security and Discover in a list on the left, each a form with labels on the left and short explanations under the options. Restore Defaults is under the list.
+- One notification for new updates instead of one per AppImage, with Update All and Open buttons; a version is announced only once, not again on every check. Update All from the tray ends with one summary notification.
+- The tray's right-click menu: Open AppImage Manager, Check for Updates, Settings.
+- The main window shows the updates the background checker found, and the tray notices updates and installs done in the main window.
+- The background checker also checks AppImages that update through a plain zsync link.
+
 ### Fixed
+- The install window keeps its small fixed size. Window managers and scripts that restore window sizes (such as KWin's "Remember Window Positions") could widen it to the main window's size; it now has its own title ("<App> – AppImage Manager") and fixed size limits.
+- Settings changed in the main window (check frequency, Applications folder, download notifications) now reach the background checker within a minute; before, it kept the old ones until it was restarted.
+- Restore Defaults no longer brings back the welcome dialog (which also turned Discover off).
+- App menu entries for AppImages whose path or environment contains a `%` work.
+- Closing the main window crashed AppImage Manager (`free(): invalid size`).
+- The background checker could not be started on demand on systems using dbus-broker (Arch and others): its D-Bus service file used a section name dbus-broker does not accept. The tray widget now also says when the checker is not running instead of showing an empty list.
+- Background checks now keep to their schedule across restarts and suspend: "Weekly" checked at every login, and "Monthly" and custom intervals over 24 days did not work at all. Checks wait while offline and run once you are back online.
 - Apps showed up twice in the app menu when they (or a launcher such as ArtCraft Launcher) add their own menu entry: AppImage Manager added a second one beside it. It now recognises any entry that starts the AppImage, names its own entry after the app's id (for example `ai.storyteller.figcraft.desktop`) so an app that registers itself replaces it instead of adding another, and removes its own duplicates on the next start. Keeping the app's entry also keeps its file associations and taskbar icon matching. Turning off "Show in App Menu" removes every entry for the AppImage (ones written by other software go to the Trash).
 
 ## 2.1.0 - 2026-11-15
@@ -43,7 +79,7 @@
 - AUR package was missing the `qt6-svg` dependency.
 - Settings → Catalogs: dragging a catalog to reorder it did nothing, and editing a turned-off catalog turned it back on.
 - Discover's Source filter switched to another catalog after catalogs were reordered or removed.
-- Update checks on a large library reported a time-out: the 30-second limit covered all AppImages together instead of each one. After a real time-out, late results no longer leak into the next check.
+- Update checks on a large library reported a time-out: the 30-second limit covered all AppImages together. After a real time-out, late results no longer leak into the next check.
 - Release files whose name contains "arm" (like `Swarm.AppImage`) were skipped on x86_64, so no update was found for them.
 - Dragging an AppImage over the window showed no highlight on an empty Installed list, on Discover or on Settings. The "Drop to install" text was hard to read on light themes.
 - Uninstall dialog: the All and None buttons could stay hidden, leftover folders over 2 GiB showed a wrong size, and paths were not shortened to `~`.

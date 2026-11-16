@@ -47,6 +47,11 @@ find_package(KF6 6.7 REQUIRED COMPONENTS
 
 find_package(KF6KirigamiAddons REQUIRED)
 
+# Optional: lets the tray window sit next to the tray on Wayland (part of Plasma).
+find_package(LayerShellQt)
+set_package_properties(LayerShellQt PROPERTIES TYPE RECOMMENDED
+    PURPOSE "Places the tray window next to the system tray on Wayland")
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Canberra IMPORTED_TARGET libcanberra)
 

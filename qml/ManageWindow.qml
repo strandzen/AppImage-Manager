@@ -9,12 +9,21 @@ import appimagemanager
 Kirigami.ApplicationWindow {
     id: root
     visible: true
-    title: i18n("AppImage Manager")
+    // Its own title: window managers (and scripts that restore window sizes) must not take
+    // it for the dashboard, which is the same application.
+    title: i18nc("window title: app name", "%1 – AppImage Manager",
+                 backend.metadataLoaded ? backend.displayName : backend.originalName)
 
-    width:  Kirigami.Units.gridUnit * 26
-    height: Kirigami.Units.gridUnit * 22
-    minimumWidth:  width;  maximumWidth:  width
-    minimumHeight: height; maximumHeight: height
+    // A fixed size. The limits are constants, not bound to width/height: bound, they followed
+    // any outside resize (e.g. a KWin script restoring the dashboard's size) and allowed it.
+    readonly property int fixedWidth: Kirigami.Units.gridUnit * 26
+    readonly property int fixedHeight: Kirigami.Units.gridUnit * 22
+    width: fixedWidth
+    height: fixedHeight
+    minimumWidth: fixedWidth
+    maximumWidth: fixedWidth
+    minimumHeight: fixedHeight
+    maximumHeight: fixedHeight
 
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     Kirigami.Theme.inherit: false
@@ -63,6 +72,30 @@ Kirigami.ApplicationWindow {
                           .filter(s => s !== "").join(" · ")
                     visible: text !== ""
                     color: Kirigami.Theme.disabledTextColor
+                }
+
+                // Another copy of this app is already installed.
+                Controls.Label {
+                    Layout.alignment: Qt.AlignHCenter
+                    visible: !backend.isInstalled && backend.existingState !== AppImageBackend.NotInstalled
+                    font: Kirigami.Theme.smallFont
+                    text: {
+                        switch (backend.existingState) {
+                        case AppImageBackend.ThisNewer:
+                            return i18n("Version %1 is installed · this one is newer", backend.existingVersion)
+                        case AppImageBackend.ThisOlder:
+                            return i18n("Version %1 is installed · this one is older", backend.existingVersion)
+                        case AppImageBackend.SameVersion:
+                            return i18n("This version is already installed")
+                        default:
+                            return backend.existingVersion !== ""
+                                ? i18n("Version %1 is already installed", backend.existingVersion)
+                                : i18n("Already installed")
+                        }
+                    }
+                    color: backend.existingState === AppImageBackend.ThisNewer ? Kirigami.Theme.positiveTextColor
+                         : backend.existingState === AppImageBackend.ThisOlder ? Kirigami.Theme.neutralTextColor
+                         : Kirigami.Theme.disabledTextColor
                 }
             }
 
@@ -132,7 +165,10 @@ Kirigami.ApplicationWindow {
                             onReleased: {
                                 if (backend.isInstalled) return
                                 if (dragIcon.Drag.target !== null) {
-                                    backend.beginInstall()
+                                    if (backend.existingState !== AppImageBackend.NotInstalled)
+                                        replaceDialog.open()
+                                    else
+                                        backend.beginInstall(false)
                                 }
                                 // Reset position instantly to return to source
                                 dragIcon.x = 0
@@ -234,6 +270,74 @@ Kirigami.ApplicationWindow {
                 // SigUnsigned=3 or SigInvalid=2 → warn the user first
                 signatureWarnDialog.sigState = state
                 signatureWarnDialog.open()
+            }
+        }
+    }
+
+    // ── Already installed: which copy to keep ─────────────────────────────────
+    Kirigami.Dialog {
+        id: replaceDialog
+        readonly property int existing: backend.existingState
+        readonly property string installed: backend.existingVersion !== ""
+            ? i18nc("app name and version", "%1 %2", backend.displayName, backend.existingVersion)
+            : backend.displayName
+
+        title: existing === AppImageBackend.ThisNewer ? i18n("Replace Older Version?")
+             : existing === AppImageBackend.ThisOlder ? i18n("Install Older Version?")
+             : i18n("Already Installed")
+        preferredWidth: Kirigami.Units.gridUnit * 22
+        padding: Kirigami.Units.largeSpacing
+        standardButtons: Kirigami.Dialog.Cancel
+
+        customFooterActions: [
+            Kirigami.Action {
+                text: i18n("Keep Both")
+                icon.name: "edit-copy"
+                // A copy with this file name would be overwritten.
+                visible: !backend.existingSameFile
+                onTriggered: {
+                    replaceDialog.close()
+                    backend.beginInstall(false)
+                }
+            },
+            Kirigami.Action {
+                text: i18n("Replace")
+                icon.name: "document-replace"
+                onTriggered: {
+                    replaceDialog.close()
+                    backend.beginInstall(true)
+                }
+            }
+        ]
+
+        ColumnLayout {
+            spacing: Kirigami.Units.largeSpacing
+            width: replaceDialog.availableWidth
+
+            Controls.Label {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: {
+                    switch (replaceDialog.existing) {
+                    case AppImageBackend.ThisNewer:
+                        return i18n("%1 is already installed, and this version (%2) is newer. Install it and move the older version to the Trash?",
+                                    replaceDialog.installed, backend.appVersion)
+                    case AppImageBackend.ThisOlder:
+                        return i18n("%1 is already installed, which is newer than this version (%2). Install this one and move the newer version to the Trash?",
+                                    replaceDialog.installed, backend.appVersion)
+                    case AppImageBackend.SameVersion:
+                        return i18n("%1 is already installed. Replace it with this file?", replaceDialog.installed)
+                    default:
+                        return i18n("%1 is already installed. Replace it with this one?", replaceDialog.installed)
+                    }
+                }
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                font: Kirigami.Theme.smallFont
+                color: Kirigami.Theme.disabledTextColor
+                text: i18n("Its update source, environment variables and app menu entry are kept.")
             }
         }
     }

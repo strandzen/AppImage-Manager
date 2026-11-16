@@ -62,6 +62,11 @@ else()
     install(FILES servicemenus/appimagemanager.desktop DESTINATION ${KDE_INSTALL_DATADIR}/kio/servicemenus)
 endif()
 
+# System tray widget (Plasma): the tray entry on Plasma, a view of the daemon over D-Bus.
+install(DIRECTORY plasmoid/
+    DESTINATION ${KDE_INSTALL_DATADIR}/plasma/plasmoids/io.github.strandzen.appimagemanager.tray
+)
+
 install(FILES appimagemanager.metainfo.xml
     DESTINATION ${KDE_INSTALL_METAINFODIR}
 )

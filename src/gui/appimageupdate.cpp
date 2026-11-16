@@ -22,8 +22,11 @@
 #include <QFutureWatcher>
 #include <QtConcurrent/QtConcurrent>
 
-// Watchdog per checked AppImage (checks run one at a time; each request also has its own
-// 10 s transfer timeout, so this only fires when something hangs, e.g. hashing a huge file).
+// Checks run in parallel, this many at a time (one HTTP request each, plus hashing for
+// plain zsync sources).
+static constexpr int kMaxParallelChecks = 6;
+// Watchdog: fires when no check has finished for this long (each request also has its own
+// 10 s transfer timeout, so this only catches something hanging, e.g. hashing a huge file).
 static constexpr int kCheckTimeoutMs = 30'000;
 
 AppImageUpdateManager::AppImageUpdateManager(QNetworkAccessManager *nam, QObject *parent)
@@ -54,6 +57,8 @@ void AppImageUpdateManager::checkForUpdates(const QList<CheckItem> &items)
             m_checkQueue.enqueue(item);
     }
 
+    m_checkTotal = static_cast<int>(m_checkQueue.size());
+    Q_EMIT checkProgress(0, m_checkTotal);
     if (m_checkQueue.isEmpty()) {
         Q_EMIT checkFinished(0, 0);
         return;
@@ -65,7 +70,9 @@ void AppImageUpdateManager::checkForUpdates(const QList<CheckItem> &items)
     m_networkFailures = 0;
     Q_EMIT checkingChanged();
 
-    checkNextItem();
+    m_timeoutTimer.start();
+    for (int i = 0; i < kMaxParallelChecks && !m_checkQueue.isEmpty(); ++i)
+        checkNextItem();
 }
 
 void AppImageUpdateManager::checkNextItem()
@@ -75,7 +82,6 @@ void AppImageUpdateManager::checkNextItem()
 
     const CheckItem item = m_checkQueue.dequeue();
     const quint64 batch = m_batch;
-    m_timeoutTimer.start();
 
     if (isReleaseUpdateInfo(item.updateInfo)) {
         const QString filePath = item.filePath;
@@ -89,6 +95,10 @@ void AppImageUpdateManager::checkNextItem()
             const bool networkFailed = (result == ReleaseChecker::Result::NetworkFailed);
             if (result == ReleaseChecker::Result::UpdateAvailable)
                 Q_EMIT updateFound(filePath, ver, url);
+            Q_EMIT itemChecked(filePath, result == ReleaseChecker::Result::UpdateAvailable ? CheckResult::UpdateAvailable
+                                         : result == ReleaseChecker::Result::UpToDate ? CheckResult::UpToDate
+                                                                                      : CheckResult::Failed,
+                               checker->errorText());
             finishOneCheck(result == ReleaseChecker::Result::UpdateAvailable,
                            networkFailed);
         });
@@ -115,6 +125,9 @@ void AppImageUpdateManager::checkZsyncItem(const CheckItem &item, quint64 batch)
             return;
 
         if (reply->error() != QNetworkReply::NoError) {
+            const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            Q_EMIT itemChecked(filePath, CheckResult::Failed,
+                               status == 404 ? i18n("The zsync file was not found") : reply->errorString());
             finishOneCheck(false, true);
             return;
         }
@@ -131,6 +144,7 @@ void AppImageUpdateManager::checkZsyncItem(const CheckItem &item, quint64 batch)
         if (remoteSha1.isEmpty()) {
             const QString ver = i18n("New version available");
             Q_EMIT updateFound(filePath, ver, zsyncUrl);
+            Q_EMIT itemChecked(filePath, CheckResult::UpdateAvailable, {});
             finishOneCheck(true);
             return;
         }
@@ -143,10 +157,12 @@ void AppImageUpdateManager::checkZsyncItem(const CheckItem &item, quint64 batch)
                 return;
             const QString localSha1 = watcher->result();
             if (localSha1 == remoteSha1) {
+                Q_EMIT itemChecked(filePath, CheckResult::UpToDate, {});
                 finishOneCheck(false);
             } else {
                 const QString ver = remoteSha1.left(8);
                 Q_EMIT updateFound(filePath, ver, zsyncUrl);
+                Q_EMIT itemChecked(filePath, CheckResult::UpdateAvailable, {});
                 finishOneCheck(true);
             }
         });
@@ -176,12 +192,14 @@ void AppImageUpdateManager::finishOneCheck(bool foundUpdate, bool networkFailed)
 {
     if (foundUpdate)    ++m_updatesFound;
     if (networkFailed)  ++m_networkFailures;
+    Q_EMIT checkProgress(m_checkTotal - m_pendingChecks + 1, m_checkTotal);
     if (--m_pendingChecks == 0) {
         m_timeoutTimer.stop();
         Q_EMIT checkingChanged();
         Q_EMIT checkFinished(m_updatesFound, m_networkFailures);
     } else {
-        checkNextItem();
+        m_timeoutTimer.start(); // progress: the watchdog starts over
+        checkNextItem();        // keeps kMaxParallelChecks running while the queue lasts
     }
 }
 
@@ -399,12 +417,14 @@ void AppImageUpdateManager::swapAndFinalizeDownload(const QString &filePath,
     fileObj.setPermissions(fileObj.permissions()
         | QFileDevice::ExeUser | QFileDevice::ExeGroup | QFileDevice::ExeOther);
 
-    auto *n = new KNotification(QStringLiteral("updateDownloaded"),
-                                KNotification::CloseOnTimeout, this);
-    n->setTitle(i18n("Update Completed"));
-    n->setText(i18n("%1 has been updated successfully.", displayName));
-    n->setIconName(appIconId.isEmpty() ? QStringLiteral("application-x-executable") : appIconId);
-    n->sendEvent();
+    if (m_completionNotifications) {
+        auto *n = new KNotification(QStringLiteral("updateDownloaded"),
+                                    KNotification::CloseOnTimeout, this);
+        n->setTitle(i18n("Update Completed"));
+        n->setText(i18n("%1 has been updated successfully.", displayName));
+        n->setIconName(appIconId.isEmpty() ? QStringLiteral("application-x-executable") : appIconId);
+        n->sendEvent();
+    }
 
     Q_EMIT downloadFinished(filePath, true);
 }

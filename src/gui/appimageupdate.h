@@ -17,8 +17,8 @@ class QUrl;
 //
 // Lifecycle:
 //   1. Call checkForUpdates(items) to start a batch check.
-//      Items are checked one at a time; updateFound is emitted for each available update.
-//      checkFinished is emitted when all checks resolve, or with -1 when one check hangs.
+//      Up to 6 items are checked at once; updateFound is emitted for each available update.
+//      checkFinished is emitted when all checks resolve, or with -1 when none finished for 30 s.
 //   2. Call downloadUpdate(...) per file to start a zsync2 subprocess or HTTP download.
 //      downloadProgress emits as bytes arrive; downloadFinished on exit.
 //
@@ -27,6 +27,8 @@ class AppImageUpdateManager : public QObject
 {
     Q_OBJECT
 public:
+    enum class CheckResult { UpToDate, UpdateAvailable, Failed };
+
     struct CheckItem {
         QString filePath;
         QString updateInfo;
@@ -38,6 +40,8 @@ public:
     explicit AppImageUpdateManager(QNetworkAccessManager *nam, QObject *parent = nullptr);
 
     bool isChecking() const { return m_pendingChecks > 0; }
+    // "Update Completed" notification per AppImage (on by default; the daemon sends one summary).
+    void setCompletionNotifications(bool enabled) { m_completionNotifications = enabled; }
 
     void checkForUpdates(const QList<CheckItem> &items);
     // url: a .zsync control file or a direct .AppImage download.
@@ -48,9 +52,14 @@ public:
 
 Q_SIGNALS:
     void checkingChanged();
+    // done = items of the current batch finished so far, total = items with an update source.
+    void checkProgress(int done, int total);
     // updatesFound >= 0: batch complete. -1: timed out.
     void checkFinished(int updatesFound, int networkFailures);
     void updateFound(const QString &filePath, const QString &newVersion, const QString &url);
+    // Once per checked item of the current batch (after updateFound when there is an update).
+    // reason: why it failed, for people (empty otherwise).
+    void itemChecked(const QString &filePath, AppImageUpdateManager::CheckResult result, const QString &reason);
     void downloadProgress(const QString &filePath, int percent);
     // success=true: new file is in place; success=false: old file preserved.
     void downloadFinished(const QString &filePath, bool success);
@@ -79,7 +88,9 @@ private:
     int m_pendingChecks    = 0;
     int m_updatesFound     = 0;
     int m_networkFailures  = 0;
+    int m_checkTotal       = 0;
     QTimer m_timeoutTimer;
+    bool m_completionNotifications = true;
     quint64 m_batch = 0; // bumped per batch and on timeout; stale replies compare against it
     QQueue<CheckItem> m_checkQueue;
 };

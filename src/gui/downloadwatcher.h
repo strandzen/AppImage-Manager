@@ -24,7 +24,6 @@ public:
     explicit DownloadWatcher(QObject *parent = nullptr);
 
     void setEnabled(bool enabled);
-    bool isEnabled()    const { return m_enabled; }
     bool isSandboxed()  const { return m_sandboxed; }
 
 Q_SIGNALS:

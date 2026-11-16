@@ -19,6 +19,7 @@ add_library(appimagemanager_core OBJECT
     core/appimagemanager.cpp
     core/updatesource.cpp
     core/launchenvironment.cpp
+    core/checkresults.cpp
     ${LOGGING_SRCS}
     ${KCFG_SRCS}
 )
@@ -59,6 +60,8 @@ set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/qml/AboutPage.qml
     ${CMAKE_SOURCE_DIR}/qml/AboutContent.qml
     ${CMAKE_SOURCE_DIR}/qml/ContributorsModel.qml
+    ${CMAKE_SOURCE_DIR}/qml/TrayWindow.qml
+    ${CMAKE_SOURCE_DIR}/qml/UpdateCheckToast.qml
     PROPERTIES QT_RESOURCE_ALIAS ""
 )
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
@@ -87,6 +90,10 @@ set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/AboutContent.qml
     PROPERTY QT_RESOURCE_ALIAS AboutContent.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ContributorsModel.qml
     PROPERTY QT_RESOURCE_ALIAS ContributorsModel.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/TrayWindow.qml
+    PROPERTY QT_RESOURCE_ALIAS TrayWindow.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UpdateCheckToast.qml
+    PROPERTY QT_RESOURCE_ALIAS UpdateCheckToast.qml)
 
 qt_add_qml_module(appimagemanager_qml
     URI "appimagemanager"
@@ -105,6 +112,8 @@ qt_add_qml_module(appimagemanager_qml
         ${CMAKE_SOURCE_DIR}/qml/AboutPage.qml
         ${CMAKE_SOURCE_DIR}/qml/AboutContent.qml
         ${CMAKE_SOURCE_DIR}/qml/ContributorsModel.qml
+        ${CMAKE_SOURCE_DIR}/qml/TrayWindow.qml
+        ${CMAKE_SOURCE_DIR}/qml/UpdateCheckToast.qml
     SOURCES
         core/appsettings.h
         core/appsettings.cpp
@@ -134,6 +143,8 @@ qt_add_qml_module(appimagemanager_qml
         gui/amstoremodel.cpp
         core/updatedaemon.h
         core/updatedaemon.cpp
+        gui/traymodel.h
+        gui/traymodel.cpp
         dbus/appimagedbusadaptor.h
         dbus/appimagedbusadaptor.cpp
     RESOURCE_PREFIX "/"
@@ -162,6 +173,12 @@ target_link_libraries(appimagemanager_qml PUBLIC
     KF6::Notifications
     KF6::StatusNotifierItem
 )
+
+if(LayerShellQt_FOUND)
+    # Places the tray window next to the tray on Wayland.
+    target_link_libraries(appimagemanager_qml PRIVATE LayerShellQt::Interface)
+    target_compile_definitions(appimagemanager_qml PRIVATE HAVE_LAYERSHELLQT)
+endif()
 
 if(Canberra_FOUND)
     target_link_libraries(appimagemanager_qml PRIVATE PkgConfig::Canberra)

@@ -1,0 +1,21 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "AppImage Manager Contributors"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Updates for your AppImages",
+        "Icon": "appimagemanager",
+        "Id": "io.github.strandzen.appimagemanager.tray",
+        "Name": "AppImage Manager",
+        "EnabledByDefault": true,
+        "License": "GPL-2.0-or-later",
+        "Website": "https://github.com/strandzen/AppImage-Manager"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-NotificationArea": "true",
+    "X-Plasma-NotificationAreaCategory": "SystemServices"
+}

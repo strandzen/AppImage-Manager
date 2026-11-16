@@ -138,6 +138,20 @@ void AppSettings::setShowInstallBox(bool enabled)
     Q_EMIT showInstallBoxChanged();
 }
 
+bool AppSettings::showOverview() const
+{
+    return AppImageManagerSettings::self()->showOverview();
+}
+
+void AppSettings::setShowOverview(bool enabled)
+{
+    if (showOverview() == enabled)
+        return;
+    AppImageManagerSettings::self()->setShowOverview(enabled);
+    AppImageManagerSettings::self()->save();
+    Q_EMIT showOverviewChanged();
+}
+
 void AppSettings::setApplicationsPathFromUrl(const QUrl &url)
 {
     if (url.isLocalFile()) {
@@ -200,7 +214,11 @@ void AppSettings::setDiscoverEnabled(bool enabled)
 
 void AppSettings::resetToDefaults()
 {
+    // Not the first run again: that would bring back the welcome dialog, which also turns
+    // Discover off as it does for new installs.
+    const bool firstRun = AppImageManagerSettings::self()->firstRun();
     AppImageManagerSettings::self()->setDefaults();
+    AppImageManagerSettings::self()->setFirstRun(firstRun);
     AppImageManagerSettings::self()->save();
 
     // Emit all signals so QML updates
@@ -212,6 +230,7 @@ void AppSettings::resetToDefaults()
     Q_EMIT customUpdateDaysChanged();
     Q_EMIT watchDownloadsChanged();
     Q_EMIT showInstallBoxChanged();
+    Q_EMIT showOverviewChanged();
     Q_EMIT verifySignaturesChanged();
     Q_EMIT discoverEnabledChanged();
 }

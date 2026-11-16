@@ -19,7 +19,8 @@ class APPIMAGEMANAGER_EXPORT DashboardWindow : public QObject
 {
     Q_OBJECT
 public:
-    static void open();
+    // page: "" (as it is) or "settings"; selectPath: select that AppImage on the Installed tab.
+    static void open(const QString &page = {}, const QString &selectPath = {});
 
     Q_INVOKABLE QObject *createUninstallBackend(const QString &filePath);
     Q_INVOKABLE void     installFromPath(const QUrl &url);
@@ -27,6 +28,7 @@ public:
 private:
     explicit DashboardWindow(QObject *parent = nullptr);
     void setupAndShow();
+    void applyRequest(const QString &page, const QString &selectPath);
     AppImageBackend *createBackend(const QString &filePath, bool withCorpses = false);
 
     AppImageIconProvider      *m_iconProvider       = nullptr;

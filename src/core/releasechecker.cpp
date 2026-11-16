@@ -4,6 +4,8 @@
 #include "appimageinfo.h"
 #include "updatesource.h"
 
+#include <KLocalizedString>
+
 #include <QDateTime>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -16,6 +18,27 @@
 #include <QVersionNumber>
 #include <QXmlStreamReader>
 #include "logging.h"
+
+// A failed request in words; `repository`: a release source (else a direct download link).
+static QString describeReplyError(QNetworkReply *reply, bool repository)
+{
+    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    if (status == 404)
+        return repository ? i18n("Repository not found") : i18n("Download link not found");
+    if (status == 403 || status == 429)
+        return i18n("The server's request limit is reached; try again later");
+    switch (reply->error()) {
+    case QNetworkReply::HostNotFoundError:
+    case QNetworkReply::TimeoutError:
+    case QNetworkReply::OperationCanceledError: // transfer timeout
+    case QNetworkReply::TemporaryNetworkFailureError:
+    case QNetworkReply::NetworkSessionFailedError:
+    case QNetworkReply::UnknownNetworkError:
+        return i18n("No connection");
+    default:
+        return reply->errorString();
+    }
+}
 
 ReleaseChecker::ReleaseChecker(QNetworkAccessManager *nam, QObject *parent)
     : QObject(parent)
@@ -47,6 +70,7 @@ void ReleaseChecker::check(const QString &filePath, const QString &embeddedUpdat
     } else if (kind == QLatin1String("direct") && m_parts.size() >= 2) {
         checkDirect(QUrl(info.section(QLatin1Char('|'), 1)));
     } else {
+        m_error = i18n("Unsupported update information");
         Q_EMIT checkFinished(Result::Failed, {}, {});
     }
 }
@@ -63,6 +87,7 @@ void ReleaseChecker::checkReleases(const QUrl &url, bool github)
         reply->deleteLater();
 
         if (reply->error() != QNetworkReply::NoError) {
+            m_error = describeReplyError(reply, true);
             if (github) {
                 qCDebug(AIM_LOG) << "GitHub API check failed (" << reply->errorString() << "). Falling back to Atom RSS feed...";
                 checkAtomFeed();
@@ -88,6 +113,7 @@ void ReleaseChecker::checkReleases(const QUrl &url, bool github)
 
         const QString tag = release.value(QLatin1String("tag_name")).toString();
         if (tag.isEmpty()) {
+            m_error = i18n("No releases found");
             Q_EMIT checkFinished(Result::Failed, {}, {});
             return;
         }
@@ -123,6 +149,7 @@ void ReleaseChecker::checkDirect(const QUrl &url)
     connect(reply, &QNetworkReply::finished, this, [this, reply, url]() {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
+            m_error = describeReplyError(reply, false);
             qCWarning(AIM_LOG) << "Direct download check failed for" << m_fileName << ":" << reply->errorString();
             Q_EMIT checkFinished(Result::NetworkFailed, {}, {});
             return;
@@ -132,6 +159,7 @@ void ReleaseChecker::checkDirect(const QUrl &url)
         if (isNonBinaryContentType(contentType)) {
             qCWarning(AIM_LOG) << "The update URL for" << m_fileName << "returned" << contentType
                                << "instead of an AppImage. Set a direct download URL.";
+            m_error = i18n("The link leads to a web page, not an AppImage");
             Q_EMIT checkFinished(Result::Failed, {}, {});
             return;
         }
@@ -148,6 +176,7 @@ void ReleaseChecker::checkDirect(const QUrl &url)
         }
         if (marker.isEmpty()) {
             qCWarning(AIM_LOG) << "The update URL for" << m_fileName << "sends neither Last-Modified nor ETag; cannot tell builds apart.";
+            m_error = i18n("The server does not say when the file changed");
             Q_EMIT checkFinished(Result::Failed, {}, {});
             return;
         }
@@ -187,6 +216,10 @@ void ReleaseChecker::finishWithTag(const QString &tag, const QString &url)
     }
     if (url.isEmpty()) {
         qCDebug(AIM_LOG) << "Release" << tag << "has no matching AppImage asset for" << m_fileName;
+        // After a failed API request (e.g. its limit), the Atom fallback knows only the tag:
+        // that earlier reason is the useful one.
+        if (m_error.isEmpty())
+            m_error = i18n("No AppImage for this computer in release %1", tag);
         Q_EMIT checkFinished(Result::Failed, {}, {});
         return;
     }
@@ -208,6 +241,7 @@ void ReleaseChecker::checkAtomFeed()
         reply->deleteLater();
 
         if (reply->error() != QNetworkReply::NoError) {
+            m_error = describeReplyError(reply, true);
             qCWarning(AIM_LOG) << "GitHub Atom feed fallback also failed:" << reply->errorString();
             Q_EMIT checkFinished(Result::NetworkFailed, {}, {});
             return;
@@ -238,6 +272,7 @@ void ReleaseChecker::checkAtomFeed()
         }
 
         if (latestTag.isEmpty()) {
+            m_error = i18n("No releases found");
             qCWarning(AIM_LOG) << "GitHub Atom feed fallback: could not find latest release tag in feed";
             Q_EMIT checkFinished(Result::Failed, {}, {});
             return;

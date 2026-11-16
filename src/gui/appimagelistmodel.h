@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #pragma once
 
+#include "../core/checkresults.h"
 #include "../core/appimageinfo.h"
 #include "appimagemanager_qml_export.h"
 
@@ -26,9 +27,23 @@ class APPIMAGEMANAGER_EXPORT AppImageListModel : public QAbstractListModel
 
     Q_PROPERTY(bool scanning        READ isScanning       NOTIFY scanningChanged)
     Q_PROPERTY(bool checkingUpdates READ isCheckingUpdates NOTIFY checkingUpdatesChanged)
+    // Progress of the running (or last) update check: items finished / items with a source.
+    Q_PROPERTY(int  checkDone       READ checkDone        NOTIFY checkProgressChanged)
+    Q_PROPERTY(int  checkTotal      READ checkTotal       NOTIFY checkProgressChanged)
     Q_PROPERTY(bool downloadWatcherSandboxed READ isDownloadWatcherSandboxed CONSTANT)
     // Number of rows with an update available (drives the "Installed (N)" tab and Update All).
     Q_PROPERTY(int  updateCount     READ updateCount      NOTIFY updateCountChanged)
+    // The overview: rows per update state, total size, when updates were last checked.
+    Q_PROPERTY(int  upToDateCount   READ upToDateCount    NOTIFY stateSummaryChanged)
+    Q_PROPERTY(int  failedCount     READ failedCount      NOTIFY stateSummaryChanged)
+    Q_PROPERTY(int  notCheckedCount READ notCheckedCount  NOTIFY stateSummaryChanged)
+    Q_PROPERTY(int  noSourceCount   READ noSourceCount    NOTIFY stateSummaryChanged)
+    Q_PROPERTY(QString totalSizeText READ totalSizeText   NOTIFY stateSummaryChanged)
+    // "14:02", "yesterday 14:02", …; empty when never checked (here or by the daemon).
+    Q_PROPERTY(QString lastCheckTime READ lastCheckTime   NOTIFY stateSummaryChanged)
+    // What the listSection role groups by: 0 nothing, 1 category, 2 date added, 3 update state.
+    // Rows with an update come first under "Updates available" in modes 0-2.
+    Q_PROPERTY(int  sectionMode     READ sectionMode WRITE setSectionMode NOTIFY sectionModeChanged)
 
 public:
     enum Roles {
@@ -52,8 +67,13 @@ public:
         DescriptionRole,
         DeveloperNameRole,
         HomepageRole,
-        SectionCategoryRole,  // first category, or "Other" — list section header when sorted by category
+        SectionCategoryRole,  // readable main category, or "Other" — list section header when sorted by category
         SectionAddedRole,     // "Today" / "This Week" / "This Month" / "Earlier" — when sorted by date
+        UpdateStateRole,      // UpdateState (checkresults.h) as int
+        UpdateReasonRole,     // why the last check failed
+        OlderCopyOfRole,      // name of a newer copy of the same app (same appId), or empty
+        ListSectionRole,      // the section header for the current sectionMode
+        CategoryLabelRole,    // readable main category ("Graphics", "Internet")
     };
     Q_ENUM(Roles)
 
@@ -68,7 +88,9 @@ private:
         QString cachedDescription;
         QString updateVersion;
         QString updateUrl;  // .zsync control file or direct .AppImage
-        bool updateAvailable = false;
+        int  updateState     = 0;  // UpdateState; UpdateAvailable keeps updateVersion/updateUrl
+        QString updateReason;
+        QString olderCopyOf;
         bool isUpdating      = false;
         int  updateProgress  = 0;
         bool metadataLoaded  = false;
@@ -84,8 +106,23 @@ public:
 
     bool isScanning()                  const { return m_scanning; }
     bool isCheckingUpdates()           const;
+    int  checkDone()                   const { return m_checkDone; }
+    int  checkTotal()                  const { return m_checkTotal; }
     bool isDownloadWatcherSandboxed()  const;
     int  updateCount() const { return m_updateCount; }
+    int  upToDateCount()   const { return m_upToDateCount; }
+    int  failedCount()     const { return m_failedCount; }
+    int  notCheckedCount() const { return m_notCheckedCount; }
+    int  noSourceCount()   const { return m_noSourceCount; }
+    QString totalSizeText() const;
+    QString lastCheckTime() const;
+    int  sectionMode() const { return m_sectionMode; }
+    void setSectionMode(int mode);
+    // For AppImageSortFilterModel: 0 update (or updating), 1 check failed, 2 up to date,
+    // 3 not checked, 4 no update source.
+    int  statusRank(int row) const;
+    bool hasPendingUpdate(int row) const;
+    int  updateStateForRow(int row) const;
 
     // Direct typed accessors used by AppImageSortFilterModel::lessThan to skip
     // the QVariant/role dispatch in data(). `field` matches SortField in
@@ -97,6 +134,8 @@ public:
     // string in a single trip. Avoids QML's per-role .data() round-trips
     // when populating the dashboard detail pane.
     Q_INVOKABLE QVariantMap itemData(int row) const;
+    // Row of the AppImage at `path`, or -1.
+    int rowForPath(const QString &path) const { return findRowByPath(path); }
 
     Q_INVOKABLE void scan();
     Q_INVOKABLE void refresh();
@@ -122,11 +161,18 @@ public:
     // (nothing saved) or an empty list on success.
     Q_INVOKABLE QVariantList setEnvironment(int row, const QString &text);
 
+private Q_SLOTS:
+    // Re-reads the shared check results (checkresults.h); the daemon wrote new ones.
+    void reloadStoredResults();
+
 Q_SIGNALS:
     void scanningChanged();
     void checkingUpdatesChanged();
     void updateCountChanged();
+    void stateSummaryChanged();
+    void sectionModeChanged();
     void updateCheckFinished(int updatesFound, int networkFailures);
+    void checkProgressChanged();
     void openUninstallWindow(const QString &filePath);
 
 private:
@@ -146,7 +192,14 @@ private:
     static QString formatBytes(qint64 bytes);
     static QString computeDisplayName(const Item &item);
     static QString computeIconSource(const Item &item);
-    static QString primaryCategory(const Item &item);
+    static QString categoryLabel(const Item &item);
+    QString listSection(const Item &item) const;
+    void applyStoredResult(Item &item) const;
+    void setRowState(int row, int state, const QString &reason = {});
+    void storeResults();
+    void notifyDaemon();
+    void updateOlderCopies();
+    static bool hasUpdate(const Item &item);
     static QString addedGroup(const QDateTime &added);
 
     AppImageIconProvider  *m_iconProvider;
@@ -157,6 +210,16 @@ private:
     int                    m_updateCount   = 0;
     int                    m_pendingLoads  = 0;
     int                    m_generation   = 0;
+    QHash<QString, CheckResult> m_results; // shared check results by file name
+    QDateTime              m_lastCheck;
+    int                    m_upToDateCount   = 0;
+    int                    m_failedCount     = 0;
+    int                    m_notCheckedCount = 0;
+    int                    m_noSourceCount   = 0;
+    qint64                 m_totalSize       = 0;
+    int                    m_sectionMode     = 0;
+    int                    m_checkDone  = 0;
+    int                    m_checkTotal = 0;
     QHash<QString, int>    m_pathIndex;  // path → row; kept in sync for O(1) findRowByPath
 
     QThreadPool            m_readerPool;

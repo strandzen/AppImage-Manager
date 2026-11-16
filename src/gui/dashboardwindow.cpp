@@ -38,10 +38,11 @@
 DashboardWindow *DashboardWindow::s_instance = nullptr;
 
 // static
-void DashboardWindow::open()
+void DashboardWindow::open(const QString &page, const QString &selectPath)
 {
     if (s_instance) {
         if (s_instance->m_window) {
+            s_instance->applyRequest(page, selectPath);
             s_instance->m_window->raise();
             s_instance->m_window->requestActivate();
         }
@@ -49,6 +50,16 @@ void DashboardWindow::open()
     }
     s_instance = new DashboardWindow;
     s_instance->setupAndShow();
+    if (s_instance)
+        s_instance->applyRequest(page, selectPath);
+}
+
+void DashboardWindow::applyRequest(const QString &page, const QString &selectPath)
+{
+    if (!m_window || (page.isEmpty() && selectPath.isEmpty()))
+        return;
+    QMetaObject::invokeMethod(m_window, "openRequest",
+                              Q_ARG(QVariant, page), Q_ARG(QVariant, selectPath));
 }
 
 DashboardWindow::DashboardWindow(QObject *parent)

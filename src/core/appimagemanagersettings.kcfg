@@ -30,6 +30,10 @@
     <entry name="showInstallBox" type="Bool">
       <default>true</default>
     </entry>
+    <!-- The summary on the Installed page while no AppImage is selected. -->
+    <entry name="showOverview" type="Bool">
+      <default>true</default>
+    </entry>
   </group>
   <group name="Behavior">
     <entry name="watchDownloads" type="Bool">

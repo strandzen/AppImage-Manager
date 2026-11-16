@@ -17,10 +17,82 @@ Kirigami.Page {
 
     padding: 0
 
+    // UpdateState (src/core/checkresults.h)
+    readonly property int stateNotChecked: 0
+    readonly property int stateUpToDate: 1
+    readonly property int stateUpdateAvailable: 2
+    readonly property int stateNoSource: 3
+    readonly property int stateFailed: 4
+
+    // The summary on the right while nothing is selected (Settings → General → Overview).
+    readonly property bool overviewShown: AppSettings.showOverview && listView.currentIndex < 0
+
+    // A row's second line: the version and what is known about updates.
+    function rowStatus(version, state, newVersion, olderCopyOf) {
+        const withVersion = text => version ? i18nc("version · status", "%1 · %2", version, text) : text
+        if (olderCopyOf)
+            return withVersion(i18n("Older copy of %1", olderCopyOf))
+        switch (state) {
+        case stateUpdateAvailable:
+            return version ? i18nc("old → new version", "%1 → %2", version, newVersion) : newVersion
+        case stateUpToDate: return withVersion(i18n("Up to date"))
+        case stateNoSource: return withVersion(i18n("No update source"))
+        case stateFailed:   return withVersion(i18n("Check failed"))
+        default:            return version
+        }
+    }
+
+    // The overview's status lines, also used to name the active status filter.
+    function statusLabel(state, count) {
+        switch (state) {
+        case stateUpdateAvailable: return i18np("1 update available", "%1 updates available", count)
+        case stateFailed:          return i18np("1 check failed", "%1 checks failed", count)
+        case stateUpToDate:        return i18np("1 up to date", "%1 up to date", count)
+        case stateNoSource:        return i18np("1 without an update source", "%1 without an update source", count)
+        default:                   return i18np("1 not checked yet", "%1 not checked yet", count)
+        }
+    }
+    function statusFilterName(state) {
+        switch (state) {
+        case stateUpdateAvailable: return i18n("Updates available")
+        case stateFailed:          return i18n("Check failed")
+        case stateUpToDate:        return i18n("Up to date")
+        case stateNoSource:        return i18n("No update source")
+        default:                   return i18n("Not checked yet")
+        }
+    }
+
+    // Section headers follow the sort; updates get their own section on top.
+    Binding {
+        target: listModel
+        property: "sectionMode"
+        value: proxyModel.sortField === AppImageSortFilterModel.SortByCategory ? 1
+             : proxyModel.sortField === AppImageSortFilterModel.SortByDate ? 2
+             : proxyModel.sortField === AppImageSortFilterModel.SortByStatus ? 3 : 0
+    }
+
     // ── Selected item snapshots ───────────────────────────────────────────────
     property var currentItem: ({})
     // Trails currentItem with a fade; drives all detail pane rendering
     property var displayedItem: ({})
+
+    // Selects the AppImage at `path`, clearing the search; waits for the scan when it is not listed yet.
+    property string pendingSelectPath: ""
+    function selectPath(path) {
+        searchField.text = ""
+        const row = proxyModel.rowForPath(path)
+        pendingSelectPath = row < 0 ? path : ""
+        if (row >= 0) {
+            listView.currentIndex = row
+            listView.positionViewAtIndex(row, ListView.Contain)
+        }
+    }
+    Connections {
+        target: proxyModel
+        enabled: pageRoot.pendingSelectPath !== ""
+        function onRowsInserted() { pageRoot.selectPath(pageRoot.pendingSelectPath) }
+        function onLayoutChanged() { pageRoot.selectPath(pageRoot.pendingSelectPath) }
+    }
 
     function refreshCurrentItemAt(idx) {
         if (idx < 0) { currentItem = {}; return }
@@ -37,8 +109,8 @@ Kirigami.Page {
         }
     }
 
-    // Non-modal feedback for update checks: a passive notification when there is
-    // news, an inline message with Retry when the check failed.
+    // Failed update checks: an inline message with Retry. Progress and the result are
+    // the toast at the bottom of the window (UpdateCheckToast).
     Connections {
         target: listModel
         function onUpdateCheckFinished(updatesFound, networkFailures) {
@@ -48,10 +120,6 @@ Kirigami.Page {
             } else if (networkFailures > 0 && updatesFound === 0) {
                 updateErrorMessage.text = i18n("Could not check for updates. Check your network connection and try again.")
                 updateErrorMessage.visible = true
-            } else {
-                showPassiveNotification(updatesFound === 0
-                    ? i18n("All AppImages are up to date")
-                    : i18np("%1 update available", "%1 updates available", updatesFound))
             }
         }
         function onCheckingUpdatesChanged() {
@@ -134,8 +202,8 @@ Kirigami.Page {
         Rectangle {
             id: leftPane
             Layout.fillHeight: true
-            // When nothing selected, fill the entire row; when selected, fixed width.
-            Layout.fillWidth: listView.currentIndex < 0
+            // Fills the row while nothing is selected, unless the overview takes the right side.
+            Layout.fillWidth: listView.currentIndex < 0 && !AppSettings.showOverview
             Layout.preferredWidth: Kirigami.Units.gridUnit * 16
             Kirigami.Theme.colorSet: Kirigami.Theme.View
             Kirigami.Theme.inherit: false
@@ -194,7 +262,38 @@ Kirigami.Page {
                                 checked: proxyModel.sortField === AppImageSortFilterModel.SortByDate
                                 onTriggered: proxyModel.sortField = AppImageSortFilterModel.SortByDate
                             }
+                            Controls.MenuItem {
+                                text: i18n("By Status")
+                                checkable: true; autoExclusive: true
+                                checked: proxyModel.sortField === AppImageSortFilterModel.SortByStatus
+                                onTriggered: proxyModel.sortField = AppImageSortFilterModel.SortByStatus
+                            }
                         }
+                    }
+                }
+
+                // Active status filter (from the overview), dimmed, with a clear button
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.smallSpacing
+                    visible: proxyModel.statusFilter >= 0
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        text: pageRoot.statusFilterName(proxyModel.statusFilter)
+                        color: Kirigami.Theme.disabledTextColor
+                        elide: Text.ElideRight
+                    }
+                    Controls.ToolButton {
+                        icon.name: "dialog-close"
+                        text: i18n("Show All")
+                        display: Controls.AbstractButton.IconOnly
+                        onClicked: proxyModel.statusFilter = -1
+                        Controls.ToolTip.visible: hovered
+                        Controls.ToolTip.text: text
+                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                     }
                 }
 
@@ -250,12 +349,14 @@ Kirigami.Page {
                                 }
                             }
 
-                            section.property: proxyModel.sortField === AppImageSortFilterModel.SortByCategory ? "sectionCategory"
-                                            : proxyModel.sortField === AppImageSortFilterModel.SortByDate ? "sectionAdded" : ""
+                            // listSection follows listModel.sectionMode; empty = no header.
+                            section.property: "listSection"
                             section.delegate: Kirigami.ListSectionHeader {
                                 required property string section
                                 width: ListView.view.width
                                 text: section
+                                visible: section !== ""
+                                height: visible ? implicitHeight : 0
                             }
 
                             TapHandler {
@@ -280,38 +381,79 @@ Kirigami.Page {
                                 verticalPadding: Kirigami.Units.smallSpacing
                                 horizontalPadding: Kirigami.Units.largeSpacing
 
+                                // Why a check failed, on hover.
+                                Controls.ToolTip.text: model.updateReason
+                                Controls.ToolTip.visible: hovered && model.updateState === pageRoot.stateFailed
+                                                          && model.updateReason !== ""
+                                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+
                                 contentItem: RowLayout {
                                     spacing: Kirigami.Units.largeSpacing
 
-                                    Kirigami.IconTitleSubtitle {
-                                        Layout.fillWidth: true
-                                        title: model.displayName
-                                        subtitle: model.version
-                                        icon.source: model.iconSource
-                                        icon.width: Kirigami.Units.iconSizes.medium
-                                        icon.height: Kirigami.Units.iconSizes.medium
+                                    Kirigami.Icon {
+                                        source: model.iconSource
+                                        fallback: "application-x-executable"
                                         selected: delegateRoot.highlighted
-                                        reserveSpaceForSubtitle: true
+                                        implicitWidth: Kirigami.Units.iconSizes.medium
+                                        implicitHeight: Kirigami.Units.iconSizes.medium
                                     }
 
-                                    // Update dot
-                                    Rectangle {
-                                        implicitWidth: Kirigami.Units.smallSpacing * 2
-                                        implicitHeight: implicitWidth
-                                        radius: width / 2
-                                        color: Kirigami.Theme.positiveTextColor
-                                        visible: model.updateAvailable && !model.isUpdating
-                                        Layout.alignment: Qt.AlignVCenter
-                                        HoverHandler { id: updateDotHover }
-                                        Controls.ToolTip.text: i18n("Update available: %1", model.updateVersion)
-                                        Controls.ToolTip.visible: updateDotHover.hovered
-                                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 0
+
+                                        Controls.Label {
+                                            Layout.fillWidth: true
+                                            text: model.displayName
+                                            elide: Text.ElideRight
+                                            color: delegateRoot.highlighted ? Kirigami.Theme.highlightedTextColor
+                                                                            : Kirigami.Theme.textColor
+                                        }
+
+                                        // Version and update state. An update is in the positive color
+                                        // (and spelled out, not only colored); the rest is dimmed.
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            spacing: Kirigami.Units.smallSpacing
+                                            visible: !model.isUpdating
+
+                                            readonly property bool hasUpdate: model.updateState === pageRoot.stateUpdateAvailable
+                                                                              && model.olderCopyOf === ""
+
+                                            Kirigami.Icon {
+                                                visible: model.updateState === pageRoot.stateFailed && model.olderCopyOf === ""
+                                                source: "dialog-warning"
+                                                implicitWidth: Kirigami.Units.iconSizes.small
+                                                implicitHeight: Kirigami.Units.iconSizes.small
+                                            }
+                                            Controls.Label {
+                                                Layout.fillWidth: true
+                                                text: pageRoot.rowStatus(model.version, model.updateState,
+                                                                         model.updateVersion, model.olderCopyOf)
+                                                elide: Text.ElideRight
+                                                font: Kirigami.Theme.smallFont
+                                                color: delegateRoot.highlighted ? Kirigami.Theme.highlightedTextColor
+                                                     : parent.hasUpdate ? Kirigami.Theme.positiveTextColor
+                                                     : Kirigami.Theme.disabledTextColor
+                                                opacity: !delegateRoot.highlighted && model.updateState === pageRoot.stateNoSource
+                                                         ? 0.7 : 1
+                                            }
+                                        }
+
+                                        // Download progress while updating
+                                        Controls.ProgressBar {
+                                            Layout.fillWidth: true
+                                            Layout.topMargin: Kirigami.Units.smallSpacing
+                                            visible: model.isUpdating
+                                            from: 0; to: 100
+                                            value: model.updateProgress
+                                        }
                                     }
 
                                     Controls.BusyIndicator {
                                         implicitWidth:  Kirigami.Units.iconSizes.small
                                         implicitHeight: Kirigami.Units.iconSizes.small
-                                        running: !model.metadataLoaded || model.isUpdating
+                                        running: !model.metadataLoaded
                                         visible: running
                                     }
                                 }
@@ -390,7 +532,106 @@ Kirigami.Page {
 
         Kirigami.Separator {
             Layout.fillHeight: true
-            visible: rightPane.visible
+            visible: rightPane.visible || overviewPane.visible
+        }
+
+        // ── Right pane while nothing is selected: the overview ────────
+        Controls.ScrollView {
+            id: overviewPane
+            visible: pageRoot.overviewShown
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
+
+            ColumnLayout {
+                id: overview
+                // Centered in the pane; the margin stays when the pane is narrow.
+                x: Math.max(Kirigami.Units.gridUnit * 1.5, (overviewPane.availableWidth - width) / 2)
+                width: Math.min(overviewPane.availableWidth - Kirigami.Units.gridUnit * 3, Kirigami.Units.gridUnit * 30)
+                spacing: Kirigami.Units.largeSpacing
+
+                readonly property int total: listModel.updateCount + listModel.upToDateCount + listModel.failedCount
+                                             + listModel.notCheckedCount + listModel.noSourceCount
+
+                Item { implicitHeight: Kirigami.Units.largeSpacing }
+
+                ColumnLayout {
+                    spacing: 0
+                    Kirigami.Heading {
+                        level: 1
+                        text: i18np("1 AppImage", "%1 AppImages", overview.total)
+                    }
+                    Controls.Label {
+                        text: i18nc("total size of all AppImages", "%1 in total", listModel.totalSizeText)
+                        color: Kirigami.Theme.disabledTextColor
+                    }
+                }
+
+                Kirigami.ListSectionHeader {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.largeSpacing
+                    text: i18n("Updates")
+                    leftPadding: 0
+                }
+
+                // One line per state that occurs; a click shows only those AppImages.
+                Repeater {
+                    model: [
+                        { state: pageRoot.stateUpdateAvailable, count: listModel.updateCount,     icon: "system-software-update" },
+                        { state: pageRoot.stateFailed,          count: listModel.failedCount,     icon: "dialog-warning" },
+                        { state: pageRoot.stateUpToDate,        count: listModel.upToDateCount,   icon: "checkmark" },
+                        { state: pageRoot.stateNotChecked,      count: listModel.notCheckedCount, icon: "dialog-question" },
+                        { state: pageRoot.stateNoSource,        count: listModel.noSourceCount,   icon: "action-unavailable-symbolic" },
+                    ].filter(entry => entry.count > 0)
+
+                    delegate: Controls.ItemDelegate {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        icon.name: modelData.icon
+                        text: pageRoot.statusLabel(modelData.state, modelData.count)
+                        highlighted: proxyModel.statusFilter === modelData.state
+                        onClicked: proxyModel.statusFilter = highlighted ? -1 : modelData.state
+                        Controls.ToolTip.text: i18n("Show only these in the list")
+                        Controls.ToolTip.visible: hovered
+                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        text: listModel.lastCheckTime !== "" ? i18n("Last checked %1", listModel.lastCheckTime)
+                                                             : i18n("Not checked yet")
+                        color: Kirigami.Theme.disabledTextColor
+                        elide: Text.ElideRight
+                    }
+                    Controls.Button {
+                        icon.name: "view-refresh"
+                        text: i18n("Check Now")
+                        enabled: !listModel.checkingUpdates
+                        onClicked: listModel.checkForUpdates()
+                    }
+                    Controls.Button {
+                        icon.name: "system-software-update"
+                        text: i18n("Update All")
+                        visible: listModel.updateCount > 0
+                        onClicked: pageRoot.updateAll()
+                    }
+                }
+
+                Controls.Label {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.largeSpacing
+                    text: i18n("Select an AppImage to see its details.")
+                    color: Kirigami.Theme.disabledTextColor
+                    font: Kirigami.Theme.smallFont
+                    wrapMode: Text.WordWrap
+                }
+            }
         }
 
         // ── Right pane: detail view ───────────────────────────────────
@@ -404,7 +645,8 @@ Kirigami.Page {
 
             ColumnLayout {
                 id: detailInner
-                x: Kirigami.Units.gridUnit * 1.5
+                // Centered in the pane; the margin stays when the pane is narrow.
+                x: Math.max(Kirigami.Units.gridUnit * 1.5, (rightPane.availableWidth - width) / 2)
                 // Capped so description lines stay readable on wide windows.
                 width: Math.min(rightPane.availableWidth - Kirigami.Units.gridUnit * 3, Kirigami.Units.gridUnit * 38)
                 spacing: Kirigami.Units.largeSpacing
@@ -583,35 +825,104 @@ Kirigami.Page {
                     columnSpacing: Kirigami.Units.largeSpacing
                     rowSpacing: Kirigami.Units.smallSpacing
 
-                    readonly property var rows: {
-                        const item = detailInner.item
-                        const categories = (item.categories ?? "").split(";").filter(s => s.length > 0)
+                    readonly property var item: detailInner.item
+                    readonly property var topRows: [
+                        [i18n("Version"), item.version || i18n("Unknown")],
+                        [i18n("Size"), item.formattedSize ?? ""],
+                        [i18n("Category"), item.categoryLabel ?? ""],
+                        [i18n("Added"), item.addedDate ? Qt.formatDate(item.addedDate, "d MMM yyyy") : ""],
+                    ]
+                    readonly property var bottomRows: {
                         const env = item.environment ?? []
                         const home = Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation).toString().replace("file://", "")
                         const path = item.filePath ?? ""
                         return [
-                            [i18n("Version"), item.version || i18n("Unknown")],
-                            [i18n("Size"), item.formattedSize ?? ""],
-                            [i18n("Category"), categories.join(", ") || i18n("None")],
-                            [i18n("Added"), item.addedDate ? Qt.formatDate(item.addedDate, "d MMM yyyy") : ""],
-                            [i18n("Updates"), item.updateSourceLabel || i18n("No update source")],
                             [i18n("Environment"), env.length > 0 ? env.join("\n") : i18n("Default")],
                             [i18n("File"), path.startsWith(home) ? "~" + path.slice(home.length) : path],
                         ]
                     }
+                    // The Updates row's second line: what the last check said.
+                    readonly property string updateStatus: {
+                        const checked = listModel.lastCheckTime
+                        if (item.isUpdating)
+                            return i18n("Updating to %1…", item.updateVersion ?? "")
+                        switch (item.updateState) {
+                        case pageRoot.stateUpdateAvailable: return i18n("Version %1 is available", item.updateVersion ?? "")
+                        case pageRoot.stateUpToDate:
+                            return checked !== "" ? i18n("Up to date · checked %1", checked) : i18n("Up to date")
+                        case pageRoot.stateFailed:
+                            return item.updateReason ? i18n("Check failed: %1", item.updateReason) : i18n("Check failed")
+                        case pageRoot.stateNoSource:
+                            return i18n("The AppImage does not say where its updates come from.")
+                        default: return i18n("Not checked yet")
+                        }
+                    }
+
+                    component DetailKey: Controls.Label {
+                        Layout.alignment: Qt.AlignTop | Qt.AlignRight
+                        color: Kirigami.Theme.disabledTextColor
+                    }
 
                     Repeater {
-                        model: detailsGrid.rows.length * 2
+                        model: detailsGrid.topRows.length * 2
                         Controls.Label {
                             required property int index
-                            readonly property var row: detailsGrid.rows[Math.floor(index / 2)]
+                            readonly property var row: detailsGrid.topRows[Math.floor(index / 2)]
                             readonly property bool isKey: index % 2 === 0
                             Layout.alignment: Qt.AlignTop | (isKey ? Qt.AlignRight : Qt.AlignLeft)
                             Layout.fillWidth: !isKey
                             text: isKey ? row[0] : row[1]
                             color: isKey ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
                             wrapMode: isKey ? Text.NoWrap : Text.Wrap
-                            font.family: !isKey && row[0] === i18n("Environment") && (detailInner.item.environment ?? []).length > 0
+                        }
+                    }
+
+                    DetailKey { text: i18n("Updates") }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            visible: text !== ""
+                            text: detailsGrid.item.updateSourceLabel ?? ""
+                            wrapMode: Text.Wrap
+                        }
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            text: detailsGrid.updateStatus
+                            wrapMode: Text.Wrap
+                            color: detailsGrid.item.updateState === pageRoot.stateUpdateAvailable
+                                   ? Kirigami.Theme.positiveTextColor
+                                   : detailsGrid.item.updateState === pageRoot.stateFailed
+                                   ? Kirigami.Theme.neutralTextColor
+                                   : (detailsGrid.item.updateSourceLabel ?? "") !== "" ? Kirigami.Theme.disabledTextColor
+                                                                                      : Kirigami.Theme.textColor
+                        }
+                        Kirigami.LinkButton {
+                            visible: detailsGrid.item.updateState === pageRoot.stateNoSource
+                            text: i18n("Set Update Source…")
+                            onClicked: updateSourceDialog.openFor(listView.currentIndex, detailsGrid.item.displayName ?? "")
+                        }
+                    }
+
+                    DetailKey { text: i18n("App menu") }
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        text: detailsGrid.item.hasDesktopLink ? i18n("Shown") : i18n("Not shown")
+                    }
+
+                    Repeater {
+                        model: detailsGrid.bottomRows.length * 2
+                        Controls.Label {
+                            required property int index
+                            readonly property var row: detailsGrid.bottomRows[Math.floor(index / 2)]
+                            readonly property bool isKey: index % 2 === 0
+                            Layout.alignment: Qt.AlignTop | (isKey ? Qt.AlignRight : Qt.AlignLeft)
+                            Layout.fillWidth: !isKey
+                            text: isKey ? row[0] : row[1]
+                            color: isKey ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
+                            wrapMode: isKey ? Text.NoWrap : Text.Wrap
+                            font.family: !isKey && index === 1 && (detailsGrid.item.environment ?? []).length > 0
                                          ? "monospace" : Kirigami.Theme.defaultFont.family
                         }
                     }

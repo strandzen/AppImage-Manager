@@ -35,6 +35,9 @@ public:
     // direct-download check compare against the file's modification time).
     void check(const QString &filePath, const QString &embeddedUpdateInfo, const QString &currentVersion);
 
+    // Why the last check failed (Failed/NetworkFailed), for people: "Repository not found" etc.
+    QString errorText() const { return m_error; }
+
     // True for Content-Type values that cannot be an AppImage (web pages, JSON, XML, text).
     static bool isNonBinaryContentType(const QString &contentType);
 
@@ -63,4 +66,5 @@ private:
     QString m_fileName;
     QString m_currentVersion;
     QString m_installedTag;
+    QString m_error;
 };

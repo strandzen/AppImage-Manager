@@ -105,12 +105,11 @@ target_include_directories(tst_appsettings PRIVATE
 )
 
 # ── tst_updatedaemon ─────────────────────────────────────────────────────────
-# Verifies UpdateDaemon timer gating: timer stays stopped on freq=0 (Never),
-# stops immediately when frequency changes to 0 at runtime, and checkUpdates()
-# returns early without side effects when freq=0.
+# The daemon's check schedule (persistent last check, intervals beyond a QTimer's
+# 24.8-day limit) and the tray window's model.
 ecm_add_test(tst_updatedaemon.cpp
     TEST_NAME tst_updatedaemon
-    LINK_LIBRARIES Qt6::Test appimagemanager_qml KF6::CoreAddons KF6::ConfigCore
+    LINK_LIBRARIES Qt6::Test appimagemanager_qml appimagemanager_core KF6::CoreAddons KF6::ConfigCore
     NAME_PREFIX "appimagemanager-"
 )
 target_include_directories(tst_updatedaemon PRIVATE
