@@ -1,6 +1,10 @@
 # Maintainer: strandzen <strandzen@gmail.com>
+#
+# Latest release, from its tag on GitHub. For the latest commit, use
+# packaging/appimage-manager-plasma-git/PKGBUILD. On a new release, update pkgver and the
+# checksum (updpkgsums) once the tag is pushed, then regenerate .SRCINFO.
 pkgname=appimage-manager-plasma
-pkgver=2.1.0
+pkgver=2.2.0
 pkgrel=1
 pkgdesc="A lightweight KDE Plasma utility for installing, managing, and removing AppImage files"
 arch=('x86_64' 'aarch64')
@@ -21,6 +25,7 @@ depends=(
     'kcrash'
     'kdbusaddons'
     'kstatusnotifieritem'
+    'layer-shell-qt'
     'libappimage'
 )
 makedepends=(
@@ -31,7 +36,7 @@ makedepends=(
 )
 optdepends=(
     'am-git: install AppImages via the AM package manager'
-    'zsync2: delta updates (falls back to full download without it)'
+    'bubblewrap: run apps in a sandbox'
     'libcanberra: completion sound notifications'
 )
 provides=('appimagemanager')
@@ -45,7 +50,8 @@ build() {
         -S "AppImage-Manager-$pkgver" \
         -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=/usr
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DBUILD_TESTING=OFF
     cmake --build build
 }
 

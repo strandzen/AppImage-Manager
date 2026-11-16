@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.2.0 - 2026-11-17
+
 ### Added
 - On Plasma, a system tray widget: it opens as a normal panel popup (the panel stays visible, Plasma's look), shows the update count on its icon, and is hidden among the tray's extra items when nothing needs a look. On other desktops a tray icon with its own window does the same.
 - Tray overview: click the tray entry for an overview of your AppImages and their update state (update available, up to date, no update source, check failed), when they were last checked (the tooltip also says when the next check is due), with Check Now, Update All, and buttons for the main window and Settings. Clicking an app opens the main window with it selected. Middle-click checks for updates.

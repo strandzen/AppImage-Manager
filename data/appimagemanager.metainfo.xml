@@ -67,6 +67,21 @@
   </content_rating>
 
   <releases>
+    <release version="2.2.0" date="2026-11-17">
+      <description>
+        <p>Safer apps, smaller updates and a tray that fits Plasma.</p>
+        <ul>
+          <li>Run an app, or all of them, in a sandbox that only sees its own folder and the folders you allow.</li>
+          <li>Release notes for apps released on GitHub, Codeberg, Forgejo or Gitea.</li>
+          <li>Undo an update: the previous version is kept and can be restored.</li>
+          <li>Built-in delta updates: only the changed parts of an app are downloaded.</li>
+          <li>A system tray widget with an overview of all AppImages and their update state.</li>
+          <li>Every app shows where it stands: up to date, update available, no update source or check failed.</li>
+          <li>Keep an app's settings in the Applications folder; signatures shown and checked correctly.</li>
+          <li>Installing an app you already have offers to replace it or keep both.</li>
+        </ul>
+      </description>
+    </release>
     <release version="2.1.0" date="2026-11-15">
       <description>
         <p>A cleaner, quieter interface with Installed and Discover tabs, and more ways to update.</p>

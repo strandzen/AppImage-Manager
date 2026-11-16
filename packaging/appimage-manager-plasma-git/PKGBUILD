@@ -1,5 +1,6 @@
 # Maintainer: strandzen <strandzen@gmail.com>
-# Builds the latest commit from GitHub. Dependencies mirror packaging/aur/PKGBUILD.
+# Latest development version: builds the latest commit from GitHub.
+# For the latest release, use packaging/appimage-manager-plasma/PKGBUILD.
 pkgname=appimage-manager-plasma-git
 pkgver=r0.000000
 pkgrel=1

@@ -9,7 +9,7 @@ Drop an AppImage on the window, or right-click it in Dolphin, and it goes into o
 
 It doesn't care where your AppImages come from. Updates work from the information built into an AppImage, or from a GitHub, Codeberg, Forgejo or Gitea repository, a zsync file or a plain download link that you set yourself. The app catalogs are optional, and you can add your own.
 
-The latest release is 2.1.0; this page describes the current development version, which has more (see [CHANGELOG.md](CHANGELOG.md)). I mostly test it on my own machine on Arch, so other distributions may need some work.
+This is version 2.2.0 (see [CHANGELOG.md](CHANGELOG.md)). I mostly test it on my own machine on Arch, so other distributions may need some work.
 
 > [!NOTE]
 > This project built with heavy AI assistance. It is an independent project and is not affiliated with or endorsed by KDE or KDE e.V.
@@ -48,15 +48,24 @@ The latest release is 2.1.0; this page describes the current development version
 
 ### Arch Linux
 
-Install from the AUR, for the latest release:
+Install from the AUR, either the latest release or the latest development version:
 
 ```sh
-paru -S appimage-manager-plasma
+paru -S appimage-manager-plasma        # latest release
+paru -S appimage-manager-plasma-git    # latest development version
 ```
 
-Or `appimage-manager-plasma-git` for the latest development version. Your AUR helper also installs `libappimage`, which is only in the AUR.
+Your AUR helper also installs `libappimage`, which is only in the AUR.
 
-To build the source you have checked out, as a package you can remove again with pacman, run this in `packaging`:
+Or build the package yourself from a clone of this repository. For the latest release, run this in `packaging/appimage-manager-plasma`:
+
+```sh
+makepkg -si
+```
+
+Run it in `packaging/appimage-manager-plasma-git` instead for the latest development version from GitHub. You need `libappimage` from the AUR first.
+
+To build the source you have checked out (with your own changes), run this in `packaging`:
 
 ```sh
 makepkg -sif

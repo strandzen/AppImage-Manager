@@ -29,7 +29,7 @@ Makefile
 build_new/
 build_*/
 
-# Packaging scripts (local workflow only — packaging/aur/ is tracked)
+# Packaging scripts (local workflow only; the package folders in packaging/ are tracked)
 packaging/local/
 
 # makepkg output from packaging/PKGBUILD (cd packaging && makepkg -si)

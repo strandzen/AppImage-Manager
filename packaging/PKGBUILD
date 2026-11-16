@@ -1,10 +1,10 @@
 # Local build of this checkout, installed as a pacman package (cleanly removable):
 #   cd packaging && makepkg -si
-# Not for the AUR (see packaging/aur/ and packaging/aur-git/). It lives here rather than
+# Not for the AUR (see packaging/appimage-manager-plasma/ and packaging/appimage-manager-plasma-git/). It lives here rather than
 # in the repo root because makepkg uses <PKGBUILD dir>/src as its work dir, which would
 # collide with the project's src/. pkgver follows VERSION in the top-level CMakeLists.txt.
 pkgname=appimage-manager-plasma
-pkgver=2.1.0
+pkgver=2.2.0
 pkgrel=1
 pkgdesc="A lightweight KDE Plasma utility for installing, managing, and removing AppImage files (local build)"
 arch=('x86_64' 'aarch64')

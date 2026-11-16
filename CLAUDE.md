@@ -10,7 +10,7 @@ This file is the authoritative reference for working on AppImage Manager.
 
 **Distribution target:** KDE Store and AUR.  
 **Philosophy:** Simplicity, efficiency, and complete source agnosticism. No unnecessary abstractions. Every feature must justify its existence. The utility strives to remain entirely agnostic to where AppImages are sourced from, supporting custom repository configurations natively.  
-**Stack:** C++20, Qt 6.9, KDE Frameworks 6.7, KirigamiAddons, Kirigami (Plasma 6 era), QML. Project version `2.1.0`.  
+**Stack:** C++20, Qt 6.9, KDE Frameworks 6.7, KirigamiAddons, Kirigami (Plasma 6 era), QML. Project version `2.2.0`.  
 **License:** GPL-2.0-or-later.
 
 ### AI Assistant Guidelines
@@ -68,7 +68,7 @@ ctest --test-dir build/dev --output-on-failure
 QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH=build/dev/src timeout 5 qml6 qml/<File>.qml; echo $?
 ```
 
-**When releasing:** bump `VERSION` in the top-level `CMakeLists.txt` (`project(AppImageManager VERSION X.Y.Z ...)`). This is the single source of truth — `version.h` is generated from it and `AppSettings::appVersion()` reads it at runtime. Also update the version string in this file, move `CHANGELOG.md`'s `## Unreleased` entries under the new version, and add a `<release>` entry to `data/appimagemanager.metainfo.xml`. For the AUR, bump `pkgver` in `packaging/aur/PKGBUILD`, update `sha256sums`, and regenerate `.SRCINFO` (`makepkg --printsrcinfo > .SRCINFO`). Forgetting any of these causes the About dialog to display the wrong version or the KDE Store validator to reject the submission.
+**When releasing:** bump `VERSION` in the top-level `CMakeLists.txt` (`project(AppImageManager VERSION X.Y.Z ...)`). This is the single source of truth — `version.h` is generated from it and `AppSettings::appVersion()` reads it at runtime. Also update the version string in this file, move `CHANGELOG.md`'s `## Unreleased` entries under the new version, and add a `<release>` entry to `data/appimagemanager.metainfo.xml`. For the AUR, bump `pkgver` in `packaging/appimage-manager-plasma/PKGBUILD`, update `sha256sums` once the tag is on GitHub (`updpkgsums`), and regenerate `.SRCINFO` in both package folders (`makepkg --printsrcinfo > .SRCINFO`). Forgetting any of these causes the About dialog to display the wrong version or the KDE Store validator to reject the submission.
 
 Build output: `build/<presetName>/`. Unit tests in [tests/](tests/) cover `appimageinfo` helpers, `AppImageReader` cleanName, `AppImageCache` round-trip, `AppImageListModel` watcher behavior, the daemon's schedule and tray model (`tst_updatedaemon`), built-in zsync (`tst_zsync`), app menu entries (`tst_desktoplink`), and update sources and launch environment (`tst_updatesource`: input auto-detection, effective update info, config round-trip incl. the legacy `Repo` key, release asset pick, environment parsing, Content-Type guard). The manual checklist below still applies for UI/integration paths.
 
@@ -84,7 +84,7 @@ Build output: `build/<presetName>/`. Unit tests in [tests/](tests/) cover `appim
 | [qml/](qml/) | All QML files (top-level, NOT under `src/`) |
 | [tests/](tests/) | Unit tests (`tst_*.cpp`) |
 | [data/](data/) | Desktop files, icons, autostart, .pot |
-| [packaging/](packaging/) | `PKGBUILD` (local `makepkg -si`), `aur/` (release, published), `aur-git/` (latest commit), `build-appimage.sh` |
+| [packaging/](packaging/) | `PKGBUILD` (this checkout, `makepkg -sif`), `appimage-manager-plasma/` (latest release, published to the AUR), `appimage-manager-plasma-git/` (latest commit, published to the AUR), `build-appimage.sh` |
 
 ---
 
