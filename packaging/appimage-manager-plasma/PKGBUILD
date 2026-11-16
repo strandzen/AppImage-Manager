@@ -42,7 +42,7 @@ optdepends=(
 provides=('appimagemanager')
 conflicts=('appimage-manager-plasma-git')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/strandzen/AppImage-Manager/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('dcbdf5c97762b5e03b9c4ad7a3cfb615039460101ba3b3c59097248e3af7f8c0')
+sha256sums=('afaec2e56e2c2027d7cb0fd3191e2a0157f1c24dcaff9bad2b4d8171e6501152')
 
 build() {
     cmake \
