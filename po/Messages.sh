@@ -38,6 +38,9 @@ $XGETTEXT \
     qml/OnboardingDialog.qml \
     qml/UpdateSourceDialog.qml \
     qml/EnvironmentDialog.qml \
+    qml/ConfigFolderDialog.qml \
+    qml/SandboxDialog.qml \
+    qml/ReleaseNotesDialog.qml \
     qml/AboutDialog.qml \
     qml/AboutPage.qml \
     qml/AboutContent.qml \

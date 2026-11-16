@@ -551,7 +551,7 @@ void UpdateDaemon::updateAll()
         if (item.state != TrayModel::UpdateAvailable || item.url.isEmpty())
             continue;
         m_model->setState(item.path, TrayModel::Updating, item.newVersion, item.url);
-        m_updates->downloadUpdate(item.path, item.url, item.name, item.appIconId);
+        m_updates->downloadUpdate(item.path, item.url, item.name, item.appIconId, item.version);
     }
     updateTray();
 }

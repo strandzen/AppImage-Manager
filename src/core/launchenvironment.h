@@ -24,7 +24,22 @@ APPIMAGEMANAGER_EXPORT EnvironmentParse parseEnvironment(const QString &text);
 APPIMAGEMANAGER_EXPORT QStringList loadEnvironment(const QString &filePath);
 APPIMAGEMANAGER_EXPORT void saveEnvironment(const QString &filePath, const QStringList &variables);
 
-// Starts the AppImage detached with its saved environment on top of ours.
+// Settings folder in Applications: the app keeps its settings in
+// <folder of the AppImage>/.config/<name>/ (its XDG_CONFIG_HOME) instead of ~/.config.
+// Stored as [ConfigFolder][<file name>] = <name>; no entry = off.
+APPIMAGEMANAGER_EXPORT QString configFolderName(const QString &filePath);
+APPIMAGEMANAGER_EXPORT void setConfigFolderName(const QString &filePath, const QString &name);
+// The folder, or "" when off.
+APPIMAGEMANAGER_EXPORT QString configFolderPath(const QString &filePath);
+// "mailcraft" for mailcraft-0.13.0-linux-x86_64.AppImage.
+APPIMAGEMANAGER_EXPORT QString defaultConfigFolderName(const QString &filePath);
+
+// What a launch adds to the environment: the saved variables, then XDG_CONFIG_HOME and
+// XDG_CONFIG_DIRS for the settings folder (unless the user set them). ~/.config stays in
+// XDG_CONFIG_DIRS so the desktop's theme and fonts settings are still read.
+APPIMAGEMANAGER_EXPORT QStringList launchVariables(const QString &filePath);
+
+// Starts the AppImage detached with launchVariables() on top of our environment.
 APPIMAGEMANAGER_EXPORT bool launchWithEnvironment(const QString &filePath);
 
 // "env 'KEY=value' … " for a .desktop Exec line, or "" without variables.

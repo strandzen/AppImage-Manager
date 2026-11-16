@@ -10,6 +10,10 @@
 #include "../core/appsettings.h"
 #include "../core/updatesource.h"
 #include "../core/launchenvironment.h"
+#include "../core/previousversion.h"
+#include "../core/sandbox.h"
+#include "../core/releasechecker.h"
+#include "../core/releasenotes.h"
 
 #include <KFormat>
 #include <KIO/CopyJob>
@@ -25,14 +29,18 @@
 #include <QFutureWatcher>
 #include <QIcon>
 #include <QNetworkAccessManager>
+#include <QLocale>
+#include <QNetworkReply>
 #include <QProcess>
+#include <QStandardPaths>
 #include <QThread>
 #include <QtConcurrent/QtConcurrent>
 
 AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject *parent)
     : QAbstractListModel(parent)
     , m_iconProvider(iconProvider)
-    , m_updateManager(new AppImageUpdateManager(new QNetworkAccessManager(this), this))
+    , m_network(new QNetworkAccessManager(this))
+    , m_updateManager(new AppImageUpdateManager(m_network, this))
     , m_downloadWatcher(new DownloadWatcher(this))
 {
     m_readerPool.setMaxThreadCount(qBound(1, QThread::idealThreadCount() / 2, 4));
@@ -52,6 +60,16 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
                 }
                 refresh();
             });
+
+    // Sandbox all: menu entries of sandboxed apps start through appimagemanager --run.
+    connect(AppSettings::instance(), &AppSettings::sandboxAllChanged, this, [this]() {
+        for (const Item &item : std::as_const(m_items)) {
+            if (item.hasDesktopLink)
+                AppImageManager::createDesktopLink(item.filePath, item.info);
+        }
+        if (!m_items.isEmpty())
+            Q_EMIT dataChanged(index(0, 0), index(m_items.size() - 1, 0));
+    });
 
     // ── Download watcher ──────────────────────────────────────────────────────
     m_downloadWatcher->setEnabled(AppSettings::instance()->watchDownloads());
@@ -630,6 +648,8 @@ void AppImageListModel::refresh()
 void AppImageListModel::loadMetadataForRow(int row)
 {
     const QString path = m_items.at(row).filePath;
+    m_items[row].signatureState = -1; // a changed file is checked again
+    m_items[row].signatureKey.clear();
     const int gen = m_generation;
 
     // Fast path: check the SQLite cache on the main thread before spawning a
@@ -870,6 +890,198 @@ QVariantList AppImageListModel::setEnvironment(int row, const QString &text)
     return {};
 }
 
+QVariantMap AppImageListModel::configFolder(int row) const
+{
+    if (row < 0 || row >= m_items.size()) return {};
+    const Item &item = m_items.at(row);
+    const QString name = configFolderName(item.filePath);
+    const QString path = QFileInfo(item.filePath).absolutePath() + QStringLiteral("/.config/")
+                       + (name.isEmpty() ? defaultConfigFolderName(item.filePath) : name);
+    QVariantList configDirs;
+    if (name.isEmpty()) {
+        for (const auto &dir : AppImageManager::findConfigDirs(item.info))
+            configDirs.append(QVariantMap{ { QStringLiteral("path"), dir.path },
+                                           { QStringLiteral("likely"), dir.confidence == AppImageManager::CorpseConfidence::High } });
+    }
+    QStringList contents;
+    if (!name.isEmpty()) {
+        for (const QFileInfo &child : QDir(path).entryInfoList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot))
+            contents.append(child.absoluteFilePath());
+    }
+    return {
+        { QStringLiteral("enabled"), !name.isEmpty() },
+        { QStringLiteral("path"), path },
+        { QStringLiteral("configDirs"), configDirs },
+        { QStringLiteral("contents"), contents },
+    };
+}
+
+void AppImageListModel::setConfigFolder(int row, bool enable, const QStringList &moveDirs)
+{
+    if (row < 0 || row >= m_items.size()) return;
+    const Item &item = m_items.at(row);
+    const QString filePath = item.filePath;
+    QString target;
+    if (enable) {
+        setConfigFolderName(filePath, defaultConfigFolderName(filePath));
+        target = configFolderPath(filePath);
+    } else {
+        target = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
+        setConfigFolderName(filePath, {});
+    }
+    QDir().mkpath(target);
+    // The app menu entry carries the folder in its Exec line: rewrite it.
+    if (item.hasDesktopLink)
+        AppImageManager::createDesktopLink(filePath, item.info);
+    Q_EMIT dataChanged(index(row, 0), index(row, 0));
+
+    // Never overwrite: a folder with the same name already at the target stays where it is.
+    QList<QUrl> urls;
+    QStringList skipped;
+    for (const QString &dir : moveDirs) {
+        if (QFileInfo::exists(target + QLatin1Char('/') + QFileInfo(dir).fileName()))
+            skipped.append(QFileInfo(dir).fileName());
+        else
+            urls.append(QUrl::fromLocalFile(dir));
+    }
+    if (!skipped.isEmpty())
+        sendError(this, i18n("Some Settings Were Not Moved"),
+                  i18n("%1 already exists in %2.", skipped.join(QStringLiteral(", ")), target));
+    if (urls.isEmpty())
+        return;
+    auto *job = KIO::move(urls, QUrl::fromLocalFile(target), KIO::HideProgressInfo);
+    const QString oldFolder = enable ? QString() : QFileInfo(filePath).absolutePath() + QStringLiteral("/.config/")
+                                                   + QFileInfo(moveDirs.first()).dir().dirName();
+    connect(job, &KJob::result, this, [this, oldFolder](KJob *j) {
+        if (j->error())
+            sendError(this, i18n("Could Not Move Settings"), j->errorString());
+        else if (!oldFolder.isEmpty())
+            QDir().rmdir(oldFolder);  // only when empty
+    });
+    job->start();
+}
+
+QVariantMap AppImageListModel::sandbox(int row) const
+{
+    if (row < 0 || row >= m_items.size()) return {};
+    const QString path = m_items.at(row).filePath;
+    const SandboxSettings settings = loadSandbox(path);
+    QString folder = configFolderPath(path);
+    if (folder.isEmpty())
+        folder = QFileInfo(path).absolutePath() + QStringLiteral("/.config/") + defaultConfigFolderName(path);
+    return {
+        { QStringLiteral("enabled"), settings.enabled },
+        { QStringLiteral("folders"), settings.folders },
+        { QStringLiteral("available"), sandboxAvailable() },
+        { QStringLiteral("settingsFolder"), folder },
+    };
+}
+
+void AppImageListModel::setSandbox(int row, bool enabled, const QStringList &folders)
+{
+    if (row < 0 || row >= m_items.size()) return;
+    const Item &item = m_items.at(row);
+    if (enabled && configFolderName(item.filePath).isEmpty())
+        setConfigFolderName(item.filePath, defaultConfigFolderName(item.filePath));
+    saveSandbox(item.filePath, { enabled, folders });
+    // The app menu entry starts it through appimagemanager --run when sandboxed: rewrite it.
+    if (item.hasDesktopLink)
+        AppImageManager::createDesktopLink(item.filePath, item.info);
+    Q_EMIT dataChanged(index(row, 0), index(row, 0));
+}
+
+void AppImageListModel::checkSignature(int row)
+{
+    if (row < 0 || row >= m_items.size()) return;
+    Item &item = m_items[row];
+    if (item.signatureState >= 0 || item.signatureChecking)
+        return;
+    item.signatureChecking = true;
+    const QString path = item.filePath;
+    using Result = QPair<SignatureState, QString>;
+    auto *watcher = new QFutureWatcher<Result>(this);
+    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, path]() {
+        watcher->deleteLater();
+        const int r = findRowByPath(path);
+        if (r < 0)
+            return;
+        Item &it = m_items[r];
+        it.signatureChecking = false;
+        it.signatureState = int(watcher->result().first);
+        it.signatureKey = watcher->result().second;
+        Q_EMIT dataChanged(index(r, 0), index(r, 0));
+    });
+    watcher->setFuture(QtConcurrent::run(&m_readerPool, [path]() {
+        QString fingerprint;
+        const SignatureState state = AppImageReader::verifySignature(path, &fingerprint);
+        return Result(state, fingerprint);
+    }));
+}
+
+void AppImageListModel::fetchReleaseNotes(int row)
+{
+    if (row < 0 || row >= m_items.size()) return;
+    const Item &item = m_items.at(row);
+    const QString path = item.filePath;
+    const UpdateSource source = loadUpdateSource(path);
+    const QString info = effectiveUpdateInfo(item.info.updateInfo, source);
+    const QString page = updateSourceWebUrl(info) + QStringLiteral("/releases");
+    const QUrl url = releaseListUrl(info);
+    if (!url.isValid()) {
+        Q_EMIT releaseNotesReady(path, {}, {}, i18n("This app's update source has no release notes."));
+        return;
+    }
+    QNetworkRequest request(url);
+    request.setRawHeader("User-Agent", "AppImageManager");
+    request.setRawHeader("Accept", "application/json");
+    request.setTransferTimeout(20000);
+    QNetworkReply *reply = m_network->get(request);
+    connect(reply, &QNetworkReply::finished, this,
+            [this, reply, path, page, version = item.info.version, tag = source.installedTag,
+             prerelease = source.prerelease]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) {
+            Q_EMIT releaseNotesReady(path, {}, page, ReleaseChecker::describeReplyError(reply, true));
+            return;
+        }
+        QVariantList notes;
+        const QLocale locale;
+        for (const ReleaseNote &note : pickReleaseNotes(reply->readAll(), version, tag, prerelease)) {
+            notes.append(QVariantMap{
+                { QStringLiteral("tag"), note.tag },
+                { QStringLiteral("name"), note.name },
+                { QStringLiteral("body"), note.body },
+                { QStringLiteral("url"), note.url },
+                { QStringLiteral("date"), note.published.isValid()
+                      ? locale.toString(note.published.toLocalTime().date(), QLocale::LongFormat) : QString() },
+                { QStringLiteral("prerelease"), note.prerelease },
+            });
+        }
+        Q_EMIT releaseNotesReady(path, notes, page, notes.isEmpty() ? i18n("No releases found") : QString());
+    });
+}
+
+bool AppImageListModel::restorePrevious(int row)
+{
+    if (row < 0 || row >= m_items.size()) return false;
+    Item &item = m_items[row];
+    if (item.isUpdating) return false;
+    if (!::restorePrevious(item.filePath, item.info.version)) {
+        sendError(this, i18n("Restore Failed"), i18n("The previous version of %1 could not be restored.", item.cachedDisplayName));
+        return false;
+    }
+    // A different file now: what the last check said no longer applies.
+    item.updateVersion.clear();
+    item.updateUrl.clear();
+    m_results.remove(item.info.originalName);
+    saveCheckResult(item.info.originalName, {});
+    setRowState(row, int(UpdateState::NotChecked));
+    notifyDaemon();
+    ++m_pendingLoads; // loadMetadataForRow decrements it
+    loadMetadataForRow(row);
+    return true;
+}
+
 bool AppImageListModel::setUpdateSource(int row, const QString &input, const QString &type, bool prerelease)
 {
     if (row < 0 || row >= m_items.size()) return false;
@@ -903,7 +1115,7 @@ void AppImageListModel::downloadUpdate(int row)
     Q_EMIT dataChanged(index(row, 0), index(row, 0), {IsUpdatingRole, UpdateProgressRole});
 
     m_updateManager->downloadUpdate(item.filePath, item.updateUrl,
-                                    item.cachedDisplayName, item.info.appId);
+                                    item.cachedDisplayName, item.info.appId, item.info.version);
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -983,6 +1195,7 @@ QVariantMap AppImageListModel::itemData(int row) const
     if (row < 0 || row >= m_items.size())
         return {};
     const Item &item = m_items.at(row);
+    const QString effective = effectiveUpdateInfo(item.info.updateInfo, loadUpdateSource(item.filePath));
     return {
         { QStringLiteral("filePath"),        item.filePath                                },
         { QStringLiteral("cleanName"),       item.info.cleanName                          },
@@ -1009,8 +1222,14 @@ QVariantMap AppImageListModel::itemData(int row) const
         { QStringLiteral("developerName"),   item.info.developerName                      },
         { QStringLiteral("homepage"),        item.info.homepage                           },
         { QStringLiteral("environment"),     loadEnvironment(item.filePath)                },
-        { QStringLiteral("updateSourceLabel"), describeUpdateInfo(
-              effectiveUpdateInfo(item.info.updateInfo, loadUpdateSource(item.filePath)))  },
+        { QStringLiteral("configFolder"),    configFolderPath(item.filePath)               },
+        { QStringLiteral("hasPrevious"),     hasPrevious(item.filePath)                    },
+        { QStringLiteral("sandboxed"),       loadSandbox(item.filePath).enabled            },
+        { QStringLiteral("signatureState"),  item.signatureState                           },
+        { QStringLiteral("signatureKey"),    item.signatureKey                             },
+        { QStringLiteral("previousVersion"), previousVersion(item.filePath)                },
+        { QStringLiteral("updateSourceLabel"), describeUpdateInfo(effective)                },
+        { QStringLiteral("updateSourceUrl"),   updateSourceWebUrl(effective)                },
     };
 }
 

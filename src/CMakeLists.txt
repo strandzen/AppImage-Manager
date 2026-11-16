@@ -20,6 +20,9 @@ add_library(appimagemanager_core OBJECT
     core/updatesource.cpp
     core/launchenvironment.cpp
     core/checkresults.cpp
+    core/previousversion.cpp
+    core/releasenotes.cpp
+    core/sandbox.cpp
     ${LOGGING_SRCS}
     ${KCFG_SRCS}
 )
@@ -52,6 +55,9 @@ set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/qml/OnboardingDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/UpdateSourceDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/EnvironmentDialog.qml
+    ${CMAKE_SOURCE_DIR}/qml/ConfigFolderDialog.qml
+    ${CMAKE_SOURCE_DIR}/qml/SandboxDialog.qml
+    ${CMAKE_SOURCE_DIR}/qml/ReleaseNotesDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
     ${CMAKE_SOURCE_DIR}/qml/LibraryPage.qml
     ${CMAKE_SOURCE_DIR}/qml/StorePage.qml
@@ -75,6 +81,12 @@ set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/UpdateSourceDialog.qml
     PROPERTY QT_RESOURCE_ALIAS UpdateSourceDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/EnvironmentDialog.qml
     PROPERTY QT_RESOURCE_ALIAS EnvironmentDialog.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ConfigFolderDialog.qml
+    PROPERTY QT_RESOURCE_ALIAS ConfigFolderDialog.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/SandboxDialog.qml
+    PROPERTY QT_RESOURCE_ALIAS SandboxDialog.qml)
+set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/ReleaseNotesDialog.qml
+    PROPERTY QT_RESOURCE_ALIAS ReleaseNotesDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
     PROPERTY QT_RESOURCE_ALIAS AboutDialog.qml)
 set_property(SOURCE ${CMAKE_SOURCE_DIR}/qml/LibraryPage.qml
@@ -104,6 +116,9 @@ qt_add_qml_module(appimagemanager_qml
         ${CMAKE_SOURCE_DIR}/qml/OnboardingDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/UpdateSourceDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/EnvironmentDialog.qml
+        ${CMAKE_SOURCE_DIR}/qml/ConfigFolderDialog.qml
+        ${CMAKE_SOURCE_DIR}/qml/SandboxDialog.qml
+        ${CMAKE_SOURCE_DIR}/qml/ReleaseNotesDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/AboutDialog.qml
         ${CMAKE_SOURCE_DIR}/qml/LibraryPage.qml
         ${CMAKE_SOURCE_DIR}/qml/StorePage.qml
@@ -128,6 +143,7 @@ qt_add_qml_module(appimagemanager_qml
         gui/appimagelistmodel.cpp
         gui/appimageupdate.h
         gui/appimageupdate.cpp
+        gui/zsyncdownloader.cpp
         gui/downloadwatcher.h
         gui/downloadwatcher.cpp
         gui/appimagesortfiltermodel.h

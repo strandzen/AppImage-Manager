@@ -29,6 +29,11 @@ class APPIMAGEMANAGER_EXPORT AppSettings : public QObject
     Q_PROPERTY(bool    verifySignatures  READ verifySignatures  WRITE setVerifySignatures  NOTIFY verifySignaturesChanged)
     Q_PROPERTY(bool    showInstallBox    READ showInstallBox    WRITE setShowInstallBox    NOTIFY showInstallBoxChanged)
     Q_PROPERTY(bool    showOverview      READ showOverview      WRITE setShowOverview      NOTIFY showOverviewChanged)
+    Q_PROPERTY(bool    configInApplications READ configInApplications WRITE setConfigInApplications NOTIFY configInApplicationsChanged)
+    Q_PROPERTY(bool    sandboxAll        READ sandboxAll        WRITE setSandboxAll        NOTIFY sandboxAllChanged)
+    Q_PROPERTY(QStringList sandboxFolders READ sandboxFolders   WRITE setSandboxFolders    NOTIFY sandboxFoldersChanged)
+    Q_PROPERTY(bool    sandboxAvailable  READ sandboxAvailable  CONSTANT)
+    Q_PROPERTY(int     libraryListWidth  READ libraryListWidth  WRITE setLibraryListWidth  NOTIFY libraryListWidthChanged)
     Q_PROPERTY(bool    discoverEnabled   READ discoverEnabled   WRITE setDiscoverEnabled   NOTIFY discoverEnabledChanged)
     Q_PROPERTY(QString qtVersion READ qtVersion CONSTANT)
     Q_PROPERTY(QString kdeFrameworksVersion READ kdeFrameworksVersion CONSTANT)
@@ -82,6 +87,15 @@ public:
 
     bool showOverview() const;
     void setShowOverview(bool enabled);
+    bool configInApplications() const;
+    void setConfigInApplications(bool enabled);
+    bool sandboxAll() const;
+    void setSandboxAll(bool enabled);
+    QStringList sandboxFolders() const;
+    void setSandboxFolders(const QStringList &folders);
+    bool sandboxAvailable() const;
+    int libraryListWidth() const;
+    void setLibraryListWidth(int width);
 
     bool discoverEnabled() const;
     void setDiscoverEnabled(bool enabled);
@@ -99,6 +113,10 @@ Q_SIGNALS:
     void watchDownloadsChanged();
     void showInstallBoxChanged();
     void showOverviewChanged();
+    void configInApplicationsChanged();
+    void sandboxAllChanged();
+    void sandboxFoldersChanged();
+    void libraryListWidthChanged();
     void verifySignaturesChanged();
     void discoverEnabledChanged();
     void applicationsPathError(const QString &message);

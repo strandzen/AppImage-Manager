@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #pragma once
 
+#include <QHash>
 #include <QObject>
 #include <QTimer>
 #include <QQueue>
@@ -11,15 +12,15 @@ class QUrl;
 
 // Handles update checking (release sources via ReleaseChecker — GitHub, Forgejo/Codeberg, direct
 // URL — and plain zsync|, after applying the user's per-AppImage source from updatesource.h) and
-// in-place downloading: .zsync URLs via the zsync2 subprocess (or a full download when zsync2 is
-// missing), anything else as a plain HTTP download that is refused when the server sends a web
+// in-place downloading: .zsync URLs with the built-in zsync (ZsyncDownloader: only the blocks the
+// installed file lacks; a full download if that fails), anything else as a plain HTTP download that is refused when the server sends a web
 // page instead of a file.
 //
 // Lifecycle:
 //   1. Call checkForUpdates(items) to start a batch check.
 //      Up to 6 items are checked at once; updateFound is emitted for each available update.
 //      checkFinished is emitted when all checks resolve, or with -1 when none finished for 30 s.
-//   2. Call downloadUpdate(...) per file to start a zsync2 subprocess or HTTP download.
+//   2. Call downloadUpdate(...) per file to start a zsync or plain HTTP download.
 //      downloadProgress emits as bytes arrive; downloadFinished on exit.
 //
 // Thread: all signals are emitted on the main thread.
@@ -45,10 +46,12 @@ public:
 
     void checkForUpdates(const QList<CheckItem> &items);
     // url: a .zsync control file or a direct .AppImage download.
+    // currentVersion: the version being replaced; the replaced file is kept (previousversion.h).
     void downloadUpdate(const QString &filePath,
                         const QString &url,
                         const QString &displayName,
-                        const QString &appIconId);
+                        const QString &appIconId,
+                        const QString &currentVersion = {});
 
 Q_SIGNALS:
     void checkingChanged();
@@ -83,6 +86,8 @@ private:
                                  const QString &appIconId);
 
     void checkNextItem();
+
+    QHash<QString, QString> m_replacedVersion;  // file path → version being updated
 
     QNetworkAccessManager *m_nam;
     int m_pendingChecks    = 0;

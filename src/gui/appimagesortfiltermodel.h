@@ -44,6 +44,13 @@ public:
     Q_INVOKABLE bool setUpdateSource(int proxyRow, const QString &input, const QString &type, bool prerelease);
     Q_INVOKABLE QString environment(int proxyRow) const;
     Q_INVOKABLE QVariantList setEnvironment(int proxyRow, const QString &text);
+    Q_INVOKABLE QVariantMap configFolder(int proxyRow) const;
+    Q_INVOKABLE void setConfigFolder(int proxyRow, bool enable, const QStringList &moveDirs);
+    Q_INVOKABLE bool restorePrevious(int proxyRow);
+    Q_INVOKABLE void checkSignature(int proxyRow);
+    Q_INVOKABLE void fetchReleaseNotes(int proxyRow);
+    Q_INVOKABLE QVariantMap sandbox(int proxyRow) const;
+    Q_INVOKABLE void setSandbox(int proxyRow, bool enabled, const QStringList &folders);
 
 Q_SIGNALS:
     void filterTextChanged();

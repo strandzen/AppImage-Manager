@@ -190,6 +190,39 @@ Kirigami.Page {
         }
     }
 
+    // Drag handle for the list's width (leftPane.dragWidth / AppSettings.libraryListWidth).
+    MouseArea {
+        id: resizeHandle
+        // Over the separator, not the list's scrollbar.
+        x: leftPane.width - 1
+        y: masterDetailRow.y
+        height: masterDetailRow.height
+        width: Kirigami.Units.smallSpacing + 2
+        z: 10
+        visible: masterDetailRow.visible && !leftPane.Layout.fillWidth
+        cursorShape: Qt.SplitHCursor
+        hoverEnabled: true
+        property real startX: 0
+        property real startWidth: 0
+        onPressed: (mouse) => {
+            startX = mapToItem(masterDetailRow, mouse.x, 0).x
+            startWidth = leftPane.width
+            leftPane.dragWidth = startWidth
+        }
+        onPositionChanged: (mouse) => {
+            if (pressed)
+                leftPane.dragWidth = startWidth + mapToItem(masterDetailRow, mouse.x, 0).x - startX
+        }
+        onReleased: {
+            AppSettings.libraryListWidth = Math.round(leftPane.listWidth)
+            leftPane.dragWidth = -1
+        }
+        onDoubleClicked: AppSettings.libraryListWidth = 0
+        Controls.ToolTip.text: i18n("Drag to resize; double-click for the default width")
+        Controls.ToolTip.visible: containsMouse && !pressed
+        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay * 3
+    }
+
     // ── Populated state: master-detail ────────────────────────────────
     RowLayout {
         id: masterDetailRow
@@ -204,10 +237,20 @@ Kirigami.Page {
             Layout.fillHeight: true
             // Fills the row while nothing is selected, unless the overview takes the right side.
             Layout.fillWidth: listView.currentIndex < 0 && !AppSettings.showOverview
-            Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+            Layout.preferredWidth: listWidth
             Kirigami.Theme.colorSet: Kirigami.Theme.View
             Kirigami.Theme.inherit: false
             color: Kirigami.Theme.backgroundColor
+
+            // Draggable width (the handle on the right edge); 0 in the settings = the default.
+            readonly property real defaultWidth: Kirigami.Units.gridUnit * 16
+            readonly property real minWidth: Kirigami.Units.gridUnit * 11
+            readonly property real maxWidth: Math.max(minWidth, masterDetailRow.width - Kirigami.Units.gridUnit * 20)
+            property real dragWidth: -1
+            readonly property real listWidth: Math.min(maxWidth, Math.max(minWidth,
+                dragWidth >= 0 ? dragWidth
+                               : AppSettings.libraryListWidth > 0 ? AppSettings.libraryListWidth : defaultWidth))
+
 
             ColumnLayout {
                 anchors.fill: parent
@@ -340,6 +383,8 @@ Kirigami.Page {
 
                             onCurrentIndexChanged: {
                                 pageRoot.refreshCurrentItemAt(currentIndex)
+                                if (currentIndex >= 0)
+                                    proxyModel.checkSignature(currentIndex)
                                 if (currentIndex >= 0) {
                                     detailTransition.restart()
                                 } else {
@@ -768,16 +813,55 @@ Kirigami.Page {
                                 }
                             }
                             Controls.MenuItem {
+                                icon.name: "documentation"
+                                text: i18n("Release Notes…")
+                                // GitHub, Codeberg, Forgejo and Gitea sources have them.
+                                visible: (detailInner.item.updateSourceUrl ?? "") !== ""
+                                height: visible ? implicitHeight : 0
+                                onTriggered: releaseNotesDialog.openFor(listView.currentIndex, detailInner.item)
+                            }
+                            Controls.MenuItem {
                                 icon.name: "configure"
                                 text: i18n("Update Source…")
                                 onTriggered: updateSourceDialog.openFor(listView.currentIndex,
                                                                         detailInner.item.displayName ?? "")
                             }
                             Controls.MenuItem {
+                                text: i18n("Keep Settings in Applications")
+                                checkable: true
+                                // A sandboxed app always keeps its settings there.
+                                enabled: !(detailInner.item.sandboxed ?? false)
+                                checked: (detailInner.item.configFolder ?? "") !== ""
+                                // The dialog decides; the check follows the saved state.
+                                onTriggered: {
+                                    checked = Qt.binding(() => (detailInner.item.configFolder ?? "") !== "")
+                                    configFolderDialog.openFor(listView.currentIndex, detailInner.item.displayName ?? "")
+                                }
+                            }
+                            Controls.MenuItem {
+                                icon.name: "security-high"
+                                text: i18n("Sandbox…")
+                                onTriggered: sandboxDialog.openFor(listView.currentIndex,
+                                                                   detailInner.item.displayName ?? "")
+                            }
+                            Controls.MenuItem {
                                 icon.name: "code-context"
                                 text: i18n("Environment Variables…")
                                 onTriggered: environmentDialog.openFor(listView.currentIndex,
                                                                        detailInner.item.displayName ?? "")
+                            }
+                            Controls.MenuItem {
+                                icon.name: "edit-undo"
+                                visible: detailInner.item.hasPrevious ?? false
+                                height: visible ? implicitHeight : 0
+                                text: (detailInner.item.previousVersion ?? "") !== ""
+                                      ? i18n("Restore Previous Version (%1)", detailInner.item.previousVersion)
+                                      : i18n("Restore Previous Version")
+                                onTriggered: {
+                                    const name = detailInner.item.displayName ?? ""
+                                    if (proxyModel.restorePrevious(listView.currentIndex))
+                                        showPassiveNotification(i18n("Restored the previous version of %1.", name))
+                                }
                             }
                             Controls.MenuSeparator {}
                             Controls.MenuItem {
@@ -836,8 +920,12 @@ Kirigami.Page {
                         const env = item.environment ?? []
                         const home = Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation).toString().replace("file://", "")
                         const path = item.filePath ?? ""
+                        const settings = item.configFolder ?? ""
                         return [
                             [i18n("Environment"), env.length > 0 ? env.join("\n") : i18n("Default")],
+                            [i18n("Sandbox"), item.sandboxed ? i18n("On") : i18n("Off")],
+                            [i18n("Settings"), settings !== "" ? (settings.startsWith(home) ? "~" + settings.slice(home.length) : settings)
+                                                               : i18n("In ~/.config")],
                             [i18n("File"), path.startsWith(home) ? "~" + path.slice(home.length) : path],
                         ]
                     }
@@ -881,11 +969,18 @@ Kirigami.Page {
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 0
+                        // GitHub / Codeberg / Forgejo: the label links to the repository.
                         Controls.Label {
                             Layout.fillWidth: true
-                            visible: text !== ""
+                            visible: text !== "" && (detailsGrid.item.updateSourceUrl ?? "") === ""
                             text: detailsGrid.item.updateSourceLabel ?? ""
                             wrapMode: Text.Wrap
+                        }
+                        Kirigami.UrlButton {
+                            visible: (detailsGrid.item.updateSourceUrl ?? "") !== ""
+                            url: detailsGrid.item.updateSourceUrl ?? ""
+                            text: detailsGrid.item.updateSourceLabel ?? ""
+                            horizontalAlignment: Text.AlignLeft
                         }
                         Controls.Label {
                             Layout.fillWidth: true
@@ -911,6 +1006,31 @@ Kirigami.Page {
                         text: detailsGrid.item.hasDesktopLink ? i18n("Shown") : i18n("Not shown")
                     }
 
+                    // The embedded signature, checked in the background when the app is selected.
+                    DetailKey { text: i18n("Signature") }
+                    Controls.Label {
+                        readonly property int sigState: detailsGrid.item.signatureState ?? -1
+                        readonly property string key: detailsGrid.item.signatureKey ?? ""
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        text: {
+                            switch (sigState) {
+                            case 1: return i18n("Signed · key %1", key.slice(-16).replace(/(.{4})(?!$)/g, "$1 "))
+                            case 2: return i18n("Does not match its signature: the file was changed after it was signed")
+                            case 3: return i18n("Not signed")
+                            case 4: return i18n("Signed, not checked (gpg is not installed)")
+                            case 0: return i18n("Signed, but it could not be checked")
+                            default: return i18n("Checking…")
+                            }
+                        }
+                        color: sigState === 2 ? Kirigami.Theme.negativeTextColor
+                             : sigState === 1 ? Kirigami.Theme.positiveTextColor
+                             : Kirigami.Theme.disabledTextColor
+                        Controls.ToolTip.visible: sigState === 1 && sigHover.hovered
+                        Controls.ToolTip.text: i18n("Key fingerprint: %1", key)
+                        HoverHandler { id: sigHover }
+                    }
+
                     Repeater {
                         model: detailsGrid.bottomRows.length * 2
                         Controls.Label {
@@ -931,6 +1051,24 @@ Kirigami.Page {
                 Item { implicitHeight: Kirigami.Units.gridUnit }
             }
         }
+    }
+
+    ReleaseNotesDialog {
+        id: releaseNotesDialog
+    }
+
+    SandboxDialog {
+        id: sandboxDialog
+        onSaved: (enabled) => showPassiveNotification(enabled
+            ? i18n("Sandbox on. It applies the next time the app starts.")
+            : i18n("Sandbox off. It applies the next time the app starts."))
+    }
+
+    ConfigFolderDialog {
+        id: configFolderDialog
+        onSaved: (enabled) => showPassiveNotification(enabled
+            ? i18n("Settings are kept in Applications from the next start.")
+            : i18n("Settings are kept in ~/.config from the next start."))
     }
 
     EnvironmentDialog {

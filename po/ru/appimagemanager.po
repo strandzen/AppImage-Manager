@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: appimagemanager 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-14 22:45+0100\n"
+"POT-Creation-Date: 2026-11-17 00:01+0100\n"
 "PO-Revision-Date: 2026-05-28 00:00+0000\n"
 "Last-Translator: AppImage Manager Contributors\n"
 "Language-Team: Russian\n"
@@ -17,345 +17,703 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: src/main.cpp:26 src/core/updatedaemon.cpp:90 src/core/updatedaemon.cpp:92
-#: src/core/updatedaemon.cpp:244 qml/ManageWindow.qml:12
-#: qml/DashboardWindow.qml:12
+#: src/main.cpp:37 src/core/updatedaemon.cpp:666 src/core/updatedaemon.cpp:668
+#: qml/DashboardWindow.qml:12 qml/TrayWindow.qml:48
+#: data/plasmoid/contents/ui/main.qml:126
+#: data/plasmoid/contents/ui/main.qml:129
 msgid "AppImage Manager"
 msgstr "Менеджер AppImage"
 
-#: src/main.cpp:28
+#: src/main.cpp:39
 #, fuzzy
 msgid "Manage AppImage files"
 msgstr "Управление AppImage"
 
-#: src/main.cpp:30
+#: src/main.cpp:41
 msgid "© 2024 AppImage Manager Contributors"
 msgstr "© 2024 Авторы AppImage Manager"
 
-#: src/main.cpp:46
+#: src/main.cpp:56
 msgid "AppImage file to manage. If omitted, opens the dashboard."
 msgstr ""
 "Файл AppImage для управления. Если не указан, открывается панель мониторинга."
 
-#: src/main.cpp:48
+#: src/main.cpp:58
+#, fuzzy
 msgid "Run in background as an update daemon"
-msgstr ""
+msgstr "Работать в фоне как служба обновлений"
 
-#: src/main.cpp:49
+#: src/main.cpp:59
+#, fuzzy
 msgid "Open the dashboard window"
-msgstr ""
+msgstr "Открыть главное окно"
 
-#: src/core/appimagemanager.cpp:137
+#: src/main.cpp:60
+#, fuzzy
+msgid "Open the dashboard on its Settings page"
+msgstr "Открыть главное окно на странице настроек"
+
+#: src/main.cpp:62
+#, fuzzy
+msgid "Open the dashboard with this installed AppImage selected"
+msgstr "Открыть главное окно с выбранным установленным AppImage"
+
+#: src/core/appimagemanager.cpp:237
 msgid "Managed by AppImage Manager"
 msgstr "Под управлением Менеджера AppImage"
 
-#: src/core/updatedaemon.cpp:93 src/core/updatedaemon.cpp:245
-msgid "No pending updates"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:105
-msgid "Check for Updates Now"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:109 qml/ManageWindow.qml:186
-msgid "Open Dashboard"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:127 src/gui/appimagelistmodel.cpp:77
-msgid "%1 downloaded"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:129 src/gui/appimagelistmodel.cpp:79
-msgid "Manage"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:206
-msgid "Update Available"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:207
-msgid "An update is available for %1 (%2 → %3)."
-msgstr ""
-
-#: src/core/updatedaemon.cpp:212
+#: src/core/updatedaemon.cpp:520
 #, fuzzy
-msgid "Open Manager"
-msgstr "Менеджер AppImage"
+msgctxt "app, new version"
+msgid "%1 %2"
+msgstr "%1 %2"
 
-#: src/core/updatedaemon.cpp:238
+#: src/core/updatedaemon.cpp:521
 #, fuzzy
-msgid "AppImage Updates"
-msgstr "Менеджер AppImage"
+msgctxt "app, old → new version"
+msgid "%1 %2 → %3"
+msgstr "%1 %2 → %3"
 
-#: src/core/updatedaemon.cpp:239 qml/DashboardWindow.qml:108
-#: qml/LibraryPage.qml:51
-msgid "%1 update available"
+#: src/core/updatedaemon.cpp:531
+#, fuzzy
+msgid "and 1 more"
+msgid_plural "and %1 more"
+msgstr[0] "и ещё %1"
+msgstr[1] "и ещё %1"
+msgstr[2] "и ещё %1"
+
+#: src/core/updatedaemon.cpp:534 src/core/updatedaemon.cpp:719
+#: qml/LibraryPage.qml:48 qml/TrayWindow.qml:96 qml/UpdateCheckToast.qml:44
+#: data/plasmoid/contents/ui/main.qml:55
+#, fuzzy
+msgid "1 update available"
 msgid_plural "%1 updates available"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Обновить"
+msgstr[1] "Обновить"
+msgstr[2] "Обновить"
 
-#: src/core/updatesource.cpp:214
-msgctxt "update source"
-msgid "GitHub · %1/%2"
-msgstr ""
+#: src/core/updatedaemon.cpp:537 qml/DashboardWindow.qml:136
+#: qml/LibraryPage.qml:665 qml/TrayWindow.qml:233
+#: data/plasmoid/contents/ui/main.qml:246
+#, fuzzy
+msgid "Update All"
+msgstr "Обновить"
 
-#: src/core/updatesource.cpp:217
-msgctxt "update source"
-msgid "Codeberg · %1/%2"
-msgstr ""
+#: src/core/updatedaemon.cpp:539 src/core/updatedaemon.cpp:677
+#: qml/TrayWindow.qml:243 data/plasmoid/contents/ui/main.qml:134
+#: data/plasmoid/contents/ui/main.qml:256
+#, fuzzy
+msgid "Open AppImage Manager"
+msgstr "Менеджер AppImage"
 
-#: src/core/updatesource.cpp:218
-msgctxt "update source"
-msgid "Forgejo · %1/%2/%3"
-msgstr ""
-
-#: src/core/updatesource.cpp:222
-msgctxt "update source"
-msgid "zsync · %1"
-msgstr ""
-
-#: src/core/updatesource.cpp:224
-msgctxt "update source"
-msgid "Direct download · %1"
-msgstr ""
-
-#: src/gui/appimagebackend.cpp:106
-msgid "Could not launch the application."
-msgstr ""
-
-#: src/gui/appimagebackend.cpp:143
-msgid "Could not create launcher entry."
-msgstr ""
-
-#: src/gui/appimagebackend.cpp:144
-msgid "Could not remove launcher entry."
-msgstr ""
-
-#: src/gui/appimagebackend.cpp:237
-msgid "AppImage installed"
-msgstr "AppImage установлен"
-
-#: src/gui/appimagebackend.cpp:238
-msgid "%1 was moved to Applications."
-msgstr "Файл %1 перемещён в раздел «Приложения»."
-
-#: src/gui/appimagebackend.cpp:258
-msgid "AppImage removed"
-msgstr "AppImage удален"
-
-#: src/gui/appimagebackend.cpp:259
-msgid "%1 was moved to Trash."
-msgstr "Файл %1 перемещен в корзину."
-
-#: src/gui/appimagebackend.cpp:263
-msgid "Restore"
-msgstr ""
-
-#: src/gui/appimagelistmodel.cpp:136
+#: src/core/updatedaemon.cpp:577 src/gui/appimagelistmodel.cpp:198
 #, fuzzy
 msgid "Update Failed"
 msgstr "Обновить"
 
-#: src/gui/appimagelistmodel.cpp:137
-msgid "%1 could not be updated."
-msgstr ""
+#: src/core/updatedaemon.cpp:578
+#, fuzzy
+msgid "%1 could not be updated. It was left as it was."
+msgstr "Не удалось обновить %1. Оставлено как было."
 
-#: src/gui/appimagelistmodel.cpp:225 src/gui/amstoremodel.cpp:111
+#: src/core/updatedaemon.cpp:585
+#, fuzzy
+msgid "Updated 1 AppImage"
+msgid_plural "Updated %1 AppImages"
+msgstr[0] "Управление AppImage"
+msgstr[1] "Управление AppImage"
+msgstr[2] "Управление AppImage"
+
+#: src/core/updatedaemon.cpp:680 qml/DashboardWindow.qml:143
+#: qml/DashboardWindow.qml:180 data/plasmoid/contents/ui/main.qml:139
+#, fuzzy
+msgid "Check for Updates"
+msgstr "Проверить обновления"
+
+#: src/core/updatedaemon.cpp:685 data/plasmoid/contents/ui/main.qml:145
+#, fuzzy
+msgid "Settings…"
+msgstr "Настройки"
+
+#: src/core/updatedaemon.cpp:715 qml/TrayWindow.qml:94
+#: data/plasmoid/contents/ui/main.qml:53
+#, fuzzy
+msgid "Checking for updates…"
+msgstr "Проверка обновлений…"
+
+#: src/core/updatedaemon.cpp:717 qml/TrayWindow.qml:95
+#: data/plasmoid/contents/ui/main.qml:54
+#, fuzzy
+msgid "Updating 1 AppImage…"
+msgid_plural "Updating %1 AppImages…"
+msgstr[0] "Обновить"
+msgstr[1] "Обновить"
+msgstr[2] "Обновить"
+
+#: src/core/updatedaemon.cpp:721 qml/TrayWindow.qml:97
+#: data/plasmoid/contents/ui/main.qml:56
+#, fuzzy
+msgid "No updates available"
+msgstr "AppImage удален"
+
+#: src/core/updatedaemon.cpp:822 src/gui/appimagelistmodel.cpp:95
+#, fuzzy
+msgid "%1 downloaded"
+msgstr "%1 загружено"
+
+#: src/core/updatedaemon.cpp:824 src/gui/appimagelistmodel.cpp:97
+#, fuzzy
+msgid "Manage"
+msgstr "Управлять"
+
+#: src/core/updatesource.cpp:214
+#, fuzzy
+msgctxt "update source"
+msgid "GitHub · %1/%2"
+msgstr "GitHub · %1/%2"
+
+#: src/core/updatesource.cpp:217
+#, fuzzy
+msgctxt "update source"
+msgid "Codeberg · %1/%2"
+msgstr "Codeberg · %1/%2"
+
+#: src/core/updatesource.cpp:218
+#, fuzzy
+msgctxt "update source"
+msgid "Forgejo · %1/%2/%3"
+msgstr "Forgejo · %1/%2/%3"
+
+#: src/core/updatesource.cpp:222
+#, fuzzy
+msgctxt "update source"
+msgid "zsync · %1"
+msgstr "zsync · %1"
+
+#: src/core/updatesource.cpp:224
+#, fuzzy
+msgctxt "update source"
+msgid "Direct download · %1"
+msgstr "Прямая загрузка · %1"
+
+#: src/core/checkresults.cpp:96
+#, fuzzy
+msgctxt "time"
+msgid "yesterday %1"
+msgstr "вчера %1"
+
+#: src/core/checkresults.cpp:98
+#, fuzzy
+msgctxt "time"
+msgid "tomorrow %1"
+msgstr "завтра %1"
+
+#: src/core/releasechecker.cpp:27
+#, fuzzy
+msgid "Repository not found"
+msgstr "Репозиторий не найден"
+
+#: src/core/releasechecker.cpp:27
+#, fuzzy
+msgid "Download link not found"
+msgstr "Ссылка на загрузку не найдена"
+
+#: src/core/releasechecker.cpp:29
+#, fuzzy
+msgid "The server's request limit is reached; try again later"
+msgstr "Достигнут лимит запросов сервера; попробуйте позже"
+
+#: src/core/releasechecker.cpp:37
+#, fuzzy
+msgid "No connection"
+msgstr "Нет соединения"
+
+#: src/core/releasechecker.cpp:73
+#, fuzzy
+msgid "Unsupported update information"
+msgstr "Неподдерживаемые сведения об обновлении"
+
+#: src/core/releasechecker.cpp:116 src/core/releasechecker.cpp:275
+#: src/gui/appimagelistmodel.cpp:1060
+#, fuzzy
+msgid "No releases found"
+msgstr "Выпуски не найдены"
+
+#: src/core/releasechecker.cpp:162
+#, fuzzy
+msgid "The link leads to a web page, not an AppImage"
+msgstr "Ссылка ведёт на веб-страницу, а не на AppImage"
+
+#: src/core/releasechecker.cpp:179
+#, fuzzy
+msgid "The server does not say when the file changed"
+msgstr "Сервер не сообщает, когда изменился файл"
+
+#: src/core/releasechecker.cpp:222
+#, fuzzy
+msgid "No AppImage for this computer in release %1"
+msgstr "В выпуске %1 нет AppImage для этого компьютера"
+
+#: src/gui/appimagebackend.cpp:179
+#, fuzzy
+msgid "Could not launch the application."
+msgstr "Не удалось запустить приложение."
+
+#: src/gui/appimagebackend.cpp:238
+#, fuzzy
+msgid "Could not create launcher entry."
+msgstr "Не удалось создать пункт меню."
+
+#: src/gui/appimagebackend.cpp:239
+#, fuzzy
+msgid "Could not remove launcher entry."
+msgstr "Не удалось удалить пункт меню."
+
+#: src/gui/appimagebackend.cpp:343
+msgid "AppImage installed"
+msgstr "AppImage установлен"
+
+#: src/gui/appimagebackend.cpp:344
+msgid "%1 was moved to Applications."
+msgstr "Файл %1 перемещён в раздел «Приложения»."
+
+#: src/gui/appimagebackend.cpp:405
+msgid "AppImage removed"
+msgstr "AppImage удален"
+
+#: src/gui/appimagebackend.cpp:406
+msgid "%1 was moved to Trash."
+msgstr "Файл %1 перемещен в корзину."
+
+#: src/gui/appimagebackend.cpp:410
+#, fuzzy
+msgid "Restore"
+msgstr "Восстановить"
+
+#: src/gui/appimagelistmodel.cpp:199
+#, fuzzy
+msgid "%1 could not be updated."
+msgstr "Не удалось обновить %1."
+
+#: src/gui/appimagelistmodel.cpp:502 src/gui/amstoremodel.cpp:111
+#, fuzzy
 msgctxt "list section for apps without a category"
 msgid "Other"
-msgstr ""
+msgstr "Прочее"
 
-#: src/gui/appimagelistmodel.cpp:232
+#: src/gui/appimagelistmodel.cpp:510 src/gui/appimagelistmodel.cpp:519
+#, fuzzy
+msgctxt "list section"
+msgid "Updates available"
+msgstr "Обновить"
+
+#: src/gui/appimagelistmodel.cpp:512
+#, fuzzy
+msgctxt "list section"
+msgid "Check failed"
+msgstr "Проверка не удалась"
+
+#: src/gui/appimagelistmodel.cpp:513
+#, fuzzy
+msgctxt "list section"
+msgid "Up to date"
+msgstr "Обновить"
+
+#: src/gui/appimagelistmodel.cpp:514
+#, fuzzy
+msgctxt "list section"
+msgid "No update source"
+msgstr "AppImage удален"
+
+#: src/gui/appimagelistmodel.cpp:515
+#, fuzzy
+msgctxt "list section"
+msgid "Not checked yet"
+msgstr "Ещё не проверено"
+
+#: src/gui/appimagelistmodel.cpp:523
+#, fuzzy
+msgctxt "list section, below Updates available"
+msgid "Installed"
+msgstr "Установленные файлы AppImage"
+
+#: src/gui/appimagelistmodel.cpp:531
+#, fuzzy
 msgctxt "list section"
 msgid "Today"
-msgstr ""
+msgstr "Сегодня"
 
-#: src/gui/appimagelistmodel.cpp:233
+#: src/gui/appimagelistmodel.cpp:532
+#, fuzzy
 msgctxt "list section"
 msgid "This Week"
-msgstr ""
+msgstr "На этой неделе"
 
-#: src/gui/appimagelistmodel.cpp:234
+#: src/gui/appimagelistmodel.cpp:533
+#, fuzzy
 msgctxt "list section"
 msgid "This Month"
-msgstr ""
+msgstr "В этом месяце"
 
-#: src/gui/appimagelistmodel.cpp:235
+#: src/gui/appimagelistmodel.cpp:534
+#, fuzzy
 msgctxt "list section"
 msgid "Earlier"
-msgstr ""
+msgstr "Ранее"
 
-#: src/gui/appimagelistmodel.cpp:503
+#: src/gui/appimagelistmodel.cpp:806
+#, fuzzy
 msgid "Desktop Link Failed"
-msgstr ""
+msgstr "Ошибка пункта меню"
 
-#: src/gui/appimagelistmodel.cpp:505
+#: src/gui/appimagelistmodel.cpp:808
+#, fuzzy
 msgid "Could not create desktop link for %1."
-msgstr ""
+msgstr "Не удалось создать пункт меню для %1."
 
-#: src/gui/appimagelistmodel.cpp:506
+#: src/gui/appimagelistmodel.cpp:809
+#, fuzzy
 msgid "Could not remove desktop link for %1."
-msgstr ""
+msgstr "Не удалось удалить пункт меню для %1."
 
-#: src/gui/appimagelistmodel.cpp:522
+#: src/gui/appimagelistmodel.cpp:825
 #, fuzzy
 msgid "Launch Failed"
 msgstr "Запустить %1"
 
-#: src/gui/appimagelistmodel.cpp:523
+#: src/gui/appimagelistmodel.cpp:826
+#, fuzzy
 msgid "Could not launch %1."
+msgstr "Не удалось запустить %1."
+
+#: src/gui/appimagelistmodel.cpp:948
+#, fuzzy
+msgid "Some Settings Were Not Moved"
+msgstr "Некоторые настройки не перенесены"
+
+#: src/gui/appimagelistmodel.cpp:949
+#, fuzzy
+msgid "%1 already exists in %2."
+msgstr "%1 уже есть в %2."
+
+#: src/gui/appimagelistmodel.cpp:957
+#, fuzzy
+msgid "Could Not Move Settings"
+msgstr "Не удалось перенести настройки"
+
+#: src/gui/appimagelistmodel.cpp:1031
+msgid "This app's update source has no release notes."
 msgstr ""
 
-#: src/gui/appimageupdate.cpp:122
+#: src/gui/appimagelistmodel.cpp:1070
+#, fuzzy
+msgid "Restore Failed"
+msgstr "Обновить"
+
+#: src/gui/appimagelistmodel.cpp:1070
+#, fuzzy
+msgid "The previous version of %1 could not be restored."
+msgstr "Не удалось восстановить предыдущую версию %1."
+
+#: src/gui/appimageupdate.cpp:131
+#, fuzzy
+msgid "The zsync file was not found"
+msgstr "Файл zsync не найден"
+
+#: src/gui/appimageupdate.cpp:146
+#, fuzzy
 msgid "New version available"
-msgstr ""
+msgstr "Доступна новая версия"
 
-#: src/gui/appimageupdate.cpp:234 src/gui/appimageupdate.cpp:415
+#: src/gui/appimageupdate.cpp:401
+#, fuzzy
 msgid "Update Completed"
-msgstr ""
+msgstr "Обновление завершено"
 
-#: src/gui/appimageupdate.cpp:235 src/gui/appimageupdate.cpp:416
+#: src/gui/appimageupdate.cpp:402
+#, fuzzy
 msgid "%1 has been updated successfully."
-msgstr ""
+msgstr "%1 успешно обновлён."
 
-#: src/gui/amstoremodel.cpp:944
+#: src/gui/amstoremodel.cpp:913
+#, fuzzy
 msgid "Installation cancelled."
-msgstr ""
+msgstr "Установка отменена."
 
-#: src/gui/amstoremodel.cpp:947 src/gui/amstoremodel.cpp:1098
+#: src/gui/amstoremodel.cpp:916 src/gui/amstoremodel.cpp:1067
+#, fuzzy
 msgid "Download cancelled."
-msgstr ""
+msgstr "Загрузка отменена."
 
-#: src/gui/amstoremodel.cpp:981
+#: src/gui/amstoremodel.cpp:950
+#, fuzzy
 msgid "Error: Package metadata not found."
-msgstr ""
+msgstr "Ошибка: сведения о пакете не найдены."
 
-#: src/gui/amstoremodel.cpp:999
+#: src/gui/amstoremodel.cpp:968
+#, fuzzy
 msgid "AM/AppMan is not installed. Falling back to direct AppImage download..."
-msgstr ""
+msgstr "AM/AppMan не установлен. AppImage будет загружен напрямую…"
 
-#: src/gui/amstoremodel.cpp:1002
+#: src/gui/amstoremodel.cpp:971
+#, fuzzy
 msgid "Error: AM/AppMan is required but not installed on your system."
-msgstr ""
+msgstr "Ошибка: нужен AM/AppMan, но он не установлен в системе."
 
-#: src/gui/amstoremodel.cpp:1027
+#: src/gui/amstoremodel.cpp:996
+#, fuzzy
 msgid "Running: %1 -i %2"
-msgstr ""
+msgstr "Выполняется: %1 -i %2"
 
-#: src/gui/amstoremodel.cpp:1031
+#: src/gui/amstoremodel.cpp:1000
+#, fuzzy
 msgid "Error: No direct download URL available for this application."
-msgstr ""
+msgstr "Ошибка: для этого приложения нет ссылки на прямую загрузку."
 
-#: src/gui/amstoremodel.cpp:1039
+#: src/gui/amstoremodel.cpp:1008
+#, fuzzy
 msgid "Starting direct download from Hub..."
-msgstr ""
+msgstr "Запуск прямой загрузки из Hub…"
 
-#: src/gui/amstoremodel.cpp:1049
+#: src/gui/amstoremodel.cpp:1018
+#, fuzzy
 msgid "Error: Failed to open temporary file for writing: %1"
-msgstr ""
+msgstr "Ошибка: не удалось открыть временный файл для записи: %1"
 
-#: src/gui/amstoremodel.cpp:1077
+#: src/gui/amstoremodel.cpp:1046
+#, fuzzy
 msgid "Downloading: %1%"
-msgstr ""
+msgstr "Загрузка: %1%"
 
-#: src/gui/amstoremodel.cpp:1100
+#: src/gui/amstoremodel.cpp:1069
+#, fuzzy
 msgid "Download failed: %1"
-msgstr ""
+msgstr "Загрузка не удалась: %1"
 
-#: src/gui/amstoremodel.cpp:1109
+#: src/gui/amstoremodel.cpp:1078
+#, fuzzy
 msgid "Download complete. Integrating application..."
-msgstr ""
+msgstr "Загрузка завершена. Встраивание приложения…"
 
-#: src/gui/amstoremodel.cpp:1113
+#: src/gui/amstoremodel.cpp:1082
+#, fuzzy
 msgid "Error: Could not overwrite existing file: %1"
-msgstr ""
+msgstr "Ошибка: не удалось перезаписать существующий файл: %1"
 
-#: src/gui/amstoremodel.cpp:1123
+#: src/gui/amstoremodel.cpp:1092
+#, fuzzy
 msgid "Error: Failed to finalize file renaming."
-msgstr ""
+msgstr "Ошибка: не удалось завершить переименование файла."
 
-#: src/gui/amstoremodel.cpp:1142
+#: src/gui/amstoremodel.cpp:1111
+#, fuzzy
 msgid "Error: Extracted AppImage metadata is invalid or file is corrupted."
 msgstr ""
+"Ошибка: прочитанные сведения AppImage недействительны или файл повреждён."
 
-#: src/gui/amstoremodel.cpp:1151
+#: src/gui/amstoremodel.cpp:1120
+#, fuzzy
 msgid "Warning: AppImage installed, but desktop integration failed."
 msgstr ""
+"Внимание: AppImage установлен, но встраивание в рабочую среду не удалось."
 
-#: src/gui/amstoremodel.cpp:1153
+#: src/gui/amstoremodel.cpp:1122
+#, fuzzy
 msgid "Desktop entry and icons created."
-msgstr ""
+msgstr "Пункт меню и значки созданы."
 
-#: src/gui/amstoremodel.cpp:1156
+#: src/gui/amstoremodel.cpp:1125
+#, fuzzy
 msgid "Installation completed successfully."
-msgstr ""
+msgstr "Установка успешно завершена."
 
-#: src/gui/dashboardwindow.cpp:182
+#: src/gui/dashboardwindow.cpp:197
 #, fuzzy
 msgid "Install failed"
 msgstr "Установленные файлы AppImage"
 
-#: src/gui/dashboardwindow.cpp:205
+#: src/gui/dashboardwindow.cpp:220
+#, fuzzy
 msgid "The signature on \"%1\" is invalid. Installation aborted."
-msgstr ""
+msgstr "Подпись «%1» недействительна. Установка прервана."
 
-#: src/gui/dashboardwindow.cpp:206
+#: src/gui/dashboardwindow.cpp:221
+#, fuzzy
 msgid "\"%1\" has no embedded signature. Installation aborted."
-msgstr ""
+msgstr "У «%1» нет встроенной подписи. Установка прервана."
 
-#: src/gui/dashboardwindow.cpp:208
+#: src/gui/dashboardwindow.cpp:223
+#, fuzzy
 msgid "Signature Check Failed"
-msgstr ""
+msgstr "Проверка подписи не удалась"
 
-#: src/plugin/appimageactionplugin.cpp:46
-msgid "Manage AppImage"
-msgstr "Управление AppImage"
+#: src/gui/traymodel.cpp:131
+#, fuzzy
+msgid "Checked %1"
+msgstr "Проверено %1"
 
-#: qml/ManageWindow.qml:74 qml/DashboardWindow.qml:95 qml/LibraryPage.qml:532
+#: src/gui/traymodel.cpp:132 qml/LibraryPage.qml:61 qml/LibraryPage.qml:653
+#: qml/LibraryPage.qml:945 qml/TrayWindow.qml:181
+#: data/plasmoid/contents/ui/main.qml:358
+#, fuzzy
+msgid "Not checked yet"
+msgstr "Ещё не проверено"
+
+#: src/gui/traymodel.cpp:139
+#, fuzzy
+msgid "Next check %1"
+msgstr "Следующая проверка %1"
+
+#: qml/ManageWindow.qml:14
+#, fuzzy
+msgctxt "window title: app name"
+msgid "%1 – AppImage Manager"
+msgstr "Менеджер AppImage"
+
+#: qml/ManageWindow.qml:135
+#, fuzzy
+msgid "Version %1 is installed · this one is newer"
+msgstr "Установлена версия %1 · эта новее"
+
+#: qml/ManageWindow.qml:137
+#, fuzzy
+msgid "Version %1 is installed · this one is older"
+msgstr "Установлена версия %1 · эта старше"
+
+#: qml/ManageWindow.qml:139
+#, fuzzy
+msgid "This version is already installed"
+msgstr "Эта версия уже установлена"
+
+#: qml/ManageWindow.qml:142
+#, fuzzy
+msgid "Version %1 is already installed"
+msgstr "Версия %1 уже установлена"
+
+#: qml/ManageWindow.qml:143
+#, fuzzy
+msgid "Already installed"
+msgstr "AppImage установлен"
+
+#: qml/ManageWindow.qml:157 qml/DashboardWindow.qml:105 qml/LibraryPage.qml:881
 #: qml/AboutPage.qml:10
 msgid "About"
 msgstr "О программе"
 
-#: qml/ManageWindow.qml:142
+#: qml/ManageWindow.qml:225
 msgid "Launch %1"
 msgstr "Запустить %1"
 
-#: qml/ManageWindow.qml:151
-msgid "Drag icon to install"
-msgstr ""
+#: qml/ManageWindow.qml:234
+#, fuzzy
+msgid "Drag icon to install (%1)"
+msgstr "Удаление %1"
 
-#: qml/ManageWindow.qml:192
+#: qml/ManageWindow.qml:269
+#, fuzzy
+msgid "Open Dashboard"
+msgstr "Открыть главное окно"
+
+#: qml/ManageWindow.qml:275 qml/SettingsPage.qml:186
 msgid "Applications"
 msgstr "Приложения"
 
-#: qml/ManageWindow.qml:206 qml/LibraryPage.qml:117 qml/LibraryPage.qml:362
+#: qml/ManageWindow.qml:289 qml/LibraryPage.qml:188 qml/LibraryPage.qml:572
 msgid ""
 "AppImages are unverified executables. Only install from sources you trust."
 msgstr ""
 "Файлы AppImage являются непроверенными исполняемыми файлами. Устанавливайте "
 "их только из надёжных источников."
 
-#: qml/ManageWindow.qml:214 qml/LibraryPage.qml:520
+#: qml/ManageWindow.qml:297 qml/LibraryPage.qml:869
 #, fuzzy
 msgid "Remove…"
 msgstr "Удалить"
 
-#: qml/ManageWindow.qml:246
+#: qml/ManageWindow.qml:329
+#, fuzzy
+msgctxt "app name and version"
+msgid "%1 %2"
+msgstr "%1 %2"
+
+#: qml/ManageWindow.qml:332
+#, fuzzy
+msgid "Replace Older Version?"
+msgstr "Заменить старую версию?"
+
+#: qml/ManageWindow.qml:333
+#, fuzzy
+msgid "Install Older Version?"
+msgstr "Установить более старую версию?"
+
+#: qml/ManageWindow.qml:334
+#, fuzzy
+msgid "Already Installed"
+msgstr "Установленные файлы AppImage"
+
+#: qml/ManageWindow.qml:341
+#, fuzzy
+msgid "Keep Both"
+msgstr "Оставить обе"
+
+#: qml/ManageWindow.qml:351
+#, fuzzy
+msgid "Replace"
+msgstr "Заменить"
+
+#: qml/ManageWindow.qml:370
+#, fuzzy
+msgid ""
+"%1 is already installed, and this version (%2) is newer. Install it and move "
+"the older version to the Trash?"
+msgstr ""
+"%1 уже установлен, и эта версия (%2) новее. Установить её и переместить "
+"старую версию в корзину?"
+
+#: qml/ManageWindow.qml:373
+#, fuzzy
+msgid ""
+"%1 is already installed, which is newer than this version (%2). Install this "
+"one and move the newer version to the Trash?"
+msgstr ""
+"%1 уже установлен и новее этой версии (%2). Установить эту и переместить "
+"более новую версию в корзину?"
+
+#: qml/ManageWindow.qml:376
+#, fuzzy
+msgid "%1 is already installed. Replace it with this file?"
+msgstr "%1 уже установлен. Заменить его этим файлом?"
+
+#: qml/ManageWindow.qml:378
+#, fuzzy
+msgid "%1 is already installed. Replace it with this one?"
+msgstr "%1 уже установлен. Заменить его этим?"
+
+#: qml/ManageWindow.qml:387
+#, fuzzy
+msgid "Its update source, environment variables and app menu entry are kept."
+msgstr "Источник обновлений, переменные окружения и пункт меню сохранятся."
+
+#: qml/ManageWindow.qml:397
+#, fuzzy
 msgid "Invalid Signature"
-msgstr ""
+msgstr "Недействительная подпись"
 
-#: qml/ManageWindow.qml:246
+#: qml/ManageWindow.qml:397
+#, fuzzy
 msgid "No Signature Found"
-msgstr ""
+msgstr "Подпись не найдена"
 
-#: qml/ManageWindow.qml:269
+#: qml/ManageWindow.qml:420
+#, fuzzy
 msgid ""
 "The GPG signature on this AppImage is <b>invalid</b>. The file may have been "
 "tampered with. Installing is strongly discouraged."
 msgstr ""
+"Подпись GPG этого AppImage <b>недействительна</b>. Файл мог быть изменён. "
+"Устанавливать его настоятельно не рекомендуется."
 
-#: qml/ManageWindow.qml:270
+#: qml/ManageWindow.qml:421
 #, fuzzy
 msgid ""
 "This AppImage has no GPG signature and cannot be verified. Only install from "
@@ -397,39 +755,48 @@ msgid "Moving to Trash…"
 msgstr "Переместить в корзину?"
 
 #: qml/UninstallDialog.qml:107
+#, fuzzy
 msgid "Scanning for leftover data…"
-msgstr ""
+msgstr "Поиск оставшихся данных…"
 
 #: qml/UninstallDialog.qml:125
 msgid "Select items to remove:"
 msgstr "Выберите элементы для удаления:"
 
 #: qml/UninstallDialog.qml:133
+#, fuzzy
 msgid ""
 "Leftover directories are sorted by match confidence — high-confidence "
 "entries are pre-selected. Only remove directories you are sure belong to "
 "this app."
 msgstr ""
+"Оставшиеся папки отсортированы по совпадению; надёжные уже отмечены. "
+"Удаляйте только папки, которые точно принадлежат этому приложению."
 
 #: qml/UninstallDialog.qml:139
+#, fuzzy
 msgid "All"
-msgstr ""
+msgstr "Все"
 
-#: qml/UninstallDialog.qml:144 qml/LibraryPage.qml:572
+#: qml/UninstallDialog.qml:144 qml/SandboxDialog.qml:142
+#, fuzzy
 msgid "None"
-msgstr ""
+msgstr "Ничего"
 
-#: qml/UninstallDialog.qml:209
+#: qml/UninstallDialog.qml:212
+#, fuzzy
 msgid ""
 "Possibly related — these directories may not belong to this app. Verify "
 "before removing."
 msgstr ""
+"Возможно, связаны: эти папки могут не принадлежать этому приложению. "
+"Проверьте перед удалением."
 
-#: qml/UninstallDialog.qml:267 qml/StorePage.qml:497 qml/SettingsPage.qml:504
+#: qml/UninstallDialog.qml:272 qml/StorePage.qml:528 qml/SettingsPage.qml:739
 msgid "Cancel"
 msgstr "Отмена"
 
-#: qml/UninstallDialog.qml:271
+#: qml/UninstallDialog.qml:276
 #, fuzzy
 msgid "Move to Trash"
 msgstr "Переместить в корзину?"
@@ -440,248 +807,556 @@ msgid "Select AppImage to Install"
 msgstr "AppImage установлен"
 
 #: qml/DashboardWindow.qml:33
+#, fuzzy
 msgid "AppImage files (*.AppImage *.appimage)"
-msgstr ""
+msgstr "Файлы AppImage (*.AppImage *.appimage)"
 
 #: qml/DashboardWindow.qml:33
+#, fuzzy
 msgid "All files (*)"
-msgstr ""
+msgstr "Все файлы (*)"
 
-#: qml/DashboardWindow.qml:84
+#: qml/DashboardWindow.qml:94
+#, fuzzy
 msgid "Back"
-msgstr ""
+msgstr "Назад"
 
-#: qml/DashboardWindow.qml:95 qml/DashboardWindow.qml:167
-#: qml/SettingsPage.qml:13
+#: qml/DashboardWindow.qml:105 qml/DashboardWindow.qml:190
+#: qml/LibraryPage.qml:927 qml/TrayWindow.qml:253
+#: data/plasmoid/contents/ui/main.qml:265
 msgid "Settings"
 msgstr "Настройки"
 
-#: qml/DashboardWindow.qml:102
+#: qml/DashboardWindow.qml:112
 #, fuzzy
 msgid "Installed (%1)"
 msgstr "Удаление %1"
 
-#: qml/DashboardWindow.qml:103
+#: qml/DashboardWindow.qml:113
 #, fuzzy
 msgid "Installed"
 msgstr "Установленные файлы AppImage"
 
-#: qml/DashboardWindow.qml:115 qml/SettingsPage.qml:205
+#: qml/DashboardWindow.qml:118
+#, fuzzy
+msgid "%1 update available"
+msgid_plural "%1 updates available"
+msgstr[0] "Доступно %1 обновление"
+msgstr[1] "Доступно %1 обновления"
+msgstr[2] "Доступно %1 обновлений"
+
+#: qml/DashboardWindow.qml:125 qml/SettingsPage.qml:24 qml/SettingsPage.qml:434
 #, fuzzy
 msgid "Discover"
 msgstr "Установленные файлы AppImage"
 
-#: qml/DashboardWindow.qml:126
+#: qml/DashboardWindow.qml:149
 #, fuzzy
-msgid "Update All"
-msgstr "Обновить"
+msgid "Check for Updates (last checked %1)"
+msgstr "Проверить обновления (последняя проверка %1)"
 
-#: qml/DashboardWindow.qml:133 qml/LibraryPage.qml:108
+#: qml/DashboardWindow.qml:156 qml/LibraryPage.qml:179
 #, fuzzy
 msgid "Install from File…"
 msgstr "Установленные файлы AppImage"
 
-#: qml/DashboardWindow.qml:144
+#: qml/DashboardWindow.qml:167
+#, fuzzy
 msgid "Main Menu"
-msgstr ""
+msgstr "Главное меню"
 
-#: qml/DashboardWindow.qml:157
+#: qml/DashboardWindow.qml:180
+#, fuzzy
 msgid "Checking for Updates…"
-msgstr ""
+msgstr "Проверка обновлений…"
 
-#: qml/DashboardWindow.qml:157
-msgid "Check for Updates"
-msgstr ""
-
-#: qml/DashboardWindow.qml:172 qml/AboutDialog.qml:11
+#: qml/DashboardWindow.qml:195 qml/AboutDialog.qml:11
 msgid "About AppImage Manager"
 msgstr "О программе Менеджер AppImage"
 
-#: qml/DashboardWindow.qml:253
+#: qml/DashboardWindow.qml:286
+#, fuzzy
 msgid "Drop to install"
-msgstr ""
+msgstr "Отпустите для установки"
 
-#: qml/LibraryPage.qml:43
-msgid ""
-"The update check timed out. Check your network connection and try again."
-msgstr ""
-
-#: qml/LibraryPage.qml:46
-msgid ""
-"Could not check for updates. Check your network connection and try again."
-msgstr ""
-
-#: qml/LibraryPage.qml:50
+#: qml/LibraryPage.qml:32
 #, fuzzy
-msgid "All AppImages are up to date"
-msgstr "Менеджер AppImage"
+msgctxt "version · status"
+msgid "%1 · %2"
+msgstr "%1 · %2"
 
-#: qml/LibraryPage.qml:104
+#: qml/LibraryPage.qml:34
 #, fuzzy
-msgid "No AppImages yet"
-msgstr "Нет установленных файлов AppImage"
+msgid "Older copy of %1"
+msgstr "Старая копия %1"
 
-#: qml/LibraryPage.qml:105
-msgid "Drop an AppImage here, or put one in %1."
-msgstr ""
-
-#: qml/LibraryPage.qml:153
-msgid "Search"
-msgstr ""
-
-#: qml/LibraryPage.qml:160
-msgid "Sort"
-msgstr "Сортировка"
-
-#: qml/LibraryPage.qml:171
-msgid "By Name"
-msgstr ""
-
-#: qml/LibraryPage.qml:177
-msgid "By Size"
-msgstr ""
-
-#: qml/LibraryPage.qml:183
-msgid "By Category"
-msgstr ""
-
-#: qml/LibraryPage.qml:189
+#: qml/LibraryPage.qml:37 qml/TrayWindow.qml:174
+#: data/plasmoid/contents/ui/main.qml:350
 #, fuzzy
-msgid "By Date Added"
-msgstr "По дате добавления"
+msgctxt "old → new version"
+msgid "%1 → %2"
+msgstr "%1 → %2"
 
-#: qml/LibraryPage.qml:215 qml/StorePage.qml:380
-msgid "Retry"
-msgstr ""
-
-#: qml/LibraryPage.qml:299
-msgid "Update available: %1"
-msgstr ""
-
-#: qml/LibraryPage.qml:339
+#: qml/LibraryPage.qml:38 qml/LibraryPage.qml:59 qml/LibraryPage.qml:940
+#: qml/TrayWindow.qml:177 data/plasmoid/contents/ui/main.qml:353
 #, fuzzy
-msgid "Drop an AppImage to install it"
-msgstr "AppImage установлен"
-
-#: qml/LibraryPage.qml:353 qml/StorePage.qml:361
-msgid "No results for \"%1\""
-msgstr ""
-
-#: qml/LibraryPage.qml:456
-#, fuzzy
-msgid "Launch"
-msgstr "Запустить %1"
-
-#: qml/LibraryPage.qml:463
-#, fuzzy
-msgid "Update to %1"
+msgid "Up to date"
 msgstr "Обновить"
 
-#: qml/LibraryPage.qml:473
-#, fuzzy
-msgid "Updating to %1…"
-msgstr "Обновить"
-
-#: qml/LibraryPage.qml:483 qml/StorePage.qml:508
-msgid "More"
-msgstr ""
-
-#: qml/LibraryPage.qml:495
-msgid "Show in App Menu"
-msgstr ""
-
-#: qml/LibraryPage.qml:501
-msgid "Added %1 to the app menu"
-msgstr ""
-
-#: qml/LibraryPage.qml:502
-msgid "Removed %1 from the app menu"
-msgstr ""
-
-#: qml/LibraryPage.qml:507
-#, fuzzy
-msgid "Update Source…"
-msgstr "AppImage удален"
-
-#: qml/LibraryPage.qml:513
-msgid "Environment Variables…"
-msgstr ""
-
-#: qml/LibraryPage.qml:551
-msgid "Details"
-msgstr ""
-
-#: qml/LibraryPage.qml:570
-#, fuzzy
-msgid "Version"
-msgstr "Версия 0.1.0"
-
-#: qml/LibraryPage.qml:570
-msgid "Unknown"
-msgstr ""
-
-#: qml/LibraryPage.qml:571
-msgid "Size"
-msgstr ""
-
-#: qml/LibraryPage.qml:572 qml/StorePage.qml:219
-msgid "Category"
-msgstr ""
-
-#: qml/LibraryPage.qml:573
-msgid "Added"
-msgstr ""
-
-#: qml/LibraryPage.qml:574 qml/SettingsPage.qml:156
-#, fuzzy
-msgid "Updates"
-msgstr "Обновить"
-
-#: qml/LibraryPage.qml:574
+#: qml/LibraryPage.qml:39 qml/LibraryPage.qml:60 qml/TrayWindow.qml:178
+#: data/plasmoid/contents/ui/main.qml:354
 #, fuzzy
 msgid "No update source"
 msgstr "AppImage удален"
 
-#: qml/LibraryPage.qml:575 qml/LibraryPage.qml:591
+#: qml/LibraryPage.qml:40 qml/LibraryPage.qml:58 qml/LibraryPage.qml:942
+#: qml/TrayWindow.qml:180 data/plasmoid/contents/ui/main.qml:357
+#, fuzzy
+msgid "Check failed"
+msgstr "Проверка не удалась"
+
+#: qml/LibraryPage.qml:49
+#, fuzzy
+msgid "1 check failed"
+msgid_plural "%1 checks failed"
+msgstr[0] "%1 проверка не удалась"
+msgstr[1] "%1 проверки не удались"
+msgstr[2] "%1 проверок не удались"
+
+#: qml/LibraryPage.qml:50
+#, fuzzy
+msgid "1 up to date"
+msgid_plural "%1 up to date"
+msgstr[0] "%1 актуален"
+msgstr[1] "%1 актуальны"
+msgstr[2] "%1 актуальны"
+
+#: qml/LibraryPage.qml:51
+#, fuzzy
+msgid "1 without an update source"
+msgid_plural "%1 without an update source"
+msgstr[0] "AppImage удален"
+msgstr[1] "AppImage удален"
+msgstr[2] "AppImage удален"
+
+#: qml/LibraryPage.qml:52
+#, fuzzy
+msgid "1 not checked yet"
+msgid_plural "%1 not checked yet"
+msgstr[0] "%1 ещё не проверен"
+msgstr[1] "%1 ещё не проверены"
+msgstr[2] "%1 ещё не проверены"
+
+#: qml/LibraryPage.qml:57
+#, fuzzy
+msgid "Updates available"
+msgstr "Обновить"
+
+#: qml/LibraryPage.qml:118
+#, fuzzy
+msgid ""
+"The update check timed out. Check your network connection and try again."
+msgstr ""
+"Проверка обновлений заняла слишком много времени. Проверьте сетевое "
+"подключение и повторите попытку."
+
+#: qml/LibraryPage.qml:121
+#, fuzzy
+msgid ""
+"Could not check for updates. Check your network connection and try again."
+msgstr ""
+"Не удалось проверить обновления. Проверьте сетевое подключение и повторите "
+"попытку."
+
+#: qml/LibraryPage.qml:175
+#, fuzzy
+msgid "No AppImages yet"
+msgstr "Нет установленных файлов AppImage"
+
+#: qml/LibraryPage.qml:176
+#, fuzzy
+msgid "Drop an AppImage here, or put one in %1."
+msgstr "Перетащите сюда AppImage или поместите его в %1."
+
+#: qml/LibraryPage.qml:221
+msgid "Drag to resize; double-click for the default width"
+msgstr ""
+
+#: qml/LibraryPage.qml:267
+#, fuzzy
+msgid "Search"
+msgstr "Поиск"
+
+#: qml/LibraryPage.qml:274
+msgid "Sort"
+msgstr "Сортировка"
+
+#: qml/LibraryPage.qml:285
+#, fuzzy
+msgid "By Name"
+msgstr "По имени"
+
+#: qml/LibraryPage.qml:291
+#, fuzzy
+msgid "By Size"
+msgstr "По размеру"
+
+#: qml/LibraryPage.qml:297
+#, fuzzy
+msgid "By Category"
+msgstr "По категории"
+
+#: qml/LibraryPage.qml:303
+#, fuzzy
+msgid "By Date Added"
+msgstr "По дате добавления"
+
+#: qml/LibraryPage.qml:309
+#, fuzzy
+msgid "By Status"
+msgstr "По состоянию"
+
+#: qml/LibraryPage.qml:334
+#, fuzzy
+msgid "Show All"
+msgstr "Показать все"
+
+#: qml/LibraryPage.qml:360 qml/StorePage.qml:411
+#, fuzzy
+msgid "Retry"
+msgstr "Повторить"
+
+#: qml/LibraryPage.qml:515 qml/StorePage.qml:392
+#, fuzzy
+msgid "No results for \"%1\""
+msgstr "Нет результатов для «%1»"
+
+#: qml/LibraryPage.qml:560
+#, fuzzy
+msgid "Drop an AppImage to install it"
+msgstr "AppImage установлен"
+
+#: qml/LibraryPage.qml:608
+#, fuzzy
+msgid "1 AppImage"
+msgid_plural "%1 AppImages"
+msgstr[0] " (AppImage)"
+msgstr[1] " (AppImage)"
+msgstr[2] " (AppImage)"
+
+#: qml/LibraryPage.qml:611
+#, fuzzy
+msgctxt "total size of all AppImages"
+msgid "%1 in total"
+msgstr "Всего %1"
+
+#: qml/LibraryPage.qml:619 qml/LibraryPage.qml:968 qml/SettingsPage.qml:22
+#, fuzzy
+msgid "Updates"
+msgstr "Обновить"
+
+#: qml/LibraryPage.qml:640
+#, fuzzy
+msgid "Show only these in the list"
+msgstr "Показывать в списке только эти"
+
+#: qml/LibraryPage.qml:652
+#, fuzzy
+msgid "Last checked %1"
+msgstr "Последняя проверка %1"
+
+#: qml/LibraryPage.qml:659 qml/TrayWindow.qml:226
+#: data/plasmoid/contents/ui/main.qml:239
+#, fuzzy
+msgid "Check Now"
+msgstr "Проверить сейчас"
+
+#: qml/LibraryPage.qml:674
+#, fuzzy
+msgid "Select an AppImage to see its details."
+msgstr "AppImage установлен"
+
+#: qml/LibraryPage.qml:766
+#, fuzzy
+msgid "Launch"
+msgstr "Запустить %1"
+
+#: qml/LibraryPage.qml:773
+#, fuzzy
+msgid "Update to %1"
+msgstr "Обновить"
+
+#: qml/LibraryPage.qml:783 qml/LibraryPage.qml:936 qml/TrayWindow.qml:176
+#: data/plasmoid/contents/ui/main.qml:352
+#, fuzzy
+msgid "Updating to %1…"
+msgstr "Обновить"
+
+#: qml/LibraryPage.qml:793 qml/StorePage.qml:539
+#, fuzzy
+msgid "More"
+msgstr "Ещё"
+
+#: qml/LibraryPage.qml:805
+#, fuzzy
+msgid "Show in App Menu"
+msgstr "Показывать в меню приложений"
+
+#: qml/LibraryPage.qml:811
+#, fuzzy
+msgid "Added %1 to the app menu"
+msgstr "%1 добавлен в меню приложений"
+
+#: qml/LibraryPage.qml:812
+#, fuzzy
+msgid "Removed %1 from the app menu"
+msgstr "%1 удалён из меню приложений"
+
+#: qml/LibraryPage.qml:817
+msgid "Release Notes…"
+msgstr ""
+
+#: qml/LibraryPage.qml:825
+#, fuzzy
+msgid "Update Source…"
+msgstr "AppImage удален"
+
+#: qml/LibraryPage.qml:830
+#, fuzzy
+msgid "Keep Settings in Applications"
+msgstr "Хранить настройки в Applications"
+
+#: qml/LibraryPage.qml:843
+#, fuzzy
+msgid "Sandbox…"
+msgstr "Песочница…"
+
+#: qml/LibraryPage.qml:849
+#, fuzzy
+msgid "Environment Variables…"
+msgstr "Переменные окружения…"
+
+#: qml/LibraryPage.qml:858
+#, fuzzy
+msgid "Restore Previous Version (%1)"
+msgstr "Восстановить предыдущую версию (%1)"
+
+#: qml/LibraryPage.qml:859
+#, fuzzy
+msgid "Restore Previous Version"
+msgstr "Восстановить предыдущую версию"
+
+#: qml/LibraryPage.qml:863
+#, fuzzy
+msgid "Restored the previous version of %1."
+msgstr "Предыдущая версия %1 восстановлена."
+
+#: qml/LibraryPage.qml:900
+#, fuzzy
+msgid "Details"
+msgstr "Подробности"
+
+#: qml/LibraryPage.qml:914
+#, fuzzy
+msgid "Version"
+msgstr "Версия 0.1.0"
+
+#: qml/LibraryPage.qml:914
+#, fuzzy
+msgid "Unknown"
+msgstr "Неизвестно"
+
+#: qml/LibraryPage.qml:915
+#, fuzzy
+msgid "Size"
+msgstr "Размер"
+
+#: qml/LibraryPage.qml:916 qml/StorePage.qml:219
+#, fuzzy
+msgid "Category"
+msgstr "Категория"
+
+#: qml/LibraryPage.qml:917
+#, fuzzy
+msgid "Added"
+msgstr "Добавлено"
+
+#: qml/LibraryPage.qml:925
+#, fuzzy
 msgid "Environment"
-msgstr ""
+msgstr "Окружение"
 
-#: qml/LibraryPage.qml:575
+#: qml/LibraryPage.qml:925
+#, fuzzy
 msgid "Default"
-msgstr ""
+msgstr "По умолчанию"
 
-#: qml/LibraryPage.qml:576
+#: qml/LibraryPage.qml:926 qml/SettingsPage.qml:337 qml/SandboxDialog.qml:24
+#, fuzzy
+msgid "Sandbox"
+msgstr "Песочница"
+
+#: qml/LibraryPage.qml:926
+#, fuzzy
+msgid "On"
+msgstr "Вкл."
+
+#: qml/LibraryPage.qml:926
+#, fuzzy
+msgid "Off"
+msgstr "Выкл."
+
+#: qml/LibraryPage.qml:928
+#, fuzzy
+msgid "In ~/.config"
+msgstr "В ~/.config"
+
+#: qml/LibraryPage.qml:929
+#, fuzzy
 msgid "File"
-msgstr ""
+msgstr "Файл"
 
-#: qml/LibraryPage.qml:604
+#: qml/LibraryPage.qml:938
+#, fuzzy
+msgid "Version %1 is available"
+msgstr "Доступна версия %1"
+
+#: qml/LibraryPage.qml:940
+#, fuzzy
+msgid "Up to date · checked %1"
+msgstr "Актуально · проверено %1"
+
+#: qml/LibraryPage.qml:942 qml/TrayWindow.qml:180
+#: data/plasmoid/contents/ui/main.qml:356
+#, fuzzy
+msgid "Check failed: %1"
+msgstr "Проверка не удалась: %1"
+
+#: qml/LibraryPage.qml:944
+#, fuzzy
+msgid "The AppImage does not say where its updates come from."
+msgstr "AppImage не сообщает, откуда берутся его обновления."
+
+#: qml/LibraryPage.qml:998
+#, fuzzy
+msgid "Set Update Source…"
+msgstr "AppImage удален"
+
+#: qml/LibraryPage.qml:1003
+#, fuzzy
+msgid "App menu"
+msgstr "Меню приложений"
+
+#: qml/LibraryPage.qml:1006
+#, fuzzy
+msgid "Shown"
+msgstr "Показывается"
+
+#: qml/LibraryPage.qml:1006
+#, fuzzy
+msgid "Not shown"
+msgstr "Не показывается"
+
+#: qml/LibraryPage.qml:1010
+#, fuzzy
+msgid "Signature"
+msgstr "Подпись"
+
+#: qml/LibraryPage.qml:1018
+#, fuzzy
+msgid "Signed · key %1"
+msgstr "Подписано · ключ %1"
+
+#: qml/LibraryPage.qml:1019
+#, fuzzy
+msgid "Does not match its signature: the file was changed after it was signed"
+msgstr "Не соответствует подписи: файл изменён после подписания"
+
+#: qml/LibraryPage.qml:1020
+#, fuzzy
+msgid "Not signed"
+msgstr "Не подписано"
+
+#: qml/LibraryPage.qml:1021
+#, fuzzy
+msgid "Signed, not checked (gpg is not installed)"
+msgstr "Подписано, не проверено (gpg не установлен)"
+
+#: qml/LibraryPage.qml:1022
+#, fuzzy
+msgid "Signed, but it could not be checked"
+msgstr "Подписано, но проверить не удалось"
+
+#: qml/LibraryPage.qml:1023
+#, fuzzy
+msgid "Checking…"
+msgstr "Проверка…"
+
+#: qml/LibraryPage.qml:1030
+#, fuzzy
+msgid "Key fingerprint: %1"
+msgstr "Отпечаток ключа: %1"
+
+#: qml/LibraryPage.qml:1063
+#, fuzzy
+msgid "Sandbox on. It applies the next time the app starts."
+msgstr "Песочница включена. Действует со следующего запуска приложения."
+
+#: qml/LibraryPage.qml:1064
+#, fuzzy
+msgid "Sandbox off. It applies the next time the app starts."
+msgstr "Песочница выключена. Действует со следующего запуска приложения."
+
+#: qml/LibraryPage.qml:1070
+#, fuzzy
+msgid "Settings are kept in Applications from the next start."
+msgstr "Настройки хранятся в Applications со следующего запуска."
+
+#: qml/LibraryPage.qml:1071
+#, fuzzy
+msgid "Settings are kept in ~/.config from the next start."
+msgstr "Настройки хранятся в ~/.config со следующего запуска."
+
+#: qml/LibraryPage.qml:1076
+#, fuzzy
 msgid "Environment saved. It applies the next time the app starts."
-msgstr ""
+msgstr "Окружение сохранено. Действует со следующего запуска приложения."
 
-#: qml/LibraryPage.qml:610
+#: qml/LibraryPage.qml:1082
+#, fuzzy
 msgid ""
 "Using the built-in update source. Check for updates to look for a new "
 "version."
 msgstr ""
+"Используется встроенный источник обновлений. Проверьте обновления, чтобы "
+"найти новую версию."
 
-#: qml/LibraryPage.qml:611
+#: qml/LibraryPage.qml:1083
+#, fuzzy
 msgid "Update source saved. Check for updates to look for a new version."
 msgstr ""
+"Источник обновлений сохранён. Проверьте обновления, чтобы найти новую версию."
 
 #: qml/StorePage.qml:36
+#, fuzzy
 msgid "Discover is turned off"
-msgstr ""
+msgstr "Обзор выключен"
 
 #: qml/StorePage.qml:37
+#, fuzzy
 msgid ""
 "Discover lets you search app catalogs such as AppImage Hub and install apps "
 "from them. It downloads the catalogs from the internet, so it stays off "
 "until you turn it on."
 msgstr ""
+"Обзор позволяет искать в каталогах вроде AppImage Hub и устанавливать из них "
+"приложения. Он загружает каталоги из интернета, поэтому выключен, пока вы "
+"его не включите."
 
 #: qml/StorePage.qml:40
+#, fuzzy
 msgid "Turn On Discover"
-msgstr ""
+msgstr "Включить Обзор"
 
 #: qml/StorePage.qml:101
 #, fuzzy
@@ -704,269 +1379,532 @@ msgid "Could not install %1"
 msgstr "Удаление %1"
 
 #: qml/StorePage.qml:158
+#, fuzzy
 msgid "Search apps"
-msgstr ""
+msgstr "Искать приложения"
 
 #: qml/StorePage.qml:165
+#, fuzzy
 msgid "Sort and Filter"
-msgstr ""
+msgstr "Сортировка и фильтр"
 
 #: qml/StorePage.qml:177
+#, fuzzy
 msgid "Sort A–Z"
-msgstr ""
+msgstr "Сортировать А–Я"
 
 #: qml/StorePage.qml:183
+#, fuzzy
 msgid "Sort Z–A"
-msgstr ""
+msgstr "Сортировать Я–А"
 
 #: qml/StorePage.qml:193 qml/UpdateSourceDialog.qml:121
+#, fuzzy
 msgid "Source"
-msgstr ""
+msgstr "Источник"
 
 #: qml/StorePage.qml:196
+#, fuzzy
 msgid "All Sources"
-msgstr ""
+msgstr "Все источники"
 
 #: qml/StorePage.qml:222
+#, fuzzy
 msgid "All Categories"
-msgstr ""
+msgstr "Все категории"
 
-#: qml/StorePage.qml:262 qml/StorePage.qml:365
+#: qml/StorePage.qml:262 qml/StorePage.qml:396
+#, fuzzy
 msgid "Clear Filters"
-msgstr ""
+msgstr "Сбросить фильтры"
 
-#: qml/StorePage.qml:362
+#: qml/StorePage.qml:393
+#, fuzzy
 msgid "No apps match these filters"
-msgstr ""
+msgstr "Нет приложений, подходящих под эти фильтры"
 
-#: qml/StorePage.qml:377
+#: qml/StorePage.qml:408
+#, fuzzy
 msgid "Could not load app catalog"
-msgstr ""
+msgstr "Не удалось загрузить каталог приложений"
 
-#: qml/StorePage.qml:378
+#: qml/StorePage.qml:409
+#, fuzzy
 msgid "Check your network connection and try again."
-msgstr ""
+msgstr "Проверьте сетевое подключение и повторите попытку."
 
-#: qml/StorePage.qml:449
+#: qml/StorePage.qml:480
 #, fuzzy
 msgid "Install script"
 msgstr "Установленные файлы AppImage"
 
-#: qml/StorePage.qml:449
+#: qml/StorePage.qml:480
+#, fuzzy
 msgid "Website"
-msgstr ""
+msgstr "Веб-сайт"
 
-#: qml/StorePage.qml:466
+#: qml/StorePage.qml:497
 #, fuzzy
 msgid "AppImage Hub"
 msgstr " (AppImage)"
 
-#: qml/StorePage.qml:467
+#: qml/StorePage.qml:498
+#, fuzzy
 msgid "AM"
-msgstr ""
+msgstr "AM"
 
-#: qml/StorePage.qml:484
+#: qml/StorePage.qml:515
 #, fuzzy
 msgid "Install"
 msgstr "Установленные файлы AppImage"
 
-#: qml/StorePage.qml:484
+#: qml/StorePage.qml:515
+#, fuzzy
 msgid "Download"
-msgstr ""
+msgstr "Загрузить"
 
-#: qml/StorePage.qml:519
+#: qml/StorePage.qml:550
 #, fuzzy
 msgid "Download from AppImage Hub"
 msgstr " (AppImage)"
 
-#: qml/StorePage.qml:519
+#: qml/StorePage.qml:550
 #, fuzzy
 msgid "Install with AM"
 msgstr "Установленные файлы AppImage"
 
-#: qml/StorePage.qml:542
+#: qml/StorePage.qml:573
+#, fuzzy
 msgid "Hide Details"
-msgstr ""
+msgstr "Скрыть подробности"
 
-#: qml/StorePage.qml:542
+#: qml/StorePage.qml:573
+#, fuzzy
 msgid "Show Details"
-msgstr ""
+msgstr "Показать подробности"
 
-#: qml/SettingsPage.qml:45 qml/OnboardingDialog.qml:93
-msgid "Cannot create folder: %1"
-msgstr ""
-
-#: qml/SettingsPage.qml:78
+#: qml/SettingsPage.qml:21
+#, fuzzy
 msgid "General"
+msgstr "Общие"
+
+#: qml/SettingsPage.qml:23
+#, fuzzy
+msgid "Security"
+msgstr "Безопасность"
+
+#: qml/SettingsPage.qml:91 qml/OnboardingDialog.qml:93
+#, fuzzy
+msgid "Cannot create folder: %1"
+msgstr "Не удаётся создать папку: %1"
+
+#: qml/SettingsPage.qml:152
+#, fuzzy
+msgid "Restore Defaults"
+msgstr "Восстановить умолчания"
+
+#: qml/SettingsPage.qml:157
+#, fuzzy
+msgid "Restores every setting on all pages. Catalogs are reset under Discover."
 msgstr ""
+"Сбрасывает все настройки на всех страницах. Каталоги сбрасываются в разделе "
+"Обзор."
 
-#: qml/SettingsPage.qml:87
-msgid "Applications folder:"
-msgstr "Папка приложений:"
+#: qml/SettingsPage.qml:190
+#, fuzzy
+msgid "Folder:"
+msgstr "Менеджер AppImage"
 
-#: qml/SettingsPage.qml:97 qml/OnboardingDialog.qml:73
+#: qml/SettingsPage.qml:201 qml/OnboardingDialog.qml:73
+#, fuzzy
 msgid "Browse…"
-msgstr ""
+msgstr "Обзор…"
 
-#: qml/SettingsPage.qml:106
+#: qml/SettingsPage.qml:210
 #, fuzzy
 msgid "Open Folder"
 msgstr "Менеджер AppImage"
 
-#: qml/SettingsPage.qml:119
-msgid "Show a drop zone below the Installed list"
-msgstr ""
+#: qml/SettingsPage.qml:220
+#, fuzzy
+msgid "App settings:"
+msgstr "Настройки"
 
-#: qml/SettingsPage.qml:127 qml/OnboardingDialog.qml:104
+#: qml/SettingsPage.qml:221
+#, fuzzy
+msgid "Keep in the Applications folder"
+msgstr "Папка приложений:"
+
+#: qml/SettingsPage.qml:226
+#, fuzzy
+msgid ""
+"Apps installed from now on keep their settings in Applications/.config "
+"instead of ~/.config, so the folder holds everything. Change it for one app "
+"with ⋯ → Keep Settings in Applications. Programs an app starts, such as a "
+"browser, use the same folder."
+msgstr ""
+"Приложения, установленные с этого момента, хранят настройки в "
+"Applications/.config вместо ~/.config, поэтому в папке всё лежит вместе. Для "
+"одного приложения это меняется через ⋯ → Хранить настройки в Applications. "
+"Программы, которые запускает приложение, например браузер, используют ту же "
+"папку."
+
+#: qml/SettingsPage.qml:230
+#, fuzzy
+msgid "Drop zone:"
+msgstr "Область перетаскивания:"
+
+#: qml/SettingsPage.qml:231
+#, fuzzy
+msgid "Show below the Installed list"
+msgstr "Показывать под списком установленных"
+
+#: qml/SettingsPage.qml:237
+#, fuzzy
+msgid "Overview:"
+msgstr "Сводка:"
+
+#: qml/SettingsPage.qml:238
+#, fuzzy
+msgid "Show a summary when no AppImage is selected"
+msgstr "Показывать сводку, когда AppImage не выбран"
+
+#: qml/SettingsPage.qml:243
+#, fuzzy
+msgid ""
+"How many AppImages are up to date, have updates or no update source, and "
+"when they were last checked."
+msgstr ""
+"Сколько AppImage актуальны, имеют обновления или не имеют источника "
+"обновлений, и когда их проверяли в последний раз."
+
+#: qml/SettingsPage.qml:248
+#, fuzzy
+msgid "Notifications"
+msgstr "Приложения"
+
+#: qml/SettingsPage.qml:252
+#, fuzzy
+msgid "Downloads:"
+msgstr "Загрузки:"
+
+#: qml/SettingsPage.qml:253 qml/OnboardingDialog.qml:104
+#, fuzzy
 msgid "Notify when an AppImage is downloaded"
-msgstr ""
+msgstr "Сообщать о загрузке AppImage"
 
-#: qml/SettingsPage.qml:128
-msgid "Watches your Downloads folder."
-msgstr ""
-
-#: qml/SettingsPage.qml:140
+#: qml/SettingsPage.qml:260
+#, fuzzy
 msgid "Download watching is unavailable in sandboxed environments."
-msgstr ""
+msgstr "Отслеживание загрузок недоступно в изолированной среде."
 
-#: qml/SettingsPage.qml:148
-msgid "Notify when installs and removals finish"
-msgstr ""
+#: qml/SettingsPage.qml:261
+#, fuzzy
+msgid "Watches your Downloads folder."
+msgstr "Следит за папкой загрузок."
 
-#: qml/SettingsPage.qml:161
-msgid "Check for updates in the background"
-msgstr ""
+#: qml/SettingsPage.qml:265
+#, fuzzy
+msgid "Installs and removals:"
+msgstr "Установка и удаление:"
 
-#: qml/SettingsPage.qml:162
+#: qml/SettingsPage.qml:266
+#, fuzzy
+msgid "Notify when they finish"
+msgstr "Сообщать по завершении"
+
+#: qml/SettingsPage.qml:280
+#, fuzzy
+msgid "Background checks"
+msgstr "Фоновая проверка"
+
+#: qml/SettingsPage.qml:284
+#, fuzzy
+msgid "Check for updates:"
+msgstr "Проверять обновления:"
+
+#: qml/SettingsPage.qml:286
+#, fuzzy
 msgid "Never"
-msgstr ""
+msgstr "Никогда"
 
-#: qml/SettingsPage.qml:162
+#: qml/SettingsPage.qml:286
+#, fuzzy
 msgid "Daily"
-msgstr ""
+msgstr "Ежедневно"
 
-#: qml/SettingsPage.qml:162
+#: qml/SettingsPage.qml:286
+#, fuzzy
 msgid "Weekly"
-msgstr ""
+msgstr "Еженедельно"
 
-#: qml/SettingsPage.qml:162
+#: qml/SettingsPage.qml:286
+#, fuzzy
 msgid "Monthly"
-msgstr ""
+msgstr "Ежемесячно"
 
-#: qml/SettingsPage.qml:162
+#: qml/SettingsPage.qml:286
+#, fuzzy
 msgid "Custom"
-msgstr ""
+msgstr "Своё"
 
-#: qml/SettingsPage.qml:172
-msgid "Every (days)"
-msgstr ""
+#: qml/SettingsPage.qml:292
+#, fuzzy
+msgid "Every:"
+msgstr "Каждые:"
 
-#: qml/SettingsPage.qml:183
-msgid "Security"
-msgstr ""
+#: qml/SettingsPage.qml:297
+#, fuzzy
+msgid "%1 day"
+msgid_plural "%1 days"
+msgstr[0] "%1 день"
+msgstr[1] "%1 дня"
+msgstr[2] "%1 дней"
 
-#: qml/SettingsPage.qml:188
-msgid "Verify signatures before installing"
+#: qml/SettingsPage.qml:303
+#, fuzzy
+msgid ""
+"Checks run in the background, also while this window is closed. The tray "
+"shows the result and you are notified once about each new version."
 msgstr ""
+"Проверка идёт в фоне, даже когда это окно закрыто. Системный лоток "
+"показывает результат, а о каждой новой версии вы получите одно уведомление."
 
-#: qml/SettingsPage.qml:189
+#: qml/SettingsPage.qml:315
+#, fuzzy
+msgid "Installing"
+msgstr "Установленные файлы AppImage"
+
+#: qml/SettingsPage.qml:319
+#, fuzzy
+msgid "Signatures:"
+msgstr "Подписи:"
+
+#: qml/SettingsPage.qml:320
+#, fuzzy
+msgid "Verify before installing"
+msgstr "Проверять перед установкой"
+
+#: qml/SettingsPage.qml:325
+#, fuzzy
 msgid ""
 "Warns before installing an AppImage that is unsigned or has an invalid "
-"signature."
+"signature. Needs gpg."
 msgstr ""
+"Предупреждает перед установкой AppImage без подписи или с недействительной "
+"подписью. Нужен gpg."
 
-#: qml/SettingsPage.qml:197
-msgid "Show a reminder that AppImages are unverified"
-msgstr ""
+#: qml/SettingsPage.qml:329
+#, fuzzy
+msgid "Reminder:"
+msgstr "Напоминание:"
 
-#: qml/SettingsPage.qml:210
-msgid "Enable Discover"
-msgstr ""
+#: qml/SettingsPage.qml:330
+#, fuzzy
+msgid "Show that AppImages are unverified"
+msgstr "Показывать, что AppImage не проверены"
 
-#: qml/SettingsPage.qml:211
+#: qml/SettingsPage.qml:341
+#, fuzzy
+msgid "Sandbox:"
+msgstr "Песочница"
+
+#: qml/SettingsPage.qml:342
+#, fuzzy
+msgid "Sandbox all AppImages"
+msgstr "Управление AppImage"
+
+#: qml/SettingsPage.qml:349
 msgid ""
-"Search and install apps from online catalogs. The catalogs are downloaded "
-"from the internet."
+"Each app sees only its own folder in Applications/.config and the folders "
+"below; the rest of your home folder and other drives are hidden, so an app "
+"starts without the settings it had in ~/.config unless you move them first "
+"with ⋯ → Keep Settings in Applications. Leave one app out with ⋯ → Sandbox…."
 msgstr ""
 
-#: qml/SettingsPage.qml:219
+#: qml/SettingsPage.qml:350
+#, fuzzy
+msgid "Needs bubblewrap. Install the “bubblewrap” package to use the sandbox."
+msgstr ""
+"Для песочницы нужен bubblewrap. Установите пакет «bubblewrap», чтобы её "
+"использовать."
+
+#: qml/SettingsPage.qml:355
+msgid "Shared folders:"
+msgstr ""
+
+#: qml/SettingsPage.qml:370
+#, fuzzy
+msgid "Downloads"
+msgstr "Загрузки:"
+
+#: qml/SettingsPage.qml:371
+msgid "Documents"
+msgstr ""
+
+#: qml/SettingsPage.qml:372
+#, fuzzy
+msgid "Pictures"
+msgstr "Подписи:"
+
+#: qml/SettingsPage.qml:373
+msgid "Music"
+msgstr ""
+
+#: qml/SettingsPage.qml:374
+msgid "Videos"
+msgstr ""
+
+#: qml/SettingsPage.qml:375
+msgid "Desktop"
+msgstr ""
+
+#: qml/SettingsPage.qml:405 qml/SandboxDialog.qml:126
+#, fuzzy
+msgid "Remove"
+msgstr "Удалить"
+
+#: qml/SettingsPage.qml:416 qml/SandboxDialog.qml:159
+#, fuzzy
+msgid "Add Folder…"
+msgstr "Добавить папку…"
+
+#: qml/SettingsPage.qml:422
+msgid ""
+"Every sandboxed app may read and change these, on top of the folders given "
+"to it in ⋯ → Sandbox…."
+msgstr ""
+
+#: qml/SettingsPage.qml:438
+#, fuzzy
+msgid "App catalogs:"
+msgstr "Каталоги приложений:"
+
+#: qml/SettingsPage.qml:439
+#, fuzzy
+msgid "Search and install from online catalogs"
+msgstr "Искать и устанавливать из онлайн-каталогов"
+
+#: qml/SettingsPage.qml:444
+#, fuzzy
+msgid "The catalogs are downloaded from the internet when you open Discover."
+msgstr "Каталоги загружаются из интернета при открытии Обзора."
+
+#: qml/SettingsPage.qml:456
+#, fuzzy
 msgid "Catalogs"
-msgstr ""
+msgstr "Каталоги"
 
-#: qml/SettingsPage.qml:307
-msgid "Drag to reorder source priority"
+#: qml/SettingsPage.qml:460
+#, fuzzy
+msgid ""
+"Drag to change the order. An app that is in several catalogs is installed "
+"from the first one."
 msgstr ""
+"Перетащите, чтобы изменить порядок. Приложение из нескольких каталогов "
+"устанавливается из первого."
 
-#: qml/SettingsPage.qml:346 qml/SettingsPage.qml:426
+#: qml/SettingsPage.qml:558
+#, fuzzy
+msgid "Drag to reorder"
+msgstr "Перетащите для изменения порядка"
+
+#: qml/SettingsPage.qml:583
+#, fuzzy
+msgid "Searched"
+msgstr "Используется в поиске"
+
+#: qml/SettingsPage.qml:583
+#, fuzzy
+msgid "Not searched"
+msgstr "Не используется в поиске"
+
+#: qml/SettingsPage.qml:590 qml/SettingsPage.qml:660
+#, fuzzy
 msgid "Edit Source"
-msgstr ""
+msgstr "Изменить источник"
 
-#: qml/SettingsPage.qml:354
+#: qml/SettingsPage.qml:606
+#, fuzzy
 msgid "Delete Source"
-msgstr ""
+msgstr "Удалить источник"
 
-#: qml/SettingsPage.qml:388
-msgid "Add Source…"
-msgstr ""
+#: qml/SettingsPage.qml:640
+#, fuzzy
+msgid "Add Catalog…"
+msgstr "Добавить каталог…"
 
-#: qml/SettingsPage.qml:398
-msgid "Reset Sources"
-msgstr ""
+#: qml/SettingsPage.qml:648
+#, fuzzy
+msgid "Reset Catalogs"
+msgstr "Сбросить каталоги"
 
-#: qml/SettingsPage.qml:410
-msgid "Restore Defaults"
-msgstr ""
-
-#: qml/SettingsPage.qml:426
+#: qml/SettingsPage.qml:660
+#, fuzzy
 msgid "Add Source"
-msgstr ""
+msgstr "Добавить источник"
 
-#: qml/SettingsPage.qml:443
+#: qml/SettingsPage.qml:678
+#, fuzzy
 msgid "Name:"
-msgstr ""
+msgstr "Имя:"
 
-#: qml/SettingsPage.qml:449
+#: qml/SettingsPage.qml:684
+#, fuzzy
 msgid "e.g. My Repo"
-msgstr ""
+msgstr "напр. Мой репозиторий"
 
-#: qml/SettingsPage.qml:458
+#: qml/SettingsPage.qml:693
+#, fuzzy
 msgid "Feed URL:"
-msgstr ""
+msgstr "URL ленты:"
 
-#: qml/SettingsPage.qml:464
+#: qml/SettingsPage.qml:699
+#, fuzzy
 msgid "e.g. https://example.com/feed.json"
-msgstr ""
+msgstr "напр. https://example.com/feed.json"
 
-#: qml/SettingsPage.qml:467
+#: qml/SettingsPage.qml:702
+#, fuzzy
 msgid "Must be a valid HTTP/HTTPS URL"
-msgstr ""
+msgstr "Должен быть действительный URL HTTP/HTTPS"
 
-#: qml/SettingsPage.qml:479
+#: qml/SettingsPage.qml:714
+#, fuzzy
 msgid "Format Type:"
-msgstr ""
+msgstr "Тип формата:"
 
-#: qml/SettingsPage.qml:487
+#: qml/SettingsPage.qml:722
+#, fuzzy
 msgid "AppImage Hub JSON (Direct Download)"
-msgstr ""
+msgstr "JSON AppImage Hub (прямая загрузка)"
 
-#: qml/SettingsPage.qml:488
+#: qml/SettingsPage.qml:723
+#, fuzzy
 msgid "AM Database Text (Recipe Script)"
-msgstr ""
+msgstr "Текст базы AM (сценарий установки)"
 
-#: qml/SettingsPage.qml:489
+#: qml/SettingsPage.qml:724
+#, fuzzy
 msgid "Universal JSON Feed (Direct Download)"
-msgstr ""
+msgstr "Универсальная лента JSON (прямая загрузка)"
 
-#: qml/SettingsPage.qml:510 qml/UpdateSourceDialog.qml:62
-#: qml/EnvironmentDialog.qml:28
+#: qml/SettingsPage.qml:745 qml/UpdateSourceDialog.qml:62
+#: qml/EnvironmentDialog.qml:28 qml/SandboxDialog.qml:34
+#, fuzzy
 msgid "Save"
-msgstr ""
+msgstr "Сохранить"
 
-#: qml/SettingsPage.qml:510
+#: qml/SettingsPage.qml:745
+#, fuzzy
 msgid "Add"
+msgstr "Добавить"
+
+#: qml/SettingsPage.qml:790
+msgid "Folder Every Sandboxed App May Use"
 msgstr ""
 
-#: qml/SettingsPage.qml:554 qml/OnboardingDialog.qml:148
+#: qml/SettingsPage.qml:800 qml/OnboardingDialog.qml:148
 #, fuzzy
 msgid "Select Applications Folder"
 msgstr "Папка приложений:"
@@ -977,14 +1915,18 @@ msgid "Welcome to AppImage Manager"
 msgstr "О программе Менеджер AppImage"
 
 #: qml/OnboardingDialog.qml:36
+#, fuzzy
 msgid "Get Started"
-msgstr ""
+msgstr "Начать"
 
 #: qml/OnboardingDialog.qml:46
+#, fuzzy
 msgid ""
 "Install, update and remove AppImages. You can change these choices later in "
 "Settings."
 msgstr ""
+"Устанавливайте, обновляйте и удаляйте AppImage. Эти параметры можно изменить "
+"позже в настройках."
 
 #: qml/OnboardingDialog.qml:58
 #, fuzzy
@@ -992,35 +1934,42 @@ msgid "Applications folder"
 msgstr "Папка приложений:"
 
 #: qml/OnboardingDialog.qml:116
+#, fuzzy
 msgid "Enable Discover to search online app catalogs"
-msgstr ""
+msgstr "Включить Обзор для поиска в онлайн-каталогах приложений"
 
 #: qml/OnboardingDialog.qml:138
 #, fuzzy
-msgid "Tip: right-click an AppImage in Dolphin and choose Manage AppImage."
+msgid ""
+"Tip: in Dolphin, right-click an AppImage and open it with AppImage Manager."
 msgstr ""
 "Щёлкните правой кнопкой мыши файл AppImage и выберите «Управление AppImage», "
 "чтобы установить его."
 
 #: qml/UpdateSourceDialog.qml:34
+#, fuzzy
 msgid "Detect Automatically"
-msgstr ""
+msgstr "Определять автоматически"
 
 #: qml/UpdateSourceDialog.qml:35
+#, fuzzy
 msgid "GitHub Repository"
-msgstr ""
+msgstr "Репозиторий GitHub"
 
 #: qml/UpdateSourceDialog.qml:36
+#, fuzzy
 msgid "Codeberg, Forgejo or Gitea Repository"
-msgstr ""
+msgstr "Репозиторий Codeberg, Forgejo или Gitea"
 
 #: qml/UpdateSourceDialog.qml:37
+#, fuzzy
 msgid "zsync File"
-msgstr ""
+msgstr "Файл zsync"
 
 #: qml/UpdateSourceDialog.qml:38
+#, fuzzy
 msgid "Direct Download"
-msgstr ""
+msgstr "Прямая загрузка"
 
 #: qml/UpdateSourceDialog.qml:41
 #, fuzzy
@@ -1033,75 +1982,247 @@ msgid "Update Source"
 msgstr "AppImage удален"
 
 #: qml/UpdateSourceDialog.qml:51
+#, fuzzy
 msgid "Use Built-in"
-msgstr ""
+msgstr "Использовать встроенный"
 
 #: qml/UpdateSourceDialog.qml:114
+#, fuzzy
 msgid "Built-in source: %1"
-msgstr ""
+msgstr "Встроенный источник: %1"
 
 #: qml/UpdateSourceDialog.qml:115
+#, fuzzy
 msgid ""
 "This AppImage has no built-in update source. Enter where it is released."
 msgstr ""
+"У этого AppImage нет встроенного источника обновлений. Укажите, где он "
+"публикуется."
 
 #: qml/UpdateSourceDialog.qml:126
+#, fuzzy
 msgid "owner/repo, a repository URL, or a download URL"
-msgstr ""
+msgstr "owner/repo, URL репозитория или URL загрузки"
 
 #: qml/UpdateSourceDialog.qml:147
+#, fuzzy
 msgid "Empty: use the built-in source"
-msgstr ""
+msgstr "Пусто: использовать встроенный источник"
 
 #: qml/UpdateSourceDialog.qml:149
+#, fuzzy
 msgid "Not a repository or download URL"
-msgstr ""
+msgstr "Это не репозиторий и не URL загрузки"
 
 #: qml/UpdateSourceDialog.qml:154
+#, fuzzy
 msgid "Type: %1"
-msgstr ""
+msgstr "Тип: %1"
 
 #: qml/UpdateSourceDialog.qml:182
+#, fuzzy
 msgid "Include pre-releases"
-msgstr ""
+msgstr "Включать предварительные выпуски"
 
 #: qml/UpdateSourceDialog.qml:190
+#, fuzzy
 msgid ""
 "That cannot be used as an update source. Enter owner/repo, a repository URL, "
 "or a download URL."
 msgstr ""
+"Это нельзя использовать как источник обновлений. Введите owner/repo, URL "
+"репозитория или URL загрузки."
 
 #: qml/UpdateSourceDialog.qml:201
+#, fuzzy
 msgid ""
 "The release file matching this computer's architecture is downloaded. Delta "
 "updates are used when the release also publishes a .zsync file."
 msgstr ""
+"Загружается файл выпуска для архитектуры этого компьютера. Разностные "
+"обновления используются, если выпуск также содержит файл .zsync."
 
 #: qml/UpdateSourceDialog.qml:203
+#, fuzzy
 msgid ""
 "The file is downloaded again whenever the server reports a newer build. Web "
 "pages are refused."
 msgstr ""
+"Файл загружается заново, когда сервер сообщает о более новой сборке. Веб-"
+"страницы отклоняются."
 
 #: qml/EnvironmentDialog.qml:18
+#, fuzzy
 msgid "Environment Variables — %1"
-msgstr ""
+msgstr "Переменные окружения — %1"
 
 #: qml/EnvironmentDialog.qml:18
+#, fuzzy
 msgid "Environment Variables"
-msgstr ""
+msgstr "Переменные окружения"
 
 #: qml/EnvironmentDialog.qml:47
+#, fuzzy
 msgid "Line %2 is not KEY=value or repeats a name."
 msgid_plural "Lines %2 are not KEY=value or repeat a name."
+msgstr[0] "Строка %2 не в формате KEY=value или повторяет имя."
+msgstr[1] "Строки %2 не в формате KEY=value или повторяют имя."
+msgstr[2] "Строки %2 не в формате KEY=value или повторяют имя."
+
+#: qml/EnvironmentDialog.qml:70
+#, fuzzy
+msgid ""
+"One KEY=value per line. Used when the app is launched from here and from the "
+"app menu."
+msgstr ""
+"Одна пара KEY=value в строке. Используется при запуске приложения отсюда и "
+"из меню приложений."
+
+#: qml/ConfigFolderDialog.qml:25
+#, fuzzy
+msgid "Keep Settings in Applications?"
+msgstr "Хранить настройки в Applications?"
+
+#: qml/ConfigFolderDialog.qml:25
+#, fuzzy
+msgid "Keep Settings in ~/.config?"
+msgstr "Хранить настройки в ~/.config?"
+
+#: qml/ConfigFolderDialog.qml:35
+#, fuzzy
+msgid "Turn On"
+msgstr "Включить"
+
+#: qml/ConfigFolderDialog.qml:35
+#, fuzzy
+msgid "Turn Off"
+msgstr "Выключить"
+
+#: qml/ConfigFolderDialog.qml:81
+#, fuzzy
+msgid "%1 will keep its settings in %2 instead of ~/.config."
+msgstr "%1 будет хранить настройки в %2 вместо ~/.config."
+
+#: qml/ConfigFolderDialog.qml:82
+#, fuzzy
+msgid "%1 will keep its settings in ~/.config again."
+msgstr "%1 снова будет хранить настройки в ~/.config."
+
+#: qml/ConfigFolderDialog.qml:90
+#, fuzzy
+msgid "Move its current settings there:"
+msgstr "Перенести туда текущие настройки:"
+
+#: qml/ConfigFolderDialog.qml:90
+#, fuzzy
+msgid "Move its settings back:"
+msgstr "Вернуть настройки обратно:"
+
+#: qml/ConfigFolderDialog.qml:111
+#, fuzzy
+msgid "Close %1 before moving its settings."
+msgstr "Закройте %1 перед переносом настроек."
+
+#: qml/ConfigFolderDialog.qml:112
+#, fuzzy
+msgid "No settings were found in ~/.config; it starts with its defaults."
+msgstr ""
+"В ~/.config настройки не найдены; приложение запустится с параметрами по "
+"умолчанию."
+
+#: qml/SandboxDialog.qml:24
+#, fuzzy
+msgid "Sandbox — %1"
+msgstr "Песочница — %1"
+
+#: qml/SandboxDialog.qml:74
+#, fuzzy
+msgid ""
+"The sandbox needs bubblewrap. Install the “bubblewrap” package to use it."
+msgstr ""
+"Для песочницы нужен bubblewrap. Установите пакет «bubblewrap», чтобы её "
+"использовать."
+
+#: qml/SandboxDialog.qml:79
+#, fuzzy
+msgid "Run in a sandbox"
+msgstr "Запускать в песочнице"
+
+#: qml/SandboxDialog.qml:90
+msgid ""
+"All AppImages run in a sandbox (Settings → Security). Turn this off to leave "
+"%1 out."
+msgstr ""
+
+#: qml/SandboxDialog.qml:98
+#, fuzzy
+msgid ""
+"%1 sees only its own folder (%2) and the folders below; the rest of your "
+"home folder and other drives are hidden. Display, sound and network keep "
+"working."
+msgstr ""
+"%1 видит только свою папку (%2) и папки ниже; остальная домашняя папка и "
+"другие диски скрыты. Экран, звук и сеть продолжают работать."
+
+#: qml/SandboxDialog.qml:104
+#, fuzzy
+msgid "Folders it may use"
+msgstr "Папки, которые можно использовать"
+
+#: qml/SandboxDialog.qml:153
+msgid "Plus 1 folder every sandboxed app may use (Settings → Security)."
+msgid_plural ""
+"Plus %1 folders every sandboxed app may use (Settings → Security)."
 msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-#: qml/EnvironmentDialog.qml:70
-msgid ""
-"One KEY=value per line. Used when the app is launched from here and from the "
-"app menu."
+#: qml/SandboxDialog.qml:167
+#, fuzzy
+msgid "Folder %1 May Use"
+msgstr "Папка, которую может использовать %1"
+
+#: qml/ReleaseNotesDialog.qml:21
+msgid "What's New in %1"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:22
+#, fuzzy
+msgid "Release Notes — %1"
+msgstr "Обновить"
+
+#: qml/ReleaseNotesDialog.qml:34
+msgid "Open on GitHub"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:34
+#, fuzzy
+msgid "Open in Browser"
+msgstr "Менеджер AppImage"
+
+#: qml/ReleaseNotesDialog.qml:89
+#, fuzzy
+msgid "No release notes"
+msgstr "Выпуски не найдены"
+
+#: qml/ReleaseNotesDialog.qml:101
+msgid "The %1 newest releases"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:102
+msgid "%1 release since the installed version"
+msgid_plural "%1 releases since the installed version"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: qml/ReleaseNotesDialog.qml:133
+#, fuzzy
+msgid "Pre-release"
+msgstr "Включать предварительные выпуски"
+
+#: qml/ReleaseNotesDialog.qml:141
+msgid "No notes were written for this release."
 msgstr ""
 
 #: qml/AboutContent.qml:22
@@ -1119,92 +2240,169 @@ msgid "A lightweight AppImage manager for KDE Plasma 6."
 msgstr "Легковесный менеджер AppImage для KDE Plasma 6."
 
 #: qml/AboutContent.qml:62
+#, fuzzy
 msgid "Project Details"
-msgstr ""
+msgstr "Сведения о проекте"
 
 #: qml/AboutContent.qml:78
+#, fuzzy
 msgid "License"
-msgstr ""
+msgstr "Лицензия"
 
 #: qml/AboutContent.qml:83
+#, fuzzy
 msgid "GPL v2 or later"
-msgstr ""
+msgstr "GPL v2 или новее"
 
 #: qml/AboutContent.qml:114
+#, fuzzy
 msgid "Contribute"
-msgstr ""
+msgstr "Принять участие"
 
 #: qml/AboutContent.qml:146
+#, fuzzy
 msgid "Report an Issue"
-msgstr ""
+msgstr "Сообщить о проблеме"
 
 #: qml/AboutContent.qml:164
+#, fuzzy
 msgid "Libraries in Use"
-msgstr ""
+msgstr "Используемые библиотеки"
 
 #: qml/AboutContent.qml:172
+#, fuzzy
 msgid "Copy environment details to clipboard"
-msgstr ""
+msgstr "Скопировать сведения об окружении в буфер обмена"
 
 #: qml/AboutContent.qml:180
+#, fuzzy
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Скопировать в буфер обмена"
 
 #: qml/AboutContent.qml:188
+#, fuzzy
 msgid "Environment details copied to clipboard."
-msgstr ""
+msgstr "Сведения об окружении скопированы в буфер обмена."
 
 #: qml/AboutContent.qml:203
+#, fuzzy
 msgid "Qt %1"
-msgstr ""
+msgstr "Qt %1"
 
 #: qml/AboutContent.qml:205
+#, fuzzy
 msgid "Cross-platform application development framework."
-msgstr ""
+msgstr "Кроссплатформенный фреймворк для разработки приложений."
 
 #: qml/AboutContent.qml:213
+#, fuzzy
 msgid "Visit Qt Website"
-msgstr ""
+msgstr "Открыть сайт Qt"
 
 #: qml/AboutContent.qml:228
+#, fuzzy
 msgid "KDE Frameworks %1"
-msgstr ""
+msgstr "KDE Frameworks %1"
 
 #: qml/AboutContent.qml:230
+#, fuzzy
 msgid "Collection of libraries created by the KDE Community to extend Qt."
-msgstr ""
+msgstr "Набор библиотек сообщества KDE, расширяющих Qt."
 
 #: qml/AboutContent.qml:238
+#, fuzzy
 msgid "Visit KDE Website"
-msgstr ""
+msgstr "Открыть сайт KDE"
 
 #: qml/AboutContent.qml:255
+#, fuzzy
 msgid "SquashFS extraction module used for reading AppImage configurations."
-msgstr ""
+msgstr "Модуль SquashFS для чтения сведений из AppImage."
 
 #: qml/AboutContent.qml:266
+#, fuzzy
 msgid "Contributors"
-msgstr ""
+msgstr "Участники"
 
 #: qml/AboutContent.qml:324
+#, fuzzy
 msgid "Email Contributor"
-msgstr ""
+msgstr "Написать участнику"
 
 #: qml/AboutContent.qml:331
+#, fuzzy
 msgid "Visit Profile"
-msgstr ""
+msgstr "Открыть профиль"
 
 #: qml/ContributorsModel.qml:11 qml/ContributorsModel.qml:74
+#, fuzzy
 msgid "Lead Developer"
-msgstr ""
+msgstr "Ведущий разработчик"
 
 #: qml/ContributorsModel.qml:18
+#, fuzzy
 msgid "Dutch Translator / Contributor"
-msgstr ""
+msgstr "Переводчик на нидерландский / участник"
 
 #: qml/ContributorsModel.qml:74
+#, fuzzy
 msgid "Contributor"
+msgstr "Участник"
+
+#: qml/TrayWindow.qml:142
+#, fuzzy
+msgid "Show in AppImage Manager"
+msgstr "Менеджер AppImage"
+
+#: qml/TrayWindow.qml:159 data/plasmoid/contents/ui/main.qml:319
+#, fuzzy
+msgctxt "AppImages without an update source"
+msgid "Not tracked (%1)"
+msgstr "Удаление %1"
+
+#: qml/TrayWindow.qml:210 data/plasmoid/contents/ui/main.qml:386
+#, fuzzy
+msgid "No AppImages installed"
+msgstr "AppImage установлен"
+
+#: qml/UpdateCheckToast.qml:42
+#, fuzzy
+msgid "No AppImage has an update source"
+msgstr "AppImage удален"
+
+#: qml/UpdateCheckToast.qml:43
+#, fuzzy
+msgid "All AppImages are up to date"
+msgstr "Менеджер AppImage"
+
+#: qml/UpdateCheckToast.qml:80
+#, fuzzy
+msgid "Checking for updates (%1/%2)"
+msgstr "Проверка обновлений (%1/%2)"
+
+#: data/plasmoid/contents/ui/main.qml:387
+#, fuzzy
+msgid "The background checker is not running"
+msgstr "Фоновая проверка не запущена"
+
+#: data/plasmoid/contents/ui/main.qml:389
+#, fuzzy
+msgid ""
+"It starts when you log in. To start it now, run: appimagemanager --daemon"
 msgstr ""
+"Она запускается при входе в систему. Чтобы запустить её сейчас, выполните: "
+"appimagemanager --daemon"
+
+#, fuzzy
+#~ msgid "Open Manager"
+#~ msgstr "Менеджер AppImage"
+
+#, fuzzy
+#~ msgid "AppImage Updates"
+#~ msgstr "Менеджер AppImage"
+
+#~ msgid "Applications folder:"
+#~ msgstr "Папка приложений:"
 
 #, fuzzy
 #~ msgid "AppImage Dashboard"

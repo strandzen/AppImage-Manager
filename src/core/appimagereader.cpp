@@ -11,6 +11,8 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <cstring>
+#include <QCryptographicHash>
 #include <QFileInfo>
 #include <QLocale>
 #include <QProcess>
@@ -312,7 +314,7 @@ QByteArray AppImageReader::readFileFromAppImage(const QString &innerPath, QStrin
 
 // Read the raw bytes of a named section from an ELF64 little-endian binary.
 // Returns empty QByteArray if the section is absent or the file is not ELF64 LE.
-static QByteArray readElfSection(const QString &path, const QByteArray &sectionName)
+static QByteArray readElfSection(const QString &path, const QByteArray &sectionName, qint64 *offset = nullptr)
 {
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly))
@@ -373,32 +375,58 @@ static QByteArray readElfSection(const QString &path, const QByteArray &sectionN
         const quint64 secSize = rd64(shdrs, base + 32);
         if (!f.seek(static_cast<qint64>(secOff)))
             return {};
+        if (offset)
+            *offset = static_cast<qint64>(secOff);
         return f.read(static_cast<qint64>(secSize));
     }
     return {};
 }
 
-// static
-SignatureState AppImageReader::verifySignature(const QString &path)
+// A section the runtime reserves is zero-filled until something is written into it.
+static QByteArray trimZeros(QByteArray data)
 {
-    // Try sha256 first, then sha1 (older appimagetool used sha1)
-    QByteArray sigData  = readElfSection(path, ".sha256_sig");
-    QByteArray hashData = readElfSection(path, ".sha256_hash");
-    if (sigData.isEmpty()) {
-        sigData  = readElfSection(path, ".sha1_sig");
-        hashData = readElfSection(path, ".sha1_hash");
-    }
+    while (!data.isEmpty() && data.back() == '\0')
+        data.chop(1);
+    return data;
+}
 
+// SHA-256 of the file with the given sections read as zeros, as appimagetool signs it.
+static QByteArray digestSkipping(const QString &path, const QList<QPair<qint64, qint64>> &skip)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly))
+        return {};
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    qint64 pos = 0;
+    while (!f.atEnd()) {
+        QByteArray chunk = f.read(1 << 20);
+        if (chunk.isEmpty())
+            break;
+        for (const auto &range : skip) {
+            const qint64 from = qMax(range.first, pos);
+            const qint64 to = qMin(range.first + range.second, pos + chunk.size());
+            if (from < to)
+                std::memset(chunk.data() + (from - pos), 0, to - from);
+        }
+        hash.addData(chunk);
+        pos += chunk.size();
+    }
+    return hash.result().toHex();
+}
+
+// static
+SignatureState AppImageReader::verifySignature(const QString &path, QString *fingerprint)
+{
+    // appimagetool --sign: an armored detached signature in .sha256_sig over the hex SHA-256
+    // of the file (those sections zeroed), and the signer's public key in .sig_key.
+    qint64 sigOff = -1, keyOff = -1, md5Off = -1;
+    const QByteArray sigSection = readElfSection(path, ".sha256_sig", &sigOff);
+    const QByteArray keySection = readElfSection(path, ".sig_key", &keyOff);
+    const QByteArray md5Section = readElfSection(path, ".digest_md5", &md5Off);
+    const QByteArray sigData = trimZeros(sigSection);
     if (sigData.isEmpty())
         return SignatureState::Unsigned;
 
-    if (hashData.isEmpty()) {
-        qCWarning(AIM_LOG) << "verifySignature:" << path
-                           << "has a signature section but no hash section — corrupt?";
-        return SignatureState::Invalid;
-    }
-
-    // Locate gpg
     QString gpgExe = QStandardPaths::findExecutable(QStringLiteral("gpg2"));
     if (gpgExe.isEmpty())
         gpgExe = QStandardPaths::findExecutable(QStringLiteral("gpg"));
@@ -408,30 +436,75 @@ SignatureState AppImageReader::verifySignature(const QString &path)
     QTemporaryDir tmp;
     if (!tmp.isValid())
         return SignatureState::Unchecked;
-
-    auto writeTemp = [&](const QString &name, const QByteArray &data) -> QString {
+    const auto writeTemp = [&](const QString &name, const QByteArray &data) -> QString {
         const QString fp = tmp.filePath(name);
         QFile f(fp);
         if (!f.open(QIODevice::WriteOnly) || f.write(data) != data.size())
             return {};
         return fp;
     };
-
-    const QString sigFile  = writeTemp(QStringLiteral("app.sig"),  sigData);
-    const QString hashFile = writeTemp(QStringLiteral("app.hash"), hashData);
-    if (sigFile.isEmpty() || hashFile.isEmpty())
-        return SignatureState::Unchecked;
-
-    // gpg --verify <detached-sig> <signed-data>
     constexpr int kGpgTimeoutMs = 15'000;
-    QProcess gpg;
-    gpg.start(gpgExe, { QStringLiteral("--verify"), sigFile, hashFile });
-    if (!gpg.waitForFinished(kGpgTimeoutMs)) {
-        gpg.kill();
-        return SignatureState::Unchecked;
-    }
+    const auto runGpg = [&](const QStringList &args, QByteArray *status = nullptr) -> int {
+        QProcess gpg;
+        gpg.start(gpgExe, args);
+        if (!gpg.waitForFinished(kGpgTimeoutMs)) {
+            gpg.kill();
+            return -1;
+        }
+        if (status)
+            *status = gpg.readAllStandardOutput();
+        return gpg.exitCode();
+    };
 
-    return gpg.exitCode() == 0 ? SignatureState::Valid : SignatureState::Invalid;
+    // The embedded key goes into a keyring of its own: it proves the file is unchanged since
+    // the holder of that key signed it (compare the fingerprint to the one the developer
+    // publishes). Without an embedded key, the user's keyring is used.
+    QStringList home;
+    const QByteArray key = trimZeros(keySection);
+    if (!key.isEmpty()) {
+        const QString homeDir = tmp.filePath(QStringLiteral("gnupg"));
+        QDir().mkpath(homeDir);
+        QFile::setPermissions(homeDir, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        home = { QStringLiteral("--homedir"), homeDir };
+        const QString keyFile = writeTemp(QStringLiteral("key.asc"), key);
+        if (keyFile.isEmpty() || runGpg(home + QStringList{ QStringLiteral("--batch"), QStringLiteral("--import"), keyFile }) != 0)
+            return SignatureState::Unchecked;
+    }
+    const QString sigFile = writeTemp(QStringLiteral("app.sig"), sigData);
+    if (sigFile.isEmpty())
+        return SignatureState::Unchecked;
+
+    QList<QPair<qint64, qint64>> skip = { { sigOff, sigSection.size() } };
+    if (keyOff >= 0)
+        skip.append({ keyOff, keySection.size() });
+    QList<QList<QPair<qint64, qint64>>> variants = { skip };
+    if (md5Off >= 0)
+        variants.append(skip + QList<QPair<qint64, qint64>>{ { md5Off, md5Section.size() } });
+
+    bool noKey = false;
+    for (const auto &variant : std::as_const(variants)) {
+        const QByteArray digest = digestSkipping(path, variant);
+        if (digest.isEmpty())
+            return SignatureState::Unchecked;
+        for (const QByteArray &data : QList<QByteArray>{ digest, digest + '\n' }) {
+            const QString dataFile = writeTemp(QStringLiteral("app.digest"), data);
+            QByteArray status;
+            const int code = runGpg(home + QStringList{ QStringLiteral("--batch"), QStringLiteral("--status-fd"),
+                                                        QStringLiteral("1"), QStringLiteral("--verify"), sigFile, dataFile },
+                                    &status);
+            if (code == 0) {
+                for (const QByteArray &line : status.split('\n')) {
+                    if (line.startsWith("[GNUPG:] VALIDSIG ") && fingerprint)
+                        *fingerprint = QString::fromLatin1(line.split(' ').value(2));
+                }
+                return SignatureState::Valid;
+            }
+            if (status.contains("[GNUPG:] NO_PUBKEY"))
+                noKey = true;
+        }
+    }
+    // Signed with a key we don't have: can't tell either way.
+    return noKey ? SignatureState::Unchecked : SignatureState::Invalid;
 }
 
 void AppImageReader::extractMetadataFromXml(const QByteArray &xmlData, AppImageInfo &info)

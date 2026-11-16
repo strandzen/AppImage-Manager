@@ -41,6 +41,18 @@ target_include_directories(tst_updatesource PRIVATE
     ${CMAKE_BINARY_DIR}/src
 )
 
+# ── tst_zsync ─────────────────────────────────────────────────────────────────
+# Built-in zsync: control parsing, block matching against a changed file, ranges.
+ecm_add_test(tst_zsync.cpp
+    TEST_NAME tst_zsync
+    LINK_LIBRARIES Qt6::Test appimagemanager_qml
+    NAME_PREFIX "appimagemanager-"
+)
+target_include_directories(tst_zsync PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}/src
+)
+
 # ── tst_desktoplink ───────────────────────────────────────────────────────────
 # App menu entries: own-id naming, entries other software wrote, duplicate cleanup.
 # Runs in QStandardPaths test mode (~/.qttest), never the real applications dir.

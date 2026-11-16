@@ -12,10 +12,10 @@
 // Result of a GPG signature check on a Type 2 AppImage.
 // Stored in AppImageInfo so the result survives the AppImageReader round-trip.
 enum class SignatureState : int {
-    Unchecked      = 0, // not yet attempted
+    Unchecked      = 0, // not attempted, or signed with a key we don't have
     Valid          = 1, // .sha256_sig present, gpg confirms it
     Invalid        = 2, // .sha256_sig present, gpg rejects it (tampered / wrong key)
-    Unsigned       = 3, // no .sha256_sig ELF section found
+    Unsigned       = 3, // no .sha256_sig section, or it is zero-filled (the runtime reserves it)
     GpgUnavailable = 4, // section present but gpg/gpg2 not on PATH
 };
 

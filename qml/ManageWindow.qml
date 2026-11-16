@@ -29,6 +29,56 @@ Kirigami.ApplicationWindow {
     Kirigami.Theme.inherit: false
 
     readonly property int managedIconSize: Kirigami.Units.iconSizes.huge
+    readonly property bool dialogOpen: uninstallDialog.visible || replaceDialog.visible
+                                       || signatureWarnDialog.visible || aboutDialog.visible
+
+    // Dropped on the folder, by drag or by the keyboard.
+    function requestInstall() {
+        if (backend.existingState !== AppImageBackend.NotInstalled)
+            replaceDialog.open()
+        else
+            backend.beginInstall(false)
+    }
+
+    // Ctrl+Shift+→ installs: the icon slides into the folder like a drag.
+    Shortcut {
+        sequence: "Ctrl+Shift+Right"
+        enabled: backend.metadataLoaded && !backend.isInstalled && !root.dialogOpen
+                 && !dragArea.drag.active && !keyboardMove.running
+        onActivated: {
+            const target = folderContainer.mapToItem(iconContainer, 0, 0)
+            keyboardMove.toX = target.x
+            keyboardMove.toY = target.y
+            keyboardMove.start()
+        }
+    }
+    // Installed: Enter starts the app.
+    Shortcut {
+        sequences: ["Return", "Enter"]
+        enabled: backend.isInstalled && !root.dialogOpen
+        onActivated: backend.launchAppImage()
+    }
+
+    SequentialAnimation {
+        id: keyboardMove
+        property real toX: 0
+        property real toY: 0
+        ScriptAction { script: { dragIcon.x = 0; dragIcon.y = 0 } }
+        ParallelAnimation {
+            NumberAnimation { target: dragIcon; property: "x"; to: keyboardMove.toX
+                              duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad }
+            NumberAnimation { target: dragIcon; property: "y"; to: keyboardMove.toY
+                              duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad }
+        }
+        PauseAnimation { duration: Kirigami.Units.shortDuration }
+        ScriptAction {
+            script: {
+                dragIcon.x = 0
+                dragIcon.y = 0
+                root.requestInstall()
+            }
+        }
+    }
 
     UninstallDialog { id: uninstallDialog }
 
@@ -125,7 +175,7 @@ Kirigami.ApplicationWindow {
 
                     Item {
                         id: iconContainer
-                        width: root.managedIconSize; height: root.managedIconSize
+                        implicitWidth: root.managedIconSize; implicitHeight: root.managedIconSize
                         Layout.alignment: Qt.AlignHCenter
 
                         // The stationary symbolic icon
@@ -133,7 +183,7 @@ Kirigami.ApplicationWindow {
                             id: appIcon
                             anchors.fill: parent
                             source: backend.appIconSource !== "" ? backend.appIconSource : "application-x-executable"
-                            opacity: dragArea.drag.active ? 0.3 : 1.0
+                            opacity: dragArea.drag.active || keyboardMove.running ? 0.3 : 1.0
                             Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
                         }
 
@@ -143,9 +193,10 @@ Kirigami.ApplicationWindow {
                             width: parent.width; height: parent.height
                             source: appIcon.source
                             opacity: 0.8
-                            visible: dragArea.drag.active
+                            visible: dragArea.drag.active || keyboardMove.running
 
-                            Drag.active: dragArea.drag.active
+                            // On during the keyboard move too, so the folder highlights.
+                            Drag.active: dragArea.drag.active || keyboardMove.running
                             Drag.keys: ["appimage"]
                             Drag.hotSpot.x: width / 2
                             Drag.hotSpot.y: height / 2
@@ -164,12 +215,8 @@ Kirigami.ApplicationWindow {
                             }
                             onReleased: {
                                 if (backend.isInstalled) return
-                                if (dragIcon.Drag.target !== null) {
-                                    if (backend.existingState !== AppImageBackend.NotInstalled)
-                                        replaceDialog.open()
-                                    else
-                                        backend.beginInstall(false)
-                                }
+                                if (dragIcon.Drag.target !== null)
+                                    root.requestInstall()
                                 // Reset position instantly to return to source
                                 dragIcon.x = 0
                                 dragIcon.y = 0
@@ -184,7 +231,7 @@ Kirigami.ApplicationWindow {
                         Layout.maximumWidth: Kirigami.Units.gridUnit * 10; font.bold: backend.isInstalled
                     }
                     Controls.Label {
-                        text: i18n("Drag icon to install")
+                        text: i18n("Drag icon to install (%1)", "Ctrl+Shift+→")
                         visible: !backend.isInstalled
                         color: Kirigami.Theme.disabledTextColor
                         font: Kirigami.Theme.smallFont
@@ -198,7 +245,7 @@ Kirigami.ApplicationWindow {
 
                     Item {
                         id: folderContainer
-                        width: root.managedIconSize; height: root.managedIconSize
+                        implicitWidth: root.managedIconSize; implicitHeight: root.managedIconSize
                         Layout.alignment: Qt.AlignHCenter
 
                         DropArea {
@@ -228,7 +275,7 @@ Kirigami.ApplicationWindow {
                         text: i18n("Applications")
                         horizontalAlignment: Text.AlignHCenter
                         Layout.alignment: Qt.AlignHCenter
-                        font.bold: dragArea.drag.active && !backend.isInstalled
+                        font.bold: (dragArea.drag.active || keyboardMove.running) && !backend.isInstalled
                     }
                 }
             }

@@ -34,7 +34,7 @@ makedepends=(
 )
 optdepends=(
     'am-git: install AppImages via the AM package manager'
-    'zsync2: delta updates (falls back to full download without it)'
+    'bubblewrap: run apps in a sandbox'
     'libcanberra: completion sound notifications'
 )
 provides=('appimagemanager' 'appimage-manager-plasma')

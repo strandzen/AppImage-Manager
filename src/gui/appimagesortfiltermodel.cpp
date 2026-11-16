@@ -186,3 +186,45 @@ QVariantList AppImageSortFilterModel::setEnvironment(int proxyRow, const QString
     auto *src = qobject_cast<AppImageListModel *>(sourceModel());
     return src ? src->setEnvironment(sourceRowFor(proxyRow), text) : QVariantList();
 }
+
+QVariantMap AppImageSortFilterModel::configFolder(int proxyRow) const
+{
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    return src ? src->configFolder(sourceRowFor(proxyRow)) : QVariantMap();
+}
+
+void AppImageSortFilterModel::setConfigFolder(int proxyRow, bool enable, const QStringList &moveDirs)
+{
+    if (auto *src = qobject_cast<AppImageListModel *>(sourceModel()))
+        src->setConfigFolder(sourceRowFor(proxyRow), enable, moveDirs);
+}
+
+bool AppImageSortFilterModel::restorePrevious(int proxyRow)
+{
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    return src && src->restorePrevious(sourceRowFor(proxyRow));
+}
+
+QVariantMap AppImageSortFilterModel::sandbox(int proxyRow) const
+{
+    auto *src = qobject_cast<AppImageListModel *>(sourceModel());
+    return src ? src->sandbox(sourceRowFor(proxyRow)) : QVariantMap();
+}
+
+void AppImageSortFilterModel::setSandbox(int proxyRow, bool enabled, const QStringList &folders)
+{
+    if (auto *src = qobject_cast<AppImageListModel *>(sourceModel()))
+        src->setSandbox(sourceRowFor(proxyRow), enabled, folders);
+}
+
+void AppImageSortFilterModel::checkSignature(int proxyRow)
+{
+    if (auto *src = qobject_cast<AppImageListModel *>(sourceModel()))
+        src->checkSignature(sourceRowFor(proxyRow));
+}
+
+void AppImageSortFilterModel::fetchReleaseNotes(int proxyRow)
+{
+    if (auto *src = qobject_cast<AppImageListModel *>(sourceModel()))
+        src->fetchReleaseNotes(sourceRowFor(proxyRow));
+}

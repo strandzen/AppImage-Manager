@@ -8,6 +8,16 @@
 - The tray icon shows the number of waiting updates, and its tooltip says when it last checked and will check next.
 - A Check for Updates button (⟳) in the main window's toolbar.
 - While updates are checked, a note at the bottom of the main window counts up ("Checking for updates (3/13)") and then shows the result, so a long check no longer looks stuck.
+- Details show each app's signature: signed (with the key's fingerprint), not signed, or changed since it was signed. It's checked in the background when you select the app.
+- Settings → Security → Sandbox all AppImages runs every app in the sandbox (leave one out in its Sandbox… dialog), with shared folders every sandboxed app may use: Downloads, Documents, Pictures, Music, Videos, Desktop, or your own.
+- Details: the update source of a GitHub, Codeberg, Forgejo or Gitea app links to its repository.
+- Release notes: ⋯ → Release Notes… shows what changed in every release newer than the installed one (or the latest release), formatted, with a link to the release page. Fetched when you open it, for GitHub, Codeberg, Forgejo and Gitea sources.
+- The Installed list can be made wider or narrower by dragging its edge; double-click the edge for the default width. The width is remembered.
+- Sandbox: ⋯ → Sandbox… runs an app with bubblewrap. It sees only its own folder in `Applications/.config` and the folders you add for it; the rest of your home folder and other drives are hidden, display, sound and network keep working. Launching from AppImage Manager and from the app menu both use it.
+- zsync updates no longer need `zsync2`: AppImage Manager reuses the parts of the installed file that didn't change and downloads only the rest (for example 320 KB instead of 36 MB), and checks the result. If a server can't send parts of a file, it downloads the whole file instead.
+- Undo an update: the version an update replaced is kept (in `Applications/.previous`) until the next update, and ⋯ → Restore Previous Version brings it back. Restoring again swaps them back.
+- Keep an app's settings in the Applications folder (`Applications/.config/<app>`) instead of `~/.config`, so one folder holds your apps and their settings. Turn it on per app with ⋯ → Keep Settings in Applications (it offers to move the current settings along), or for every new install in Settings → General. The folder is offered with the other leftovers when you remove the app.
+- Install from the keyboard: in the install window, Ctrl+Shift+→ slides the app into Applications, just like dragging it. Once it's installed, Enter starts it.
 - `appimagemanager --settings` and `--select <path>` open the main window on Settings or with an AppImage selected.
 - The install window says when the app is already installed, and whether this file is newer, older or the same version. Dropping it on Applications then asks: Replace (the installed copy goes to the Trash, its update source, environment variables and app menu entry move to the new one), Keep Both, or Cancel.
 
@@ -20,6 +30,7 @@
 - Two AppImages of the same app: the older one is marked "Older copy of …".
 
 ### Changed
+- Translations: every missing string in the 15 languages now has a machine-made draft, marked fuzzy for native speakers to review (fuzzy strings still show in English).
 - Dolphin: AppImages open with AppImage Manager through **Open With**; the separate "Manage AppImage" right-click entry (a Dolphin plugin and a service menu that both added it) is gone.
 - The main window and the tray share check results: what one checked, the other shows, including the reason a check failed.
 - Categories are shown in plain words ("Graphics", "Internet") instead of the raw list ("Graphics, 2DGraphics, VectorGraphics, X-Design").
@@ -33,6 +44,8 @@
 - The background checker also checks AppImages that update through a plain zsync link.
 
 ### Fixed
+- zsync updates stay quick when much of an app changed: blocks are matched in pairs like zsync does, and when little can be reused the whole file is downloaded instead of many small pieces.
+- Signature checks: every unsigned AppImage was reported as having an invalid signature (the empty signature space every AppImage has was taken for a broken signature), and signed ones were checked against the wrong data. Signatures are now checked the way appimagetool makes them, against the key in the file.
 - The install window keeps its small fixed size. Window managers and scripts that restore window sizes (such as KWin's "Remember Window Positions") could widen it to the main window's size; it now has its own title ("<App> – AppImage Manager") and fixed size limits.
 - Settings changed in the main window (check frequency, Applications folder, download notifications) now reach the background checker within a minute; before, it kept the old ones until it was restarted.
 - Restore Defaults no longer brings back the welcome dialog (which also turned Discover off).

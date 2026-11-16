@@ -37,6 +37,10 @@ namespace AppImageManager {
     // Blocking — call via QtConcurrent::run.
     // Returns entries sorted High confidence first, Low confidence second.
     QList<CorpseEntry> findCorpses(const AppImageInfo &info);
+    // Total size of the files under path. Blocking.
+    qint64 dirSize(const QString &path);
+    // The app's folders in ~/.config (as findCorpses, without sizes). Quick enough for the UI thread.
+    QList<CorpseEntry> findConfigDirs(const AppImageInfo &info);
 
     // Moves appImageUrl and all corpseUrls to Trash. Returns a KIO::CopyJob*.
     KJob *removeItems(const QUrl &appImageUrl,

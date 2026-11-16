@@ -10,6 +10,8 @@
 #include "../core/appsettings.h"
 #include "../core/checkresults.h"
 #include "../core/launchenvironment.h"
+#include "../core/previousversion.h"
+#include "../core/sandbox.h"
 #include "../core/updatesource.h"
 
 #include <KFormat>
@@ -256,8 +258,16 @@ void AppImageBackend::findCorpses()
         watcher->deleteLater();
         Q_EMIT busyChanged();
     });
-    watcher->setFuture(QtConcurrent::run([info = m_info]() {
-        return AppImageManager::findCorpses(info);
+    watcher->setFuture(QtConcurrent::run([info = m_info, folder = configFolderPath(m_appImagePath),
+                                          previous = previousFilePath(m_appImagePath)]() {
+        QList<AppImageManager::CorpseEntry> corpses = AppImageManager::findCorpses(info);
+        // The copy its last update replaced.
+        if (QFileInfo::exists(previous))
+            corpses.prepend({ previous, QFileInfo(previous).size(), AppImageManager::CorpseConfidence::High });
+        // Its settings folder in Applications, when it has one.
+        if (!folder.isEmpty() && QFileInfo::exists(folder))
+            corpses.prepend({ folder, AppImageManager::dirSize(folder), AppImageManager::CorpseConfidence::High });
+        return corpses;
     }));
 }
 
@@ -314,6 +324,8 @@ void AppImageBackend::onInstallJobFinished(KJob *job)
                    + QLatin1Char('/')
                    + QFileInfo(m_appImagePath).fileName();
     m_isInstalled = true;
+    if (!m_replace && AppSettings::instance()->configInApplications() && configFolderName(m_appImagePath).isEmpty())
+        setConfigFolderName(m_appImagePath, defaultConfigFolderName(m_appImagePath));
     const bool link = m_replace ? finishReplace() : true;
     m_hasDesktopLink = link && AppImageManager::createDesktopLink(m_appImagePath, m_info);
     Q_EMIT installedChanged();
@@ -352,11 +364,20 @@ bool AppImageBackend::finishReplace()
     saveUpdateSource(m_existingPath, {});
     saveEnvironment(m_appImagePath, loadEnvironment(m_existingPath));
     saveEnvironment(m_existingPath, {});
+    setConfigFolderName(m_appImagePath, configFolderName(m_existingPath));
+    setConfigFolderName(m_existingPath, {});
+    saveSandbox(m_appImagePath, loadSandbox(m_existingPath));
+    saveSandbox(m_existingPath, {});
 
     // removeItems() drops the old menu entry; it must go before ours is written, as both
     // can be the same app-id file.
     const bool hadLink = AppImageManager::isDesktopLinkEnabled(m_existingPath, m_existingInfo);
-    KJob *job = AppImageManager::removeItems(QUrl::fromLocalFile(m_existingPath), m_existingInfo, {});
+    // Its kept previous version goes with it.
+    QList<QUrl> extra;
+    if (hasPrevious(m_existingPath))
+        extra.append(QUrl::fromLocalFile(previousFilePath(m_existingPath)));
+    forgetPrevious(m_existingPath);
+    KJob *job = AppImageManager::removeItems(QUrl::fromLocalFile(m_existingPath), m_existingInfo, extra);
     connect(job, &KJob::result, this, [this](KJob *j) {
         if (j->error()) {
             qCWarning(AIM_LOG) << "Could not trash the replaced copy:" << j->errorString();

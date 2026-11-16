@@ -3,6 +3,7 @@
 #include "gui/appimagewindow.h"
 #include "gui/dashboardwindow.h"
 #include "core/updatedaemon.h"
+#include "core/sandbox.h"
 #include "version.h"
 
 #include <KAboutData>
@@ -18,6 +19,16 @@
 int main(int argc, char *argv[])
 {
     KLocalizedString::setApplicationDomain("appimagemanager");
+
+    // appimagemanager --run <file> [args…]: start an AppImage the way its settings say
+    // (sandboxed, with its environment) and wait for it. Used by app menu entries; no GUI.
+    if (argc >= 3 && qstrcmp(argv[1], "--run") == 0) {
+        QCoreApplication app(argc, argv);
+        QStringList appArgs;
+        for (int i = 3; i < argc; ++i)
+            appArgs.append(QString::fromLocal8Bit(argv[i]));
+        return runAppImage(QString::fromLocal8Bit(argv[2]), appArgs);
+    }
 
     QApplication app(argc, argv);
 

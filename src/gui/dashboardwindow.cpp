@@ -10,6 +10,7 @@
 #include "appsettings.h"
 #include "logging.h"
 #include "../core/appimagereader.h"
+#include "../core/launchenvironment.h"
 
 #include <KIO/CopyJob>
 #include <KLocalizedQmlContext>
@@ -186,7 +187,10 @@ void DashboardWindow::installFromPath(const QUrl &url)
 
     auto doInstall = [this, url, dest]() {
         auto *job = AppImageManager::installAppImage(url, dest);
-        connect(job, &KJob::result, this, [](KJob *j) {
+        connect(job, &KJob::result, this, [url, dest](KJob *j) {
+            const QString installed = dest + QLatin1Char('/') + url.fileName();
+            if (!j->error() && AppSettings::instance()->configInApplications() && configFolderName(installed).isEmpty())
+                setConfigFolderName(installed, defaultConfigFolderName(installed));
             if (j->error()) {
                 qCWarning(AIM_LOG) << "Install failed:" << j->errorString();
                 auto *n = KNotification::event(QStringLiteral("installFailed"),
@@ -224,5 +228,5 @@ void DashboardWindow::installFromPath(const QUrl &url)
         }
         doInstall();
     });
-    watcher->setFuture(QtConcurrent::run(&AppImageReader::verifySignature, localPath));
+    watcher->setFuture(QtConcurrent::run([localPath]() { return AppImageReader::verifySignature(localPath); }));
 }

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-14 22:45+0100\n"
+"POT-Creation-Date: 2026-11-17 00:01+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,78 +18,128 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: src/main.cpp:26 src/core/updatedaemon.cpp:90 src/core/updatedaemon.cpp:92
-#: src/core/updatedaemon.cpp:244 qml/ManageWindow.qml:12
-#: qml/DashboardWindow.qml:12
+#: src/main.cpp:37 src/core/updatedaemon.cpp:666 src/core/updatedaemon.cpp:668
+#: qml/DashboardWindow.qml:12 qml/TrayWindow.qml:48
+#: data/plasmoid/contents/ui/main.qml:126
+#: data/plasmoid/contents/ui/main.qml:129
 msgid "AppImage Manager"
 msgstr ""
 
-#: src/main.cpp:28
+#: src/main.cpp:39
 msgid "Manage AppImage files"
 msgstr ""
 
-#: src/main.cpp:30
+#: src/main.cpp:41
 msgid "© 2024 AppImage Manager Contributors"
 msgstr ""
 
-#: src/main.cpp:46
+#: src/main.cpp:56
 msgid "AppImage file to manage. If omitted, opens the dashboard."
 msgstr ""
 
-#: src/main.cpp:48
+#: src/main.cpp:58
 msgid "Run in background as an update daemon"
 msgstr ""
 
-#: src/main.cpp:49
+#: src/main.cpp:59
 msgid "Open the dashboard window"
 msgstr ""
 
-#: src/core/appimagemanager.cpp:137
+#: src/main.cpp:60
+msgid "Open the dashboard on its Settings page"
+msgstr ""
+
+#: src/main.cpp:62
+msgid "Open the dashboard with this installed AppImage selected"
+msgstr ""
+
+#: src/core/appimagemanager.cpp:237
 msgid "Managed by AppImage Manager"
 msgstr ""
 
-#: src/core/updatedaemon.cpp:93 src/core/updatedaemon.cpp:245
-msgid "No pending updates"
+#: src/core/updatedaemon.cpp:520
+msgctxt "app, new version"
+msgid "%1 %2"
 msgstr ""
 
-#: src/core/updatedaemon.cpp:105
-msgid "Check for Updates Now"
+#: src/core/updatedaemon.cpp:521
+msgctxt "app, old → new version"
+msgid "%1 %2 → %3"
 msgstr ""
 
-#: src/core/updatedaemon.cpp:109 qml/ManageWindow.qml:186
-msgid "Open Dashboard"
-msgstr ""
+#: src/core/updatedaemon.cpp:531
+msgid "and 1 more"
+msgid_plural "and %1 more"
+msgstr[0] ""
+msgstr[1] ""
 
-#: src/core/updatedaemon.cpp:127 src/gui/appimagelistmodel.cpp:77
-msgid "%1 downloaded"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:129 src/gui/appimagelistmodel.cpp:79
-msgid "Manage"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:206
-msgid "Update Available"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:207
-msgid "An update is available for %1 (%2 → %3)."
-msgstr ""
-
-#: src/core/updatedaemon.cpp:212
-msgid "Open Manager"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:238
-msgid "AppImage Updates"
-msgstr ""
-
-#: src/core/updatedaemon.cpp:239 qml/DashboardWindow.qml:108
-#: qml/LibraryPage.qml:51
-msgid "%1 update available"
+#: src/core/updatedaemon.cpp:534 src/core/updatedaemon.cpp:719
+#: qml/LibraryPage.qml:48 qml/TrayWindow.qml:96 qml/UpdateCheckToast.qml:44
+#: data/plasmoid/contents/ui/main.qml:55
+msgid "1 update available"
 msgid_plural "%1 updates available"
 msgstr[0] ""
 msgstr[1] ""
+
+#: src/core/updatedaemon.cpp:537 qml/DashboardWindow.qml:136
+#: qml/LibraryPage.qml:665 qml/TrayWindow.qml:233
+#: data/plasmoid/contents/ui/main.qml:246
+msgid "Update All"
+msgstr ""
+
+#: src/core/updatedaemon.cpp:539 src/core/updatedaemon.cpp:677
+#: qml/TrayWindow.qml:243 data/plasmoid/contents/ui/main.qml:134
+#: data/plasmoid/contents/ui/main.qml:256
+msgid "Open AppImage Manager"
+msgstr ""
+
+#: src/core/updatedaemon.cpp:577 src/gui/appimagelistmodel.cpp:198
+msgid "Update Failed"
+msgstr ""
+
+#: src/core/updatedaemon.cpp:578
+msgid "%1 could not be updated. It was left as it was."
+msgstr ""
+
+#: src/core/updatedaemon.cpp:585
+msgid "Updated 1 AppImage"
+msgid_plural "Updated %1 AppImages"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/core/updatedaemon.cpp:680 qml/DashboardWindow.qml:143
+#: qml/DashboardWindow.qml:180 data/plasmoid/contents/ui/main.qml:139
+msgid "Check for Updates"
+msgstr ""
+
+#: src/core/updatedaemon.cpp:685 data/plasmoid/contents/ui/main.qml:145
+msgid "Settings…"
+msgstr ""
+
+#: src/core/updatedaemon.cpp:715 qml/TrayWindow.qml:94
+#: data/plasmoid/contents/ui/main.qml:53
+msgid "Checking for updates…"
+msgstr ""
+
+#: src/core/updatedaemon.cpp:717 qml/TrayWindow.qml:95
+#: data/plasmoid/contents/ui/main.qml:54
+msgid "Updating 1 AppImage…"
+msgid_plural "Updating %1 AppImages…"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/core/updatedaemon.cpp:721 qml/TrayWindow.qml:97
+#: data/plasmoid/contents/ui/main.qml:56
+msgid "No updates available"
+msgstr ""
+
+#: src/core/updatedaemon.cpp:822 src/gui/appimagelistmodel.cpp:95
+msgid "%1 downloaded"
+msgstr ""
+
+#: src/core/updatedaemon.cpp:824 src/gui/appimagelistmodel.cpp:97
+msgid "Manage"
+msgstr ""
 
 #: src/core/updatesource.cpp:214
 msgctxt "update source"
@@ -116,236 +166,425 @@ msgctxt "update source"
 msgid "Direct download · %1"
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:106
+#: src/core/checkresults.cpp:96
+msgctxt "time"
+msgid "yesterday %1"
+msgstr ""
+
+#: src/core/checkresults.cpp:98
+msgctxt "time"
+msgid "tomorrow %1"
+msgstr ""
+
+#: src/core/releasechecker.cpp:27
+msgid "Repository not found"
+msgstr ""
+
+#: src/core/releasechecker.cpp:27
+msgid "Download link not found"
+msgstr ""
+
+#: src/core/releasechecker.cpp:29
+msgid "The server's request limit is reached; try again later"
+msgstr ""
+
+#: src/core/releasechecker.cpp:37
+msgid "No connection"
+msgstr ""
+
+#: src/core/releasechecker.cpp:73
+msgid "Unsupported update information"
+msgstr ""
+
+#: src/core/releasechecker.cpp:116 src/core/releasechecker.cpp:275
+#: src/gui/appimagelistmodel.cpp:1060
+msgid "No releases found"
+msgstr ""
+
+#: src/core/releasechecker.cpp:162
+msgid "The link leads to a web page, not an AppImage"
+msgstr ""
+
+#: src/core/releasechecker.cpp:179
+msgid "The server does not say when the file changed"
+msgstr ""
+
+#: src/core/releasechecker.cpp:222
+msgid "No AppImage for this computer in release %1"
+msgstr ""
+
+#: src/gui/appimagebackend.cpp:179
 msgid "Could not launch the application."
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:143
+#: src/gui/appimagebackend.cpp:238
 msgid "Could not create launcher entry."
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:144
+#: src/gui/appimagebackend.cpp:239
 msgid "Could not remove launcher entry."
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:237
+#: src/gui/appimagebackend.cpp:343
 msgid "AppImage installed"
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:238
+#: src/gui/appimagebackend.cpp:344
 msgid "%1 was moved to Applications."
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:258
+#: src/gui/appimagebackend.cpp:405
 msgid "AppImage removed"
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:259
+#: src/gui/appimagebackend.cpp:406
 msgid "%1 was moved to Trash."
 msgstr ""
 
-#: src/gui/appimagebackend.cpp:263
+#: src/gui/appimagebackend.cpp:410
 msgid "Restore"
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:136
-msgid "Update Failed"
-msgstr ""
-
-#: src/gui/appimagelistmodel.cpp:137
+#: src/gui/appimagelistmodel.cpp:199
 msgid "%1 could not be updated."
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:225 src/gui/amstoremodel.cpp:111
+#: src/gui/appimagelistmodel.cpp:502 src/gui/amstoremodel.cpp:111
 msgctxt "list section for apps without a category"
 msgid "Other"
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:232
+#: src/gui/appimagelistmodel.cpp:510 src/gui/appimagelistmodel.cpp:519
+msgctxt "list section"
+msgid "Updates available"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:512
+msgctxt "list section"
+msgid "Check failed"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:513
+msgctxt "list section"
+msgid "Up to date"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:514
+msgctxt "list section"
+msgid "No update source"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:515
+msgctxt "list section"
+msgid "Not checked yet"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:523
+msgctxt "list section, below Updates available"
+msgid "Installed"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:531
 msgctxt "list section"
 msgid "Today"
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:233
+#: src/gui/appimagelistmodel.cpp:532
 msgctxt "list section"
 msgid "This Week"
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:234
+#: src/gui/appimagelistmodel.cpp:533
 msgctxt "list section"
 msgid "This Month"
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:235
+#: src/gui/appimagelistmodel.cpp:534
 msgctxt "list section"
 msgid "Earlier"
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:503
+#: src/gui/appimagelistmodel.cpp:806
 msgid "Desktop Link Failed"
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:505
+#: src/gui/appimagelistmodel.cpp:808
 msgid "Could not create desktop link for %1."
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:506
+#: src/gui/appimagelistmodel.cpp:809
 msgid "Could not remove desktop link for %1."
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:522
+#: src/gui/appimagelistmodel.cpp:825
 msgid "Launch Failed"
 msgstr ""
 
-#: src/gui/appimagelistmodel.cpp:523
+#: src/gui/appimagelistmodel.cpp:826
 msgid "Could not launch %1."
 msgstr ""
 
-#: src/gui/appimageupdate.cpp:122
+#: src/gui/appimagelistmodel.cpp:948
+msgid "Some Settings Were Not Moved"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:949
+msgid "%1 already exists in %2."
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:957
+msgid "Could Not Move Settings"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:1031
+msgid "This app's update source has no release notes."
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:1070
+msgid "Restore Failed"
+msgstr ""
+
+#: src/gui/appimagelistmodel.cpp:1070
+msgid "The previous version of %1 could not be restored."
+msgstr ""
+
+#: src/gui/appimageupdate.cpp:131
+msgid "The zsync file was not found"
+msgstr ""
+
+#: src/gui/appimageupdate.cpp:146
 msgid "New version available"
 msgstr ""
 
-#: src/gui/appimageupdate.cpp:234 src/gui/appimageupdate.cpp:415
+#: src/gui/appimageupdate.cpp:401
 msgid "Update Completed"
 msgstr ""
 
-#: src/gui/appimageupdate.cpp:235 src/gui/appimageupdate.cpp:416
+#: src/gui/appimageupdate.cpp:402
 msgid "%1 has been updated successfully."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:944
+#: src/gui/amstoremodel.cpp:913
 msgid "Installation cancelled."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:947 src/gui/amstoremodel.cpp:1098
+#: src/gui/amstoremodel.cpp:916 src/gui/amstoremodel.cpp:1067
 msgid "Download cancelled."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:981
+#: src/gui/amstoremodel.cpp:950
 msgid "Error: Package metadata not found."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:999
+#: src/gui/amstoremodel.cpp:968
 msgid "AM/AppMan is not installed. Falling back to direct AppImage download..."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1002
+#: src/gui/amstoremodel.cpp:971
 msgid "Error: AM/AppMan is required but not installed on your system."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1027
+#: src/gui/amstoremodel.cpp:996
 msgid "Running: %1 -i %2"
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1031
+#: src/gui/amstoremodel.cpp:1000
 msgid "Error: No direct download URL available for this application."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1039
+#: src/gui/amstoremodel.cpp:1008
 msgid "Starting direct download from Hub..."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1049
+#: src/gui/amstoremodel.cpp:1018
 msgid "Error: Failed to open temporary file for writing: %1"
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1077
+#: src/gui/amstoremodel.cpp:1046
 msgid "Downloading: %1%"
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1100
+#: src/gui/amstoremodel.cpp:1069
 msgid "Download failed: %1"
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1109
+#: src/gui/amstoremodel.cpp:1078
 msgid "Download complete. Integrating application..."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1113
+#: src/gui/amstoremodel.cpp:1082
 msgid "Error: Could not overwrite existing file: %1"
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1123
+#: src/gui/amstoremodel.cpp:1092
 msgid "Error: Failed to finalize file renaming."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1142
+#: src/gui/amstoremodel.cpp:1111
 msgid "Error: Extracted AppImage metadata is invalid or file is corrupted."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1151
+#: src/gui/amstoremodel.cpp:1120
 msgid "Warning: AppImage installed, but desktop integration failed."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1153
+#: src/gui/amstoremodel.cpp:1122
 msgid "Desktop entry and icons created."
 msgstr ""
 
-#: src/gui/amstoremodel.cpp:1156
+#: src/gui/amstoremodel.cpp:1125
 msgid "Installation completed successfully."
 msgstr ""
 
-#: src/gui/dashboardwindow.cpp:182
+#: src/gui/dashboardwindow.cpp:197
 msgid "Install failed"
 msgstr ""
 
-#: src/gui/dashboardwindow.cpp:205
+#: src/gui/dashboardwindow.cpp:220
 msgid "The signature on \"%1\" is invalid. Installation aborted."
 msgstr ""
 
-#: src/gui/dashboardwindow.cpp:206
+#: src/gui/dashboardwindow.cpp:221
 msgid "\"%1\" has no embedded signature. Installation aborted."
 msgstr ""
 
-#: src/gui/dashboardwindow.cpp:208
+#: src/gui/dashboardwindow.cpp:223
 msgid "Signature Check Failed"
 msgstr ""
 
-#: src/plugin/appimageactionplugin.cpp:46
-msgid "Manage AppImage"
+#: src/gui/traymodel.cpp:131
+msgid "Checked %1"
 msgstr ""
 
-#: qml/ManageWindow.qml:74 qml/DashboardWindow.qml:95 qml/LibraryPage.qml:532
+#: src/gui/traymodel.cpp:132 qml/LibraryPage.qml:61 qml/LibraryPage.qml:653
+#: qml/LibraryPage.qml:945 qml/TrayWindow.qml:181
+#: data/plasmoid/contents/ui/main.qml:358
+msgid "Not checked yet"
+msgstr ""
+
+#: src/gui/traymodel.cpp:139
+msgid "Next check %1"
+msgstr ""
+
+#: qml/ManageWindow.qml:14
+msgctxt "window title: app name"
+msgid "%1 – AppImage Manager"
+msgstr ""
+
+#: qml/ManageWindow.qml:135
+msgid "Version %1 is installed · this one is newer"
+msgstr ""
+
+#: qml/ManageWindow.qml:137
+msgid "Version %1 is installed · this one is older"
+msgstr ""
+
+#: qml/ManageWindow.qml:139
+msgid "This version is already installed"
+msgstr ""
+
+#: qml/ManageWindow.qml:142
+msgid "Version %1 is already installed"
+msgstr ""
+
+#: qml/ManageWindow.qml:143
+msgid "Already installed"
+msgstr ""
+
+#: qml/ManageWindow.qml:157 qml/DashboardWindow.qml:105 qml/LibraryPage.qml:881
 #: qml/AboutPage.qml:10
 msgid "About"
 msgstr ""
 
-#: qml/ManageWindow.qml:142
+#: qml/ManageWindow.qml:225
 msgid "Launch %1"
 msgstr ""
 
-#: qml/ManageWindow.qml:151
-msgid "Drag icon to install"
+#: qml/ManageWindow.qml:234
+msgid "Drag icon to install (%1)"
 msgstr ""
 
-#: qml/ManageWindow.qml:192
+#: qml/ManageWindow.qml:269
+msgid "Open Dashboard"
+msgstr ""
+
+#: qml/ManageWindow.qml:275 qml/SettingsPage.qml:186
 msgid "Applications"
 msgstr ""
 
-#: qml/ManageWindow.qml:206 qml/LibraryPage.qml:117 qml/LibraryPage.qml:362
+#: qml/ManageWindow.qml:289 qml/LibraryPage.qml:188 qml/LibraryPage.qml:572
 msgid ""
 "AppImages are unverified executables. Only install from sources you trust."
 msgstr ""
 
-#: qml/ManageWindow.qml:214 qml/LibraryPage.qml:520
+#: qml/ManageWindow.qml:297 qml/LibraryPage.qml:869
 msgid "Remove…"
 msgstr ""
 
-#: qml/ManageWindow.qml:246
+#: qml/ManageWindow.qml:329
+msgctxt "app name and version"
+msgid "%1 %2"
+msgstr ""
+
+#: qml/ManageWindow.qml:332
+msgid "Replace Older Version?"
+msgstr ""
+
+#: qml/ManageWindow.qml:333
+msgid "Install Older Version?"
+msgstr ""
+
+#: qml/ManageWindow.qml:334
+msgid "Already Installed"
+msgstr ""
+
+#: qml/ManageWindow.qml:341
+msgid "Keep Both"
+msgstr ""
+
+#: qml/ManageWindow.qml:351
+msgid "Replace"
+msgstr ""
+
+#: qml/ManageWindow.qml:370
+msgid ""
+"%1 is already installed, and this version (%2) is newer. Install it and move "
+"the older version to the Trash?"
+msgstr ""
+
+#: qml/ManageWindow.qml:373
+msgid ""
+"%1 is already installed, which is newer than this version (%2). Install this "
+"one and move the newer version to the Trash?"
+msgstr ""
+
+#: qml/ManageWindow.qml:376
+msgid "%1 is already installed. Replace it with this file?"
+msgstr ""
+
+#: qml/ManageWindow.qml:378
+msgid "%1 is already installed. Replace it with this one?"
+msgstr ""
+
+#: qml/ManageWindow.qml:387
+msgid "Its update source, environment variables and app menu entry are kept."
+msgstr ""
+
+#: qml/ManageWindow.qml:397
 msgid "Invalid Signature"
 msgstr ""
 
-#: qml/ManageWindow.qml:246
+#: qml/ManageWindow.qml:397
 msgid "No Signature Found"
 msgstr ""
 
-#: qml/ManageWindow.qml:269
+#: qml/ManageWindow.qml:420
 msgid ""
 "The GPG signature on this AppImage is <b>invalid</b>. The file may have been "
 "tampered with. Installing is strongly discouraged."
 msgstr ""
 
-#: qml/ManageWindow.qml:270
+#: qml/ManageWindow.qml:421
 msgid ""
 "This AppImage has no GPG signature and cannot be verified. Only install from "
 "sources you trust."
@@ -393,21 +632,21 @@ msgstr ""
 msgid "All"
 msgstr ""
 
-#: qml/UninstallDialog.qml:144 qml/LibraryPage.qml:572
+#: qml/UninstallDialog.qml:144 qml/SandboxDialog.qml:142
 msgid "None"
 msgstr ""
 
-#: qml/UninstallDialog.qml:209
+#: qml/UninstallDialog.qml:212
 msgid ""
 "Possibly related — these directories may not belong to this app. Verify "
 "before removing."
 msgstr ""
 
-#: qml/UninstallDialog.qml:267 qml/StorePage.qml:497 qml/SettingsPage.qml:504
+#: qml/UninstallDialog.qml:272 qml/StorePage.qml:528 qml/SettingsPage.qml:739
 msgid "Cancel"
 msgstr ""
 
-#: qml/UninstallDialog.qml:271
+#: qml/UninstallDialog.qml:276
 msgid "Move to Trash"
 msgstr ""
 
@@ -423,208 +662,419 @@ msgstr ""
 msgid "All files (*)"
 msgstr ""
 
-#: qml/DashboardWindow.qml:84
+#: qml/DashboardWindow.qml:94
 msgid "Back"
 msgstr ""
 
-#: qml/DashboardWindow.qml:95 qml/DashboardWindow.qml:167
-#: qml/SettingsPage.qml:13
+#: qml/DashboardWindow.qml:105 qml/DashboardWindow.qml:190
+#: qml/LibraryPage.qml:927 qml/TrayWindow.qml:253
+#: data/plasmoid/contents/ui/main.qml:265
 msgid "Settings"
 msgstr ""
 
-#: qml/DashboardWindow.qml:102
+#: qml/DashboardWindow.qml:112
 msgid "Installed (%1)"
 msgstr ""
 
-#: qml/DashboardWindow.qml:103
+#: qml/DashboardWindow.qml:113
 msgid "Installed"
 msgstr ""
 
-#: qml/DashboardWindow.qml:115 qml/SettingsPage.qml:205
+#: qml/DashboardWindow.qml:118
+msgid "%1 update available"
+msgid_plural "%1 updates available"
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/DashboardWindow.qml:125 qml/SettingsPage.qml:24 qml/SettingsPage.qml:434
 msgid "Discover"
 msgstr ""
 
-#: qml/DashboardWindow.qml:126
-msgid "Update All"
+#: qml/DashboardWindow.qml:149
+msgid "Check for Updates (last checked %1)"
 msgstr ""
 
-#: qml/DashboardWindow.qml:133 qml/LibraryPage.qml:108
+#: qml/DashboardWindow.qml:156 qml/LibraryPage.qml:179
 msgid "Install from File…"
 msgstr ""
 
-#: qml/DashboardWindow.qml:144
+#: qml/DashboardWindow.qml:167
 msgid "Main Menu"
 msgstr ""
 
-#: qml/DashboardWindow.qml:157
+#: qml/DashboardWindow.qml:180
 msgid "Checking for Updates…"
 msgstr ""
 
-#: qml/DashboardWindow.qml:157
-msgid "Check for Updates"
-msgstr ""
-
-#: qml/DashboardWindow.qml:172 qml/AboutDialog.qml:11
+#: qml/DashboardWindow.qml:195 qml/AboutDialog.qml:11
 msgid "About AppImage Manager"
 msgstr ""
 
-#: qml/DashboardWindow.qml:253
+#: qml/DashboardWindow.qml:286
 msgid "Drop to install"
 msgstr ""
 
-#: qml/LibraryPage.qml:43
+#: qml/LibraryPage.qml:32
+msgctxt "version · status"
+msgid "%1 · %2"
+msgstr ""
+
+#: qml/LibraryPage.qml:34
+msgid "Older copy of %1"
+msgstr ""
+
+#: qml/LibraryPage.qml:37 qml/TrayWindow.qml:174
+#: data/plasmoid/contents/ui/main.qml:350
+msgctxt "old → new version"
+msgid "%1 → %2"
+msgstr ""
+
+#: qml/LibraryPage.qml:38 qml/LibraryPage.qml:59 qml/LibraryPage.qml:940
+#: qml/TrayWindow.qml:177 data/plasmoid/contents/ui/main.qml:353
+msgid "Up to date"
+msgstr ""
+
+#: qml/LibraryPage.qml:39 qml/LibraryPage.qml:60 qml/TrayWindow.qml:178
+#: data/plasmoid/contents/ui/main.qml:354
+msgid "No update source"
+msgstr ""
+
+#: qml/LibraryPage.qml:40 qml/LibraryPage.qml:58 qml/LibraryPage.qml:942
+#: qml/TrayWindow.qml:180 data/plasmoid/contents/ui/main.qml:357
+msgid "Check failed"
+msgstr ""
+
+#: qml/LibraryPage.qml:49
+msgid "1 check failed"
+msgid_plural "%1 checks failed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/LibraryPage.qml:50
+msgid "1 up to date"
+msgid_plural "%1 up to date"
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/LibraryPage.qml:51
+msgid "1 without an update source"
+msgid_plural "%1 without an update source"
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/LibraryPage.qml:52
+msgid "1 not checked yet"
+msgid_plural "%1 not checked yet"
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/LibraryPage.qml:57
+msgid "Updates available"
+msgstr ""
+
+#: qml/LibraryPage.qml:118
 msgid ""
 "The update check timed out. Check your network connection and try again."
 msgstr ""
 
-#: qml/LibraryPage.qml:46
+#: qml/LibraryPage.qml:121
 msgid ""
 "Could not check for updates. Check your network connection and try again."
 msgstr ""
 
-#: qml/LibraryPage.qml:50
-msgid "All AppImages are up to date"
-msgstr ""
-
-#: qml/LibraryPage.qml:104
+#: qml/LibraryPage.qml:175
 msgid "No AppImages yet"
 msgstr ""
 
-#: qml/LibraryPage.qml:105
+#: qml/LibraryPage.qml:176
 msgid "Drop an AppImage here, or put one in %1."
 msgstr ""
 
-#: qml/LibraryPage.qml:153
+#: qml/LibraryPage.qml:221
+msgid "Drag to resize; double-click for the default width"
+msgstr ""
+
+#: qml/LibraryPage.qml:267
 msgid "Search"
 msgstr ""
 
-#: qml/LibraryPage.qml:160
+#: qml/LibraryPage.qml:274
 msgid "Sort"
 msgstr ""
 
-#: qml/LibraryPage.qml:171
+#: qml/LibraryPage.qml:285
 msgid "By Name"
 msgstr ""
 
-#: qml/LibraryPage.qml:177
+#: qml/LibraryPage.qml:291
 msgid "By Size"
 msgstr ""
 
-#: qml/LibraryPage.qml:183
+#: qml/LibraryPage.qml:297
 msgid "By Category"
 msgstr ""
 
-#: qml/LibraryPage.qml:189
+#: qml/LibraryPage.qml:303
 msgid "By Date Added"
 msgstr ""
 
-#: qml/LibraryPage.qml:215 qml/StorePage.qml:380
+#: qml/LibraryPage.qml:309
+msgid "By Status"
+msgstr ""
+
+#: qml/LibraryPage.qml:334
+msgid "Show All"
+msgstr ""
+
+#: qml/LibraryPage.qml:360 qml/StorePage.qml:411
 msgid "Retry"
 msgstr ""
 
-#: qml/LibraryPage.qml:299
-msgid "Update available: %1"
-msgstr ""
-
-#: qml/LibraryPage.qml:339
-msgid "Drop an AppImage to install it"
-msgstr ""
-
-#: qml/LibraryPage.qml:353 qml/StorePage.qml:361
+#: qml/LibraryPage.qml:515 qml/StorePage.qml:392
 msgid "No results for \"%1\""
 msgstr ""
 
-#: qml/LibraryPage.qml:456
-msgid "Launch"
+#: qml/LibraryPage.qml:560
+msgid "Drop an AppImage to install it"
 msgstr ""
 
-#: qml/LibraryPage.qml:463
-msgid "Update to %1"
+#: qml/LibraryPage.qml:608
+msgid "1 AppImage"
+msgid_plural "%1 AppImages"
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/LibraryPage.qml:611
+msgctxt "total size of all AppImages"
+msgid "%1 in total"
 msgstr ""
 
-#: qml/LibraryPage.qml:473
-msgid "Updating to %1…"
-msgstr ""
-
-#: qml/LibraryPage.qml:483 qml/StorePage.qml:508
-msgid "More"
-msgstr ""
-
-#: qml/LibraryPage.qml:495
-msgid "Show in App Menu"
-msgstr ""
-
-#: qml/LibraryPage.qml:501
-msgid "Added %1 to the app menu"
-msgstr ""
-
-#: qml/LibraryPage.qml:502
-msgid "Removed %1 from the app menu"
-msgstr ""
-
-#: qml/LibraryPage.qml:507
-msgid "Update Source…"
-msgstr ""
-
-#: qml/LibraryPage.qml:513
-msgid "Environment Variables…"
-msgstr ""
-
-#: qml/LibraryPage.qml:551
-msgid "Details"
-msgstr ""
-
-#: qml/LibraryPage.qml:570
-msgid "Version"
-msgstr ""
-
-#: qml/LibraryPage.qml:570
-msgid "Unknown"
-msgstr ""
-
-#: qml/LibraryPage.qml:571
-msgid "Size"
-msgstr ""
-
-#: qml/LibraryPage.qml:572 qml/StorePage.qml:219
-msgid "Category"
-msgstr ""
-
-#: qml/LibraryPage.qml:573
-msgid "Added"
-msgstr ""
-
-#: qml/LibraryPage.qml:574 qml/SettingsPage.qml:156
+#: qml/LibraryPage.qml:619 qml/LibraryPage.qml:968 qml/SettingsPage.qml:22
 msgid "Updates"
 msgstr ""
 
-#: qml/LibraryPage.qml:574
-msgid "No update source"
+#: qml/LibraryPage.qml:640
+msgid "Show only these in the list"
 msgstr ""
 
-#: qml/LibraryPage.qml:575 qml/LibraryPage.qml:591
+#: qml/LibraryPage.qml:652
+msgid "Last checked %1"
+msgstr ""
+
+#: qml/LibraryPage.qml:659 qml/TrayWindow.qml:226
+#: data/plasmoid/contents/ui/main.qml:239
+msgid "Check Now"
+msgstr ""
+
+#: qml/LibraryPage.qml:674
+msgid "Select an AppImage to see its details."
+msgstr ""
+
+#: qml/LibraryPage.qml:766
+msgid "Launch"
+msgstr ""
+
+#: qml/LibraryPage.qml:773
+msgid "Update to %1"
+msgstr ""
+
+#: qml/LibraryPage.qml:783 qml/LibraryPage.qml:936 qml/TrayWindow.qml:176
+#: data/plasmoid/contents/ui/main.qml:352
+msgid "Updating to %1…"
+msgstr ""
+
+#: qml/LibraryPage.qml:793 qml/StorePage.qml:539
+msgid "More"
+msgstr ""
+
+#: qml/LibraryPage.qml:805
+msgid "Show in App Menu"
+msgstr ""
+
+#: qml/LibraryPage.qml:811
+msgid "Added %1 to the app menu"
+msgstr ""
+
+#: qml/LibraryPage.qml:812
+msgid "Removed %1 from the app menu"
+msgstr ""
+
+#: qml/LibraryPage.qml:817
+msgid "Release Notes…"
+msgstr ""
+
+#: qml/LibraryPage.qml:825
+msgid "Update Source…"
+msgstr ""
+
+#: qml/LibraryPage.qml:830
+msgid "Keep Settings in Applications"
+msgstr ""
+
+#: qml/LibraryPage.qml:843
+msgid "Sandbox…"
+msgstr ""
+
+#: qml/LibraryPage.qml:849
+msgid "Environment Variables…"
+msgstr ""
+
+#: qml/LibraryPage.qml:858
+msgid "Restore Previous Version (%1)"
+msgstr ""
+
+#: qml/LibraryPage.qml:859
+msgid "Restore Previous Version"
+msgstr ""
+
+#: qml/LibraryPage.qml:863
+msgid "Restored the previous version of %1."
+msgstr ""
+
+#: qml/LibraryPage.qml:900
+msgid "Details"
+msgstr ""
+
+#: qml/LibraryPage.qml:914
+msgid "Version"
+msgstr ""
+
+#: qml/LibraryPage.qml:914
+msgid "Unknown"
+msgstr ""
+
+#: qml/LibraryPage.qml:915
+msgid "Size"
+msgstr ""
+
+#: qml/LibraryPage.qml:916 qml/StorePage.qml:219
+msgid "Category"
+msgstr ""
+
+#: qml/LibraryPage.qml:917
+msgid "Added"
+msgstr ""
+
+#: qml/LibraryPage.qml:925
 msgid "Environment"
 msgstr ""
 
-#: qml/LibraryPage.qml:575
+#: qml/LibraryPage.qml:925
 msgid "Default"
 msgstr ""
 
-#: qml/LibraryPage.qml:576
+#: qml/LibraryPage.qml:926 qml/SettingsPage.qml:337 qml/SandboxDialog.qml:24
+msgid "Sandbox"
+msgstr ""
+
+#: qml/LibraryPage.qml:926
+msgid "On"
+msgstr ""
+
+#: qml/LibraryPage.qml:926
+msgid "Off"
+msgstr ""
+
+#: qml/LibraryPage.qml:928
+msgid "In ~/.config"
+msgstr ""
+
+#: qml/LibraryPage.qml:929
 msgid "File"
 msgstr ""
 
-#: qml/LibraryPage.qml:604
+#: qml/LibraryPage.qml:938
+msgid "Version %1 is available"
+msgstr ""
+
+#: qml/LibraryPage.qml:940
+msgid "Up to date · checked %1"
+msgstr ""
+
+#: qml/LibraryPage.qml:942 qml/TrayWindow.qml:180
+#: data/plasmoid/contents/ui/main.qml:356
+msgid "Check failed: %1"
+msgstr ""
+
+#: qml/LibraryPage.qml:944
+msgid "The AppImage does not say where its updates come from."
+msgstr ""
+
+#: qml/LibraryPage.qml:998
+msgid "Set Update Source…"
+msgstr ""
+
+#: qml/LibraryPage.qml:1003
+msgid "App menu"
+msgstr ""
+
+#: qml/LibraryPage.qml:1006
+msgid "Shown"
+msgstr ""
+
+#: qml/LibraryPage.qml:1006
+msgid "Not shown"
+msgstr ""
+
+#: qml/LibraryPage.qml:1010
+msgid "Signature"
+msgstr ""
+
+#: qml/LibraryPage.qml:1018
+msgid "Signed · key %1"
+msgstr ""
+
+#: qml/LibraryPage.qml:1019
+msgid "Does not match its signature: the file was changed after it was signed"
+msgstr ""
+
+#: qml/LibraryPage.qml:1020
+msgid "Not signed"
+msgstr ""
+
+#: qml/LibraryPage.qml:1021
+msgid "Signed, not checked (gpg is not installed)"
+msgstr ""
+
+#: qml/LibraryPage.qml:1022
+msgid "Signed, but it could not be checked"
+msgstr ""
+
+#: qml/LibraryPage.qml:1023
+msgid "Checking…"
+msgstr ""
+
+#: qml/LibraryPage.qml:1030
+msgid "Key fingerprint: %1"
+msgstr ""
+
+#: qml/LibraryPage.qml:1063
+msgid "Sandbox on. It applies the next time the app starts."
+msgstr ""
+
+#: qml/LibraryPage.qml:1064
+msgid "Sandbox off. It applies the next time the app starts."
+msgstr ""
+
+#: qml/LibraryPage.qml:1070
+msgid "Settings are kept in Applications from the next start."
+msgstr ""
+
+#: qml/LibraryPage.qml:1071
+msgid "Settings are kept in ~/.config from the next start."
+msgstr ""
+
+#: qml/LibraryPage.qml:1076
 msgid "Environment saved. It applies the next time the app starts."
 msgstr ""
 
-#: qml/LibraryPage.qml:610
+#: qml/LibraryPage.qml:1082
 msgid ""
 "Using the built-in update source. Check for updates to look for a new "
 "version."
 msgstr ""
 
-#: qml/LibraryPage.qml:611
+#: qml/LibraryPage.qml:1083
 msgid "Update source saved. Check for updates to look for a new version."
 msgstr ""
 
@@ -687,236 +1137,396 @@ msgstr ""
 msgid "All Categories"
 msgstr ""
 
-#: qml/StorePage.qml:262 qml/StorePage.qml:365
+#: qml/StorePage.qml:262 qml/StorePage.qml:396
 msgid "Clear Filters"
 msgstr ""
 
-#: qml/StorePage.qml:362
+#: qml/StorePage.qml:393
 msgid "No apps match these filters"
 msgstr ""
 
-#: qml/StorePage.qml:377
+#: qml/StorePage.qml:408
 msgid "Could not load app catalog"
 msgstr ""
 
-#: qml/StorePage.qml:378
+#: qml/StorePage.qml:409
 msgid "Check your network connection and try again."
 msgstr ""
 
-#: qml/StorePage.qml:449
+#: qml/StorePage.qml:480
 msgid "Install script"
 msgstr ""
 
-#: qml/StorePage.qml:449
+#: qml/StorePage.qml:480
 msgid "Website"
 msgstr ""
 
-#: qml/StorePage.qml:466
+#: qml/StorePage.qml:497
 msgid "AppImage Hub"
 msgstr ""
 
-#: qml/StorePage.qml:467
+#: qml/StorePage.qml:498
 msgid "AM"
 msgstr ""
 
-#: qml/StorePage.qml:484
+#: qml/StorePage.qml:515
 msgid "Install"
 msgstr ""
 
-#: qml/StorePage.qml:484
+#: qml/StorePage.qml:515
 msgid "Download"
 msgstr ""
 
-#: qml/StorePage.qml:519
+#: qml/StorePage.qml:550
 msgid "Download from AppImage Hub"
 msgstr ""
 
-#: qml/StorePage.qml:519
+#: qml/StorePage.qml:550
 msgid "Install with AM"
 msgstr ""
 
-#: qml/StorePage.qml:542
+#: qml/StorePage.qml:573
 msgid "Hide Details"
 msgstr ""
 
-#: qml/StorePage.qml:542
+#: qml/StorePage.qml:573
 msgid "Show Details"
 msgstr ""
 
-#: qml/SettingsPage.qml:45 qml/OnboardingDialog.qml:93
-msgid "Cannot create folder: %1"
-msgstr ""
-
-#: qml/SettingsPage.qml:78
+#: qml/SettingsPage.qml:21
 msgid "General"
 msgstr ""
 
-#: qml/SettingsPage.qml:87
-msgid "Applications folder:"
-msgstr ""
-
-#: qml/SettingsPage.qml:97 qml/OnboardingDialog.qml:73
-msgid "Browse…"
-msgstr ""
-
-#: qml/SettingsPage.qml:106
-msgid "Open Folder"
-msgstr ""
-
-#: qml/SettingsPage.qml:119
-msgid "Show a drop zone below the Installed list"
-msgstr ""
-
-#: qml/SettingsPage.qml:127 qml/OnboardingDialog.qml:104
-msgid "Notify when an AppImage is downloaded"
-msgstr ""
-
-#: qml/SettingsPage.qml:128
-msgid "Watches your Downloads folder."
-msgstr ""
-
-#: qml/SettingsPage.qml:140
-msgid "Download watching is unavailable in sandboxed environments."
-msgstr ""
-
-#: qml/SettingsPage.qml:148
-msgid "Notify when installs and removals finish"
-msgstr ""
-
-#: qml/SettingsPage.qml:161
-msgid "Check for updates in the background"
-msgstr ""
-
-#: qml/SettingsPage.qml:162
-msgid "Never"
-msgstr ""
-
-#: qml/SettingsPage.qml:162
-msgid "Daily"
-msgstr ""
-
-#: qml/SettingsPage.qml:162
-msgid "Weekly"
-msgstr ""
-
-#: qml/SettingsPage.qml:162
-msgid "Monthly"
-msgstr ""
-
-#: qml/SettingsPage.qml:162
-msgid "Custom"
-msgstr ""
-
-#: qml/SettingsPage.qml:172
-msgid "Every (days)"
-msgstr ""
-
-#: qml/SettingsPage.qml:183
+#: qml/SettingsPage.qml:23
 msgid "Security"
 msgstr ""
 
-#: qml/SettingsPage.qml:188
-msgid "Verify signatures before installing"
+#: qml/SettingsPage.qml:91 qml/OnboardingDialog.qml:93
+msgid "Cannot create folder: %1"
 msgstr ""
 
-#: qml/SettingsPage.qml:189
-msgid ""
-"Warns before installing an AppImage that is unsigned or has an invalid "
-"signature."
-msgstr ""
-
-#: qml/SettingsPage.qml:197
-msgid "Show a reminder that AppImages are unverified"
-msgstr ""
-
-#: qml/SettingsPage.qml:210
-msgid "Enable Discover"
-msgstr ""
-
-#: qml/SettingsPage.qml:211
-msgid ""
-"Search and install apps from online catalogs. The catalogs are downloaded "
-"from the internet."
-msgstr ""
-
-#: qml/SettingsPage.qml:219
-msgid "Catalogs"
-msgstr ""
-
-#: qml/SettingsPage.qml:307
-msgid "Drag to reorder source priority"
-msgstr ""
-
-#: qml/SettingsPage.qml:346 qml/SettingsPage.qml:426
-msgid "Edit Source"
-msgstr ""
-
-#: qml/SettingsPage.qml:354
-msgid "Delete Source"
-msgstr ""
-
-#: qml/SettingsPage.qml:388
-msgid "Add Source…"
-msgstr ""
-
-#: qml/SettingsPage.qml:398
-msgid "Reset Sources"
-msgstr ""
-
-#: qml/SettingsPage.qml:410
+#: qml/SettingsPage.qml:152
 msgid "Restore Defaults"
 msgstr ""
 
-#: qml/SettingsPage.qml:426
+#: qml/SettingsPage.qml:157
+msgid "Restores every setting on all pages. Catalogs are reset under Discover."
+msgstr ""
+
+#: qml/SettingsPage.qml:190
+msgid "Folder:"
+msgstr ""
+
+#: qml/SettingsPage.qml:201 qml/OnboardingDialog.qml:73
+msgid "Browse…"
+msgstr ""
+
+#: qml/SettingsPage.qml:210
+msgid "Open Folder"
+msgstr ""
+
+#: qml/SettingsPage.qml:220
+msgid "App settings:"
+msgstr ""
+
+#: qml/SettingsPage.qml:221
+msgid "Keep in the Applications folder"
+msgstr ""
+
+#: qml/SettingsPage.qml:226
+msgid ""
+"Apps installed from now on keep their settings in Applications/.config "
+"instead of ~/.config, so the folder holds everything. Change it for one app "
+"with ⋯ → Keep Settings in Applications. Programs an app starts, such as a "
+"browser, use the same folder."
+msgstr ""
+
+#: qml/SettingsPage.qml:230
+msgid "Drop zone:"
+msgstr ""
+
+#: qml/SettingsPage.qml:231
+msgid "Show below the Installed list"
+msgstr ""
+
+#: qml/SettingsPage.qml:237
+msgid "Overview:"
+msgstr ""
+
+#: qml/SettingsPage.qml:238
+msgid "Show a summary when no AppImage is selected"
+msgstr ""
+
+#: qml/SettingsPage.qml:243
+msgid ""
+"How many AppImages are up to date, have updates or no update source, and "
+"when they were last checked."
+msgstr ""
+
+#: qml/SettingsPage.qml:248
+msgid "Notifications"
+msgstr ""
+
+#: qml/SettingsPage.qml:252
+msgid "Downloads:"
+msgstr ""
+
+#: qml/SettingsPage.qml:253 qml/OnboardingDialog.qml:104
+msgid "Notify when an AppImage is downloaded"
+msgstr ""
+
+#: qml/SettingsPage.qml:260
+msgid "Download watching is unavailable in sandboxed environments."
+msgstr ""
+
+#: qml/SettingsPage.qml:261
+msgid "Watches your Downloads folder."
+msgstr ""
+
+#: qml/SettingsPage.qml:265
+msgid "Installs and removals:"
+msgstr ""
+
+#: qml/SettingsPage.qml:266
+msgid "Notify when they finish"
+msgstr ""
+
+#: qml/SettingsPage.qml:280
+msgid "Background checks"
+msgstr ""
+
+#: qml/SettingsPage.qml:284
+msgid "Check for updates:"
+msgstr ""
+
+#: qml/SettingsPage.qml:286
+msgid "Never"
+msgstr ""
+
+#: qml/SettingsPage.qml:286
+msgid "Daily"
+msgstr ""
+
+#: qml/SettingsPage.qml:286
+msgid "Weekly"
+msgstr ""
+
+#: qml/SettingsPage.qml:286
+msgid "Monthly"
+msgstr ""
+
+#: qml/SettingsPage.qml:286
+msgid "Custom"
+msgstr ""
+
+#: qml/SettingsPage.qml:292
+msgid "Every:"
+msgstr ""
+
+#: qml/SettingsPage.qml:297
+msgid "%1 day"
+msgid_plural "%1 days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/SettingsPage.qml:303
+msgid ""
+"Checks run in the background, also while this window is closed. The tray "
+"shows the result and you are notified once about each new version."
+msgstr ""
+
+#: qml/SettingsPage.qml:315
+msgid "Installing"
+msgstr ""
+
+#: qml/SettingsPage.qml:319
+msgid "Signatures:"
+msgstr ""
+
+#: qml/SettingsPage.qml:320
+msgid "Verify before installing"
+msgstr ""
+
+#: qml/SettingsPage.qml:325
+msgid ""
+"Warns before installing an AppImage that is unsigned or has an invalid "
+"signature. Needs gpg."
+msgstr ""
+
+#: qml/SettingsPage.qml:329
+msgid "Reminder:"
+msgstr ""
+
+#: qml/SettingsPage.qml:330
+msgid "Show that AppImages are unverified"
+msgstr ""
+
+#: qml/SettingsPage.qml:341
+msgid "Sandbox:"
+msgstr ""
+
+#: qml/SettingsPage.qml:342
+msgid "Sandbox all AppImages"
+msgstr ""
+
+#: qml/SettingsPage.qml:349
+msgid ""
+"Each app sees only its own folder in Applications/.config and the folders "
+"below; the rest of your home folder and other drives are hidden, so an app "
+"starts without the settings it had in ~/.config unless you move them first "
+"with ⋯ → Keep Settings in Applications. Leave one app out with ⋯ → Sandbox…."
+msgstr ""
+
+#: qml/SettingsPage.qml:350
+msgid "Needs bubblewrap. Install the “bubblewrap” package to use the sandbox."
+msgstr ""
+
+#: qml/SettingsPage.qml:355
+msgid "Shared folders:"
+msgstr ""
+
+#: qml/SettingsPage.qml:370
+msgid "Downloads"
+msgstr ""
+
+#: qml/SettingsPage.qml:371
+msgid "Documents"
+msgstr ""
+
+#: qml/SettingsPage.qml:372
+msgid "Pictures"
+msgstr ""
+
+#: qml/SettingsPage.qml:373
+msgid "Music"
+msgstr ""
+
+#: qml/SettingsPage.qml:374
+msgid "Videos"
+msgstr ""
+
+#: qml/SettingsPage.qml:375
+msgid "Desktop"
+msgstr ""
+
+#: qml/SettingsPage.qml:405 qml/SandboxDialog.qml:126
+msgid "Remove"
+msgstr ""
+
+#: qml/SettingsPage.qml:416 qml/SandboxDialog.qml:159
+msgid "Add Folder…"
+msgstr ""
+
+#: qml/SettingsPage.qml:422
+msgid ""
+"Every sandboxed app may read and change these, on top of the folders given "
+"to it in ⋯ → Sandbox…."
+msgstr ""
+
+#: qml/SettingsPage.qml:438
+msgid "App catalogs:"
+msgstr ""
+
+#: qml/SettingsPage.qml:439
+msgid "Search and install from online catalogs"
+msgstr ""
+
+#: qml/SettingsPage.qml:444
+msgid "The catalogs are downloaded from the internet when you open Discover."
+msgstr ""
+
+#: qml/SettingsPage.qml:456
+msgid "Catalogs"
+msgstr ""
+
+#: qml/SettingsPage.qml:460
+msgid ""
+"Drag to change the order. An app that is in several catalogs is installed "
+"from the first one."
+msgstr ""
+
+#: qml/SettingsPage.qml:558
+msgid "Drag to reorder"
+msgstr ""
+
+#: qml/SettingsPage.qml:583
+msgid "Searched"
+msgstr ""
+
+#: qml/SettingsPage.qml:583
+msgid "Not searched"
+msgstr ""
+
+#: qml/SettingsPage.qml:590 qml/SettingsPage.qml:660
+msgid "Edit Source"
+msgstr ""
+
+#: qml/SettingsPage.qml:606
+msgid "Delete Source"
+msgstr ""
+
+#: qml/SettingsPage.qml:640
+msgid "Add Catalog…"
+msgstr ""
+
+#: qml/SettingsPage.qml:648
+msgid "Reset Catalogs"
+msgstr ""
+
+#: qml/SettingsPage.qml:660
 msgid "Add Source"
 msgstr ""
 
-#: qml/SettingsPage.qml:443
+#: qml/SettingsPage.qml:678
 msgid "Name:"
 msgstr ""
 
-#: qml/SettingsPage.qml:449
+#: qml/SettingsPage.qml:684
 msgid "e.g. My Repo"
 msgstr ""
 
-#: qml/SettingsPage.qml:458
+#: qml/SettingsPage.qml:693
 msgid "Feed URL:"
 msgstr ""
 
-#: qml/SettingsPage.qml:464
+#: qml/SettingsPage.qml:699
 msgid "e.g. https://example.com/feed.json"
 msgstr ""
 
-#: qml/SettingsPage.qml:467
+#: qml/SettingsPage.qml:702
 msgid "Must be a valid HTTP/HTTPS URL"
 msgstr ""
 
-#: qml/SettingsPage.qml:479
+#: qml/SettingsPage.qml:714
 msgid "Format Type:"
 msgstr ""
 
-#: qml/SettingsPage.qml:487
+#: qml/SettingsPage.qml:722
 msgid "AppImage Hub JSON (Direct Download)"
 msgstr ""
 
-#: qml/SettingsPage.qml:488
+#: qml/SettingsPage.qml:723
 msgid "AM Database Text (Recipe Script)"
 msgstr ""
 
-#: qml/SettingsPage.qml:489
+#: qml/SettingsPage.qml:724
 msgid "Universal JSON Feed (Direct Download)"
 msgstr ""
 
-#: qml/SettingsPage.qml:510 qml/UpdateSourceDialog.qml:62
-#: qml/EnvironmentDialog.qml:28
+#: qml/SettingsPage.qml:745 qml/UpdateSourceDialog.qml:62
+#: qml/EnvironmentDialog.qml:28 qml/SandboxDialog.qml:34
 msgid "Save"
 msgstr ""
 
-#: qml/SettingsPage.qml:510
+#: qml/SettingsPage.qml:745
 msgid "Add"
 msgstr ""
 
-#: qml/SettingsPage.qml:554 qml/OnboardingDialog.qml:148
+#: qml/SettingsPage.qml:790
+msgid "Folder Every Sandboxed App May Use"
+msgstr ""
+
+#: qml/SettingsPage.qml:800 qml/OnboardingDialog.qml:148
 msgid "Select Applications Folder"
 msgstr ""
 
@@ -943,7 +1553,8 @@ msgid "Enable Discover to search online app catalogs"
 msgstr ""
 
 #: qml/OnboardingDialog.qml:138
-msgid "Tip: right-click an AppImage in Dolphin and choose Manage AppImage."
+msgid ""
+"Tip: in Dolphin, right-click an AppImage and open it with AppImage Manager."
 msgstr ""
 
 #: qml/UpdateSourceDialog.qml:34
@@ -1045,6 +1656,125 @@ msgid ""
 "app menu."
 msgstr ""
 
+#: qml/ConfigFolderDialog.qml:25
+msgid "Keep Settings in Applications?"
+msgstr ""
+
+#: qml/ConfigFolderDialog.qml:25
+msgid "Keep Settings in ~/.config?"
+msgstr ""
+
+#: qml/ConfigFolderDialog.qml:35
+msgid "Turn On"
+msgstr ""
+
+#: qml/ConfigFolderDialog.qml:35
+msgid "Turn Off"
+msgstr ""
+
+#: qml/ConfigFolderDialog.qml:81
+msgid "%1 will keep its settings in %2 instead of ~/.config."
+msgstr ""
+
+#: qml/ConfigFolderDialog.qml:82
+msgid "%1 will keep its settings in ~/.config again."
+msgstr ""
+
+#: qml/ConfigFolderDialog.qml:90
+msgid "Move its current settings there:"
+msgstr ""
+
+#: qml/ConfigFolderDialog.qml:90
+msgid "Move its settings back:"
+msgstr ""
+
+#: qml/ConfigFolderDialog.qml:111
+msgid "Close %1 before moving its settings."
+msgstr ""
+
+#: qml/ConfigFolderDialog.qml:112
+msgid "No settings were found in ~/.config; it starts with its defaults."
+msgstr ""
+
+#: qml/SandboxDialog.qml:24
+msgid "Sandbox — %1"
+msgstr ""
+
+#: qml/SandboxDialog.qml:74
+msgid ""
+"The sandbox needs bubblewrap. Install the “bubblewrap” package to use it."
+msgstr ""
+
+#: qml/SandboxDialog.qml:79
+msgid "Run in a sandbox"
+msgstr ""
+
+#: qml/SandboxDialog.qml:90
+msgid ""
+"All AppImages run in a sandbox (Settings → Security). Turn this off to leave "
+"%1 out."
+msgstr ""
+
+#: qml/SandboxDialog.qml:98
+msgid ""
+"%1 sees only its own folder (%2) and the folders below; the rest of your "
+"home folder and other drives are hidden. Display, sound and network keep "
+"working."
+msgstr ""
+
+#: qml/SandboxDialog.qml:104
+msgid "Folders it may use"
+msgstr ""
+
+#: qml/SandboxDialog.qml:153
+msgid "Plus 1 folder every sandboxed app may use (Settings → Security)."
+msgid_plural ""
+"Plus %1 folders every sandboxed app may use (Settings → Security)."
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/SandboxDialog.qml:167
+msgid "Folder %1 May Use"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:21
+msgid "What's New in %1"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:22
+msgid "Release Notes — %1"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:34
+msgid "Open on GitHub"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:34
+msgid "Open in Browser"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:89
+msgid "No release notes"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:101
+msgid "The %1 newest releases"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:102
+msgid "%1 release since the installed version"
+msgid_plural "%1 releases since the installed version"
+msgstr[0] ""
+msgstr[1] ""
+
+#: qml/ReleaseNotesDialog.qml:133
+msgid "Pre-release"
+msgstr ""
+
+#: qml/ReleaseNotesDialog.qml:141
+msgid "No notes were written for this release."
+msgstr ""
+
 #: qml/AboutContent.qml:22
 msgid "Application Info"
 msgstr ""
@@ -1143,4 +1873,38 @@ msgstr ""
 
 #: qml/ContributorsModel.qml:74
 msgid "Contributor"
+msgstr ""
+
+#: qml/TrayWindow.qml:142
+msgid "Show in AppImage Manager"
+msgstr ""
+
+#: qml/TrayWindow.qml:159 data/plasmoid/contents/ui/main.qml:319
+msgctxt "AppImages without an update source"
+msgid "Not tracked (%1)"
+msgstr ""
+
+#: qml/TrayWindow.qml:210 data/plasmoid/contents/ui/main.qml:386
+msgid "No AppImages installed"
+msgstr ""
+
+#: qml/UpdateCheckToast.qml:42
+msgid "No AppImage has an update source"
+msgstr ""
+
+#: qml/UpdateCheckToast.qml:43
+msgid "All AppImages are up to date"
+msgstr ""
+
+#: qml/UpdateCheckToast.qml:80
+msgid "Checking for updates (%1/%2)"
+msgstr ""
+
+#: data/plasmoid/contents/ui/main.qml:387
+msgid "The background checker is not running"
+msgstr ""
+
+#: data/plasmoid/contents/ui/main.qml:389
+msgid ""
+"It starts when you log in. To start it now, run: appimagemanager --daemon"
 msgstr ""

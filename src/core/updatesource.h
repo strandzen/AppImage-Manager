@@ -59,6 +59,8 @@ APPIMAGEMANAGER_EXPORT bool isReleaseUpdateInfo(const QString &updateInfo);
 // Human-readable source, e.g. "GitHub · owner/repo", "Codeberg · owner/repo",
 // "Direct download · example.com". Empty for no or unsupported information.
 APPIMAGEMANAGER_EXPORT QString describeUpdateInfo(const QString &updateInfo);
+// The repository's web page for GitHub and Forgejo/Codeberg/Gitea sources ("" otherwise).
+APPIMAGEMANAGER_EXPORT QString updateSourceWebUrl(const QString &updateInfo);
 
 // Stable names used by QML: "github", "forgejo", "zsync", "url" ("" = None).
 APPIMAGEMANAGER_EXPORT QString updateSourceTypeName(UpdateSourceType type);

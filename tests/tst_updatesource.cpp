@@ -3,14 +3,24 @@
 
 #include "../src/core/releasechecker.h"
 #include "../src/core/launchenvironment.h"
+#include "../src/core/previousversion.h"
+#include "../src/core/sandbox.h"
+#include "../src/core/releasenotes.h"
 #include "../src/core/updatesource.h"
 
 #include <KConfigGroup>
 #include <KSharedConfig>
 
 #include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QStandardPaths>
 #include <QTest>
+#include <QDir>
+#include <QProcess>
+#include <QFileInfo>
+#include <QFile>
+#include <QTemporaryDir>
 
 static QJsonArray assets(std::initializer_list<const char *> names)
 {
@@ -174,6 +184,206 @@ private Q_SLOTS:
         QVERIFY(environmentExecPrefix({}).isEmpty());
         saveEnvironment(path, {});
         QVERIFY(loadEnvironment(path).isEmpty());
+    }
+
+    void releaseNotes_pick()
+    {
+        const auto release = [](const char *tag, const QString &body, bool pre, bool draft = false) {
+            return QJsonObject{ { QStringLiteral("tag_name"), QString::fromLatin1(tag) }, { QStringLiteral("body"), body },
+                                { QStringLiteral("prerelease"), pre }, { QStringLiteral("draft"), draft } };
+        };
+        QJsonObject first = release("v2.1.0", QStringLiteral("## New\r\n- a ![shot](https://x/s.png)\n<!-- template -->\n<img src=\"x\">"), false);
+        first.insert(QStringLiteral("name"), QStringLiteral("Big one"));
+        first.insert(QStringLiteral("html_url"), QStringLiteral("https://g/r/2.1.0"));
+        first.insert(QStringLiteral("published_at"), QStringLiteral("2026-11-10T10:00:00Z"));
+        const QByteArray json = QJsonDocument(QJsonArray{
+            first, release("v2.1.0-rc1", QStringLiteral("rc"), true), release("v2.0.1", QStringLiteral("fix"), false),
+            release("v2.0.0", QStringLiteral("old"), false), release("v3.0.0", QStringLiteral("draft"), false, true),
+        }).toJson();
+        // Everything newer than 2.0.0, newest first; drafts and pre-releases out.
+        const QList<ReleaseNote> newer = pickReleaseNotes(json, QStringLiteral("2.0.0"), {}, false);
+        QCOMPARE(newer.size(), 2);
+        QCOMPARE(newer.at(0).tag, QStringLiteral("v2.1.0"));
+        QCOMPARE(newer.at(0).body, QStringLiteral("## New\n- a"));  // image, comment, <img> gone
+        QVERIFY(newer.at(0).published.isValid());
+        QCOMPARE(newer.at(1).tag, QStringLiteral("v2.0.1"));
+        // Pre-releases when the source allows them.
+        QCOMPARE(pickReleaseNotes(json, QStringLiteral("2.0.0"), {}, true).size(), 3);
+        // Up to date, or the version unknown: the newest only.
+        QCOMPARE(pickReleaseNotes(json, QStringLiteral("2.1.0"), {}, false).size(), 1);
+        QCOMPARE(pickReleaseNotes(json, {}, {}, false).size(), 1);
+        // Stops at the installed tag (version-less AppImages).
+        QCOMPARE(pickReleaseNotes(json, QStringLiteral("1.0"), QStringLiteral("v2.0.1"), false).size(), 1);
+        QVERIFY(pickReleaseNotes("not json", QStringLiteral("1"), {}, false).isEmpty());
+
+        QCOMPARE(releaseListUrl(QStringLiteral("gh-releases-zsync|o|r|latest|*.zsync")).toString(),
+                 QStringLiteral("https://api.github.com/repos/o/r/releases?per_page=20"));
+        QVERIFY(!releaseListUrl(QStringLiteral("zsync|https://x/a.zsync")).isValid());
+    }
+
+    void webUrl()
+    {
+        QCOMPARE(updateSourceWebUrl(QStringLiteral("gh-releases-zsync|owner|repo|latest|*.zsync")),
+                 QStringLiteral("https://github.com/owner/repo"));
+        QCOMPARE(updateSourceWebUrl(QStringLiteral("forgejo-releases|codeberg.org|o|r")),
+                 QStringLiteral("https://codeberg.org/o/r"));
+        QVERIFY(updateSourceWebUrl(QStringLiteral("zsync|https://x/a.zsync")).isEmpty());
+        QVERIFY(updateSourceWebUrl(QStringLiteral("direct|https://x/a.AppImage")).isEmpty());
+    }
+
+    void configFolder()
+    {
+        QCOMPARE(defaultConfigFolderName(QStringLiteral("/apps/mailcraft-0.13.0-linux-x86_64.AppImage")),
+                 QStringLiteral("mailcraft"));
+        QCOMPARE(defaultConfigFolderName(QStringLiteral("/apps/ProtonUp-Qt-2.9.1-x86_64.AppImage")),
+                 QStringLiteral("protonup-qt"));
+        QCOMPARE(defaultConfigFolderName(QStringLiteral("/a/serein-v1.0.0-nightly.57-Linux-X64.AppImage")), QStringLiteral("serein"));
+        QCOMPARE(defaultConfigFolderName(QStringLiteral("/a/kensaku_1.0.17_amd64.AppImage")), QStringLiteral("kensaku"));
+        QCOMPARE(defaultConfigFolderName(QStringLiteral("/a/Feishin-linux-x86_64.AppImage")), QStringLiteral("feishin"));
+
+        const QString path = QStringLiteral("/tmp/aim-test-apps/Cfg-1.0-x86_64.AppImage");
+        QVERIFY(configFolderPath(path).isEmpty());
+        QVERIFY(!launchVariables(path).join(QLatin1Char(' ')).contains(QStringLiteral("XDG_CONFIG_HOME")));
+
+        setConfigFolderName(path, QStringLiteral("cfg"));
+        QCOMPARE(configFolderPath(path), QStringLiteral("/tmp/aim-test-apps/.config/cfg"));
+        const QStringList vars = launchVariables(path);
+        QVERIFY(vars.contains(QStringLiteral("XDG_CONFIG_HOME=/tmp/aim-test-apps/.config/cfg")));
+        QVERIFY(std::any_of(vars.cbegin(), vars.cend(), [](const QString &v) { return v.startsWith(QStringLiteral("XDG_CONFIG_DIRS=")); }));
+
+        // The user's own XDG_CONFIG_HOME wins.
+        saveEnvironment(path, { QStringLiteral("XDG_CONFIG_HOME=/mine") });
+        QCOMPARE(launchVariables(path).filter(QStringLiteral("XDG_CONFIG_HOME=")),
+                 QStringList{ QStringLiteral("XDG_CONFIG_HOME=/mine") });
+
+        saveEnvironment(path, {});
+        setConfigFolderName(path, {});
+        QVERIFY(configFolderPath(path).isEmpty());
+        QDir(QStringLiteral("/tmp/aim-test-apps")).removeRecursively();
+    }
+
+    void previousVersion_keepAndRestore()
+    {
+        QTemporaryDir dir;
+        const QString app = dir.filePath(QStringLiteral("App.AppImage"));
+        const auto write = [](const QString &path, const QByteArray &data) {
+            QFile f(path);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write(data);
+        };
+        const auto read = [](const QString &path) {
+            QFile f(path);
+            return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+        };
+        QVERIFY(!hasPrevious(app));
+
+        // An update: the old file (renamed aside by the swap) is kept.
+        write(app, "new");
+        write(app + QStringLiteral(".bak"), "old");
+        saveInstalledTag(app, QStringLiteral("v1"));
+        QVERIFY(keepPrevious(app, app + QStringLiteral(".bak"), QStringLiteral("1.0")));
+        QVERIFY(!QFile::exists(app + QStringLiteral(".bak")));
+        QCOMPARE(read(previousFilePath(app)), QByteArray("old"));
+        QCOMPARE(::previousVersion(app), QStringLiteral("1.0"));
+        saveInstalledTag(app, QStringLiteral("v2")); // what the update installed
+
+        // Restore swaps the files, versions and installed tags; again swaps back.
+        QVERIFY(restorePrevious(app, QStringLiteral("2.0")));
+        QCOMPARE(read(app), QByteArray("old"));
+        QCOMPARE(read(previousFilePath(app)), QByteArray("new"));
+        QCOMPARE(::previousVersion(app), QStringLiteral("2.0"));
+        QCOMPARE(loadUpdateSource(app).installedTag, QStringLiteral("v1"));
+        QVERIFY(QFileInfo(app).isExecutable());
+        QVERIFY(restorePrevious(app, QStringLiteral("1.0")));
+        QCOMPARE(read(app), QByteArray("new"));
+        QCOMPARE(loadUpdateSource(app).installedTag, QStringLiteral("v2"));
+
+        forgetPrevious(app);
+        saveInstalledTag(app, {});
+    }
+
+    void sandbox_settingsAndCommand()
+    {
+        const QString path = QStringLiteral("/apps/Box-1.0.AppImage");
+        QVERIFY(!loadSandbox(path).enabled);
+        QCOMPARE(launchCommand(path), QStringList{ path });
+        saveSandbox(path, { true, { QStringLiteral("/home/u/Music") } });
+        QVERIFY(loadSandbox(path).enabled);
+        QCOMPARE(loadSandbox(path).folders, QStringList{ QStringLiteral("/home/u/Music") });
+        const QStringList command = launchCommand(path);
+        QCOMPARE(command.size(), 3);
+        QCOMPARE(command.at(1), QStringLiteral("--run"));
+        QCOMPARE(command.at(2), path);
+        saveSandbox(path, {});
+        QVERIFY(!loadSandbox(path).enabled);
+    }
+
+    void sandbox_followsSandboxAll()
+    {
+        if (!sandboxAvailable())
+            QSKIP("Sandbox all needs bwrap");
+        KConfigGroup security = KSharedConfig::openConfig(QStringLiteral("appimagemanagerrc"))->group(QStringLiteral("Security"));
+        security.writeEntry("sandboxAll", true);
+        security.writeEntry("sandboxFolders", QStringList{ QStringLiteral("/home/u/Downloads") });
+        security.sync();
+        const QString path = QStringLiteral("/apps/All-1.0.AppImage");
+        QVERIFY(sandboxAllEnabled());
+        QVERIFY(loadSandbox(path).enabled);                 // follows Sandbox all
+        QCOMPARE(sharedSandboxFolders(), QStringList{ QStringLiteral("/home/u/Downloads") });
+
+        saveSandbox(path, { false, {} });                   // left out: stored
+        QVERIFY(!loadSandbox(path).enabled);
+        saveSandbox(path, { true, {} });                    // same as Sandbox all: follows again
+        QVERIFY(!KSharedConfig::openConfig(QStringLiteral("appimagemanagerrc"))->group(QStringLiteral("Sandbox"))
+                     .group(QStringLiteral("All-1.0.AppImage")).exists());
+        security.deleteEntry("sandboxAll");
+        security.deleteEntry("sandboxFolders");
+        security.sync();
+        QVERIFY(!loadSandbox(path).enabled);
+    }
+
+    // Runs bwrap with the real arguments, a fake mount and an AppRun script that reports
+    // what it sees. Skipped without bwrap (or where user namespaces are off).
+    void sandbox_isolatesHome()
+    {
+        if (!sandboxAvailable())
+            QSKIP("bwrap not installed");
+        QTemporaryDir root;
+        const QString home = root.filePath(QStringLiteral("home"));
+        const QString settings = home + QStringLiteral("/Applications/.config/box");
+        const QString given = home + QStringLiteral("/Music");
+        const QString mount = root.filePath(QStringLiteral("mnt"));
+        for (const QString &dir : QStringList{ settings, given, mount, home + QStringLiteral("/Secret") })
+            QVERIFY(QDir().mkpath(dir));
+        const QString appImage = home + QStringLiteral("/Applications/Box.AppImage");
+        QFile(appImage).open(QIODevice::WriteOnly);
+        QFile run(mount + QStringLiteral("/AppRun"));
+        QVERIFY(run.open(QIODevice::WriteOnly));
+        run.write("#!/bin/sh\nout=\"$1/report\"\nls -A \"$2\" > \"$out\"\n"
+                  "touch \"$3/written\" && echo music-ok >> \"$out\"\n"
+                  "touch \"$2/escape\" 2>/dev/null && echo home-writable >> \"$out\"\n"
+                  "test -e /mnt/Storage && echo mnt-visible >> \"$out\"\nexit 0\n");
+        run.close();
+        run.setPermissions(run.permissions() | QFileDevice::ExeOwner);
+
+        QProcess bwrap;
+        bwrap.setProgram(QStandardPaths::findExecutable(QStringLiteral("bwrap")));
+        bwrap.setArguments(sandboxArguments(appImage, mount, settings, { given }, home,
+                                            qEnvironmentVariable("XDG_RUNTIME_DIR", QStringLiteral("/tmp")),
+                                            { settings, home, given }));
+        bwrap.start();
+        QVERIFY(bwrap.waitForFinished(20000));
+        if (bwrap.exitCode() != 0 && !QFile::exists(settings + QStringLiteral("/report")))
+            QSKIP(qPrintable(QStringLiteral("bwrap could not run here: ") + QString::fromLocal8Bit(bwrap.readAllStandardError())));
+
+        QFile report(settings + QStringLiteral("/report"));
+        QVERIFY(report.open(QIODevice::ReadOnly));
+        const QString seen = QString::fromUtf8(report.readAll());
+        QVERIFY2(!seen.contains(QStringLiteral("Secret")), qPrintable(seen));      // the rest of home is hidden
+        QVERIFY2(seen.contains(QStringLiteral("music-ok")), qPrintable(seen));      // a given folder is writable
+        QVERIFY(QFile::exists(given + QStringLiteral("/written")));
+        QVERIFY2(!seen.contains(QStringLiteral("mnt-visible")), qPrintable(seen));  // other drives hidden
+        QVERIFY(!QFile::exists(home + QStringLiteral("/escape")));                  // writes to home vanish
     }
 
     void contentType()

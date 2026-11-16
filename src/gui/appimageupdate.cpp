@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
+#include "../core/previousversion.h"
+#include "zsyncdownloader.h"
 #include "appimageupdate.h"
 #include "../core/releasechecker.h"
 #include "../core/appimageinfo.h"
@@ -16,7 +18,6 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QProcess>
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QFutureWatcher>
@@ -206,58 +207,33 @@ void AppImageUpdateManager::finishOneCheck(bool foundUpdate, bool networkFailed)
 void AppImageUpdateManager::downloadUpdate(const QString &filePath,
                                            const QString &url,
                                            const QString &displayName,
-                                           const QString &appIconId)
+                                           const QString &appIconId,
+                                           const QString &currentVersion)
 {
+    m_replacedVersion.insert(filePath, currentVersion);
     if (!QUrl(url).path().endsWith(QLatin1String(".zsync"), Qt::CaseInsensitive)) {
         // Direct .AppImage download (release asset without a .zsync file, or a direct URL source).
         downloadBinary(filePath, QUrl(url), {}, displayName, appIconId);
         return;
     }
-    const QString &zsyncUrl = url;
-    const QString zsync2Path = QStandardPaths::findExecutable(QStringLiteral("zsync2"));
-    if (zsync2Path.isEmpty()) {
-        qCDebug(AIM_LOG) << "zsync2 not found. Falling back to full HTTP download via zsync URL:" << zsyncUrl;
-        startFullHttpDownload(filePath, zsyncUrl, displayName, appIconId);
-        return;
-    }
-
+    // zsync: reuse the blocks the installed file already has, download the rest.
     const QString newFile = filePath + QStringLiteral(".new");
-
-    auto *process = new QProcess(this);
-    process->setProgram(zsync2Path);
-    process->setArguments({ QStringLiteral("-i"), filePath,
-                            QStringLiteral("-o"), newFile,
-                            zsyncUrl });
-
-    connect(process, &QProcess::readyReadStandardOutput, this, [this, process, filePath]() {
-        const QString output = QString::fromUtf8(process->readAllStandardOutput());
-        static const QRegularExpression re(QStringLiteral(R"((\d+\.\d+)%)"));
-        const auto match = re.match(output);
-        if (match.hasMatch())
-            Q_EMIT downloadProgress(filePath, static_cast<int>(match.captured(1).toDouble()));
+    auto *zsync = new ZsyncDownloader(m_nam, filePath, QUrl(url), newFile, this);
+    connect(zsync, &ZsyncDownloader::progress, this, [this, filePath](int percent) {
+        Q_EMIT downloadProgress(filePath, percent);
     });
-
-    connect(process, &QProcess::finished, this,
-            [this, process, filePath, newFile, displayName, appIconId]
-            (int exitCode, QProcess::ExitStatus) {
-        process->deleteLater();
-
-        if (exitCode == 0 && QFile::exists(newFile)) {
+    connect(zsync, &ZsyncDownloader::finished, this, [this, zsync, filePath, newFile, url, displayName, appIconId](bool ok) {
+        zsync->deleteLater();
+        if (ok) {
             swapAndFinalizeDownload(filePath, newFile, displayName, appIconId);
+        } else if (zsync->targetUrl().isValid()) {
+            // Ranges not served, or the result didn't check out: the whole file instead.
+            downloadBinary(filePath, zsync->targetUrl(), zsync->sha1(), displayName, appIconId);
         } else {
-            if (QFile::exists(newFile))
-                QFile::remove(newFile);
-            Q_EMIT downloadFinished(filePath, false);
+            startFullHttpDownload(filePath, url, displayName, appIconId);
         }
     });
-
-    process->start();
-    if (process->state() == QProcess::NotRunning) {
-        qCWarning(AIM_LOG) << "Failed to start zsync2 process";
-        process->deleteLater();
-        Q_EMIT downloadFinished(filePath, false);
-        return;
-    }
+    zsync->start();
 }
 
 void AppImageUpdateManager::startFullHttpDownload(const QString &filePath,
@@ -411,7 +387,9 @@ void AppImageUpdateManager::swapAndFinalizeDownload(const QString &filePath,
         Q_EMIT downloadFinished(filePath, false);
         return;
     }
-    QFile::remove(bakFile);
+    // Kept for "Restore Previous Version"; if it can't be kept, it goes as before.
+    if (!keepPrevious(filePath, bakFile, m_replacedVersion.take(filePath)))
+        QFile::remove(bakFile);
 
     QFile fileObj(filePath);
     fileObj.setPermissions(fileObj.permissions()

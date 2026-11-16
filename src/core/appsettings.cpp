@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: 2024 AppImage Manager Contributors
 #include "appsettings.h"
+#include "sandbox.h"
 #include "version.h"
 #include "appimagemanagersettings.h"
 
@@ -152,6 +153,67 @@ void AppSettings::setShowOverview(bool enabled)
     Q_EMIT showOverviewChanged();
 }
 
+bool AppSettings::configInApplications() const
+{
+    return AppImageManagerSettings::self()->configInApplications();
+}
+
+void AppSettings::setConfigInApplications(bool enabled)
+{
+    if (configInApplications() == enabled)
+        return;
+    AppImageManagerSettings::self()->setConfigInApplications(enabled);
+    AppImageManagerSettings::self()->save();
+    Q_EMIT configInApplicationsChanged();
+}
+
+bool AppSettings::sandboxAll() const
+{
+    return AppImageManagerSettings::self()->sandboxAll();
+}
+
+void AppSettings::setSandboxAll(bool enabled)
+{
+    if (sandboxAll() == enabled)
+        return;
+    AppImageManagerSettings::self()->setSandboxAll(enabled);
+    AppImageManagerSettings::self()->save();
+    Q_EMIT sandboxAllChanged();
+}
+
+QStringList AppSettings::sandboxFolders() const
+{
+    return AppImageManagerSettings::self()->sandboxFolders();
+}
+
+void AppSettings::setSandboxFolders(const QStringList &folders)
+{
+    if (sandboxFolders() == folders)
+        return;
+    AppImageManagerSettings::self()->setSandboxFolders(folders);
+    AppImageManagerSettings::self()->save();
+    Q_EMIT sandboxFoldersChanged();
+}
+
+bool AppSettings::sandboxAvailable() const
+{
+    return ::sandboxAvailable();
+}
+
+int AppSettings::libraryListWidth() const
+{
+    return AppImageManagerSettings::self()->libraryListWidth();
+}
+
+void AppSettings::setLibraryListWidth(int width)
+{
+    if (libraryListWidth() == width)
+        return;
+    AppImageManagerSettings::self()->setLibraryListWidth(width);
+    AppImageManagerSettings::self()->save();
+    Q_EMIT libraryListWidthChanged();
+}
+
 void AppSettings::setApplicationsPathFromUrl(const QUrl &url)
 {
     if (url.isLocalFile()) {
@@ -231,6 +293,10 @@ void AppSettings::resetToDefaults()
     Q_EMIT watchDownloadsChanged();
     Q_EMIT showInstallBoxChanged();
     Q_EMIT showOverviewChanged();
+    Q_EMIT configInApplicationsChanged();
+    Q_EMIT sandboxAllChanged();
+    Q_EMIT sandboxFoldersChanged();
+    Q_EMIT libraryListWidthChanged();
     Q_EMIT verifySignaturesChanged();
     Q_EMIT discoverEnabledChanged();
 }

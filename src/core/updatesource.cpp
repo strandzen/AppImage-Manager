@@ -224,3 +224,14 @@ QString describeUpdateInfo(const QString &updateInfo)
         return i18nc("update source", "Direct download · %1", host);
     return {};
 }
+
+QString updateSourceWebUrl(const QString &updateInfo)
+{
+    const QStringList parts = updateInfo.split(QLatin1Char('|'));
+    const QString kind = parts.value(0);
+    if (kind == QLatin1String("gh-releases-zsync") && parts.size() >= 3)
+        return QStringLiteral("https://github.com/%1/%2").arg(parts.at(1), parts.at(2));
+    if (kind == QLatin1String("forgejo-releases") && parts.size() >= 4)
+        return QStringLiteral("https://%1/%2/%3").arg(parts.at(1), parts.at(2), parts.at(3));
+    return {};
+}

@@ -9,6 +9,7 @@
 #include "appimagemanager_qml_export.h"
 
 class QNetworkAccessManager;
+class QNetworkReply;
 
 // One-shot release checker. Construct, connect checkFinished, call check(), then deleteLater().
 // Uses the AppImage's user-chosen update source (see updatesource.h) when set, otherwise its
@@ -40,6 +41,8 @@ public:
 
     // True for Content-Type values that cannot be an AppImage (web pages, JSON, XML, text).
     static bool isNonBinaryContentType(const QString &contentType);
+    // Why a request failed, in words (repository not found, request limit, no connection, …).
+    static QString describeReplyError(QNetworkReply *reply, bool repository);
 
     // Picks the download URL from a release's assets: a .zsync control file first (delta
     // updates), then an .AppImage. Assets must match `pattern` (glob, may be empty) and this

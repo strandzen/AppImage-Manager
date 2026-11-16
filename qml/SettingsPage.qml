@@ -5,6 +5,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import QtQuick.Dialogs
+import Qt.labs.platform as Platform
 import appimagemanager
 
 // Settings, laid out like a KDE settings module: a sidebar of pages next to a centered
@@ -216,6 +217,16 @@ Kirigami.Page {
                     }
 
                     Controls.Switch {
+                        Kirigami.FormData.label: i18n("App settings:")
+                        text: i18n("Keep in the Applications folder")
+                        checked: AppSettings.configInApplications
+                        onToggled: AppSettings.configInApplications = checked
+                    }
+                    Hint {
+                        text: i18n("Apps installed from now on keep their settings in Applications/.config instead of ~/.config, so the folder holds everything. Change it for one app with ⋯ → Keep Settings in Applications. Programs an app starts, such as a browser, use the same folder.")
+                    }
+
+                    Controls.Switch {
                         Kirigami.FormData.label: i18n("Drop zone:")
                         text: i18n("Show below the Installed list")
                         checked: AppSettings.showInstallBox
@@ -319,6 +330,96 @@ Kirigami.Page {
                         text: i18n("Show that AppImages are unverified")
                         checked: AppSettings.showDisclaimer
                         onToggled: AppSettings.showDisclaimer = checked
+                    }
+
+                    Kirigami.Separator {
+                        Kirigami.FormData.isSection: true
+                        Kirigami.FormData.label: i18n("Sandbox")
+                    }
+
+                    Controls.Switch {
+                        Kirigami.FormData.label: i18n("Sandbox:")
+                        text: i18n("Sandbox all AppImages")
+                        enabled: AppSettings.sandboxAvailable || checked
+                        checked: AppSettings.sandboxAll
+                        onToggled: AppSettings.sandboxAll = checked
+                    }
+                    Hint {
+                        text: AppSettings.sandboxAvailable
+                            ? i18n("Each app sees only its own folder in Applications/.config and the folders below; the rest of your home folder and other drives are hidden, so an app starts without the settings it had in ~/.config unless you move them first with ⋯ → Keep Settings in Applications. Leave one app out with ⋯ → Sandbox….")
+                            : i18n("Needs bubblewrap. Install the “bubblewrap” package to use the sandbox.")
+                    }
+
+                    ColumnLayout {
+                        id: sharedFolders
+                        Kirigami.FormData.label: i18n("Shared folders:")
+                        Kirigami.FormData.labelAlignment: Qt.AlignTop
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        function stripUrl(url) {
+                            return decodeURIComponent(url.toString().replace("file://", ""))
+                        }
+                        function toggle(path, on) {
+                            const list = AppSettings.sandboxFolders.filter(p => p !== path)
+                            if (on)
+                                list.push(path)
+                            AppSettings.sandboxFolders = list
+                        }
+                        readonly property var standard: [
+                            { name: i18n("Downloads"), path: stripUrl(Platform.StandardPaths.writableLocation(Platform.StandardPaths.DownloadLocation)) },
+                            { name: i18n("Documents"), path: stripUrl(Platform.StandardPaths.writableLocation(Platform.StandardPaths.DocumentsLocation)) },
+                            { name: i18n("Pictures"), path: stripUrl(Platform.StandardPaths.writableLocation(Platform.StandardPaths.PicturesLocation)) },
+                            { name: i18n("Music"), path: stripUrl(Platform.StandardPaths.writableLocation(Platform.StandardPaths.MusicLocation)) },
+                            { name: i18n("Videos"), path: stripUrl(Platform.StandardPaths.writableLocation(Platform.StandardPaths.MoviesLocation)) },
+                            { name: i18n("Desktop"), path: stripUrl(Platform.StandardPaths.writableLocation(Platform.StandardPaths.DesktopLocation)) },
+                        ]
+                        readonly property var custom: AppSettings.sandboxFolders.filter(
+                            p => !standard.some(s => s.path === p))
+
+                        Repeater {
+                            model: sharedFolders.standard
+                            delegate: Controls.CheckBox {
+                                required property var modelData
+                                text: modelData.name
+                                checked: AppSettings.sandboxFolders.includes(modelData.path)
+                                onToggled: sharedFolders.toggle(modelData.path, checked)
+                                Controls.ToolTip.text: modelData.path
+                                Controls.ToolTip.visible: hovered
+                                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                            }
+                        }
+                        Repeater {
+                            model: sharedFolders.custom
+                            delegate: RowLayout {
+                                required property string modelData
+                                Layout.fillWidth: true
+                                Controls.Label {
+                                    Layout.fillWidth: true
+                                    Layout.leftMargin: Kirigami.Units.smallSpacing
+                                    text: modelData
+                                    elide: Text.ElideMiddle
+                                }
+                                Controls.ToolButton {
+                                    icon.name: "list-remove"
+                                    text: i18n("Remove")
+                                    display: Controls.AbstractButton.IconOnly
+                                    onClicked: sharedFolders.toggle(modelData, false)
+                                    Controls.ToolTip.text: text
+                                    Controls.ToolTip.visible: hovered
+                                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                                }
+                            }
+                        }
+                        Controls.Button {
+                            Layout.topMargin: Kirigami.Units.smallSpacing
+                            text: i18n("Add Folder…")
+                            icon.name: "folder-new"
+                            onClicked: sandboxFolderDialog.open()
+                        }
+                    }
+                    Hint {
+                        text: i18n("Every sandboxed app may read and change these, on top of the folders given to it in ⋯ → Sandbox….")
                     }
                 }
             }
@@ -681,6 +782,16 @@ Kirigami.Page {
                 sourceTypeCombo.currentIndex = 0
             }
             open()
+        }
+    }
+
+    FolderDialog {
+        id: sandboxFolderDialog
+        title: i18n("Folder Every Sandboxed App May Use")
+        onAccepted: {
+            const path = decodeURIComponent(selectedFolder.toString().replace("file://", ""))
+            if (!AppSettings.sandboxFolders.includes(path))
+                AppSettings.sandboxFolders = AppSettings.sandboxFolders.concat([path])
         }
     }
 

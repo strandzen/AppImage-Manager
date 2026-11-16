@@ -20,7 +20,7 @@
 #include "logging.h"
 
 // A failed request in words; `repository`: a release source (else a direct download link).
-static QString describeReplyError(QNetworkReply *reply, bool repository)
+QString ReleaseChecker::describeReplyError(QNetworkReply *reply, bool repository)
 {
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     if (status == 404)

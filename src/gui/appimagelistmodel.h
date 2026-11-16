@@ -91,6 +91,9 @@ private:
         int  updateState     = 0;  // UpdateState; UpdateAvailable keeps updateVersion/updateUrl
         QString updateReason;
         QString olderCopyOf;
+        int signatureState = -1;   // SignatureState once checked (checkSignature), -1 not yet
+        bool signatureChecking = false;
+        QString signatureKey;      // fingerprint when Valid
         bool isUpdating      = false;
         int  updateProgress  = 0;
         bool metadataLoaded  = false;
@@ -160,12 +163,33 @@ public:
     // Saves the lines and rewrites the app menu entry. Returns the invalid 1-based line numbers
     // (nothing saved) or an empty list on success.
     Q_INVOKABLE QVariantList setEnvironment(int row, const QString &text);
+    // Settings folder in Applications: { enabled, path (the folder, also when off),
+    // configDirs (its folders in ~/.config: [{ path, likely }]), contents (what the folder holds) }.
+    Q_INVOKABLE QVariantMap configFolder(int row) const;
+    // Turns it on or off. moveDirs: folders to move into it (on) or back to ~/.config (off).
+    Q_INVOKABLE void setConfigFolder(int row, bool enable, const QStringList &moveDirs);
+    // Swaps the AppImage with the copy its last update replaced (previousversion.h).
+    Q_INVOKABLE bool restorePrevious(int row);
+    // Checks the embedded signature in the background (once per file version); the result
+    // arrives as itemData signatureState / signatureKey.
+    Q_INVOKABLE void checkSignature(int row);
+    // Fetches the notes of the releases newer than the installed one (releasenotes.h);
+    // answers with releaseNotesReady for that path.
+    Q_INVOKABLE void fetchReleaseNotes(int row);
+    // Sandbox: { enabled, folders, available (bwrap installed), settingsFolder }.
+    Q_INVOKABLE QVariantMap sandbox(int row) const;
+    // Saves it; turning it on gives the app a settings folder if it has none.
+    Q_INVOKABLE void setSandbox(int row, bool enabled, const QStringList &folders);
 
 private Q_SLOTS:
     // Re-reads the shared check results (checkresults.h); the daemon wrote new ones.
     void reloadStoredResults();
 
 Q_SIGNALS:
+    // notes: [{ tag, name, body (Markdown), url, date, prerelease }], newest first.
+    // pageUrl: the repository's releases page. error: why it failed, in words.
+    void releaseNotesReady(const QString &filePath, const QVariantList &notes, const QString &pageUrl,
+                           const QString &error);
     void scanningChanged();
     void checkingUpdatesChanged();
     void updateCountChanged();
@@ -203,6 +227,7 @@ private:
     static QString addedGroup(const QDateTime &added);
 
     AppImageIconProvider  *m_iconProvider;
+    QNetworkAccessManager *m_network;
     AppImageUpdateManager *m_updateManager;
     DownloadWatcher       *m_downloadWatcher;
     QList<Item>            m_items;

@@ -3,6 +3,7 @@
 #include "appimagemanager.h"
 #include "logging.h"
 #include "launchenvironment.h"
+#include "sandbox.h"
 
 #include <KDesktopFile>
 #include <KConfigGroup>
@@ -26,9 +27,7 @@
 
 #include <algorithm>
 
-namespace {
-
-qint64 dirSize(const QString &path)
+qint64 AppImageManager::dirSize(const QString &path)
 {
     qint64 total = 0;
     QDirIterator it(path, QDir::Files | QDir::NoSymLinks, QDirIterator::Subdirectories);
@@ -38,6 +37,8 @@ qint64 dirSize(const QString &path)
     }
     return total;
 }
+
+namespace {
 
 QString applicationsDir()
 {
@@ -57,6 +58,10 @@ QString execTarget(const QString &exec)
         while (i < args.size() && (args.at(i).startsWith(QLatin1Char('-')) || args.at(i).contains(QLatin1Char('='))))
             ++i;
     }
+    // A sandboxed app's entry: appimagemanager --run <file>.
+    if (i + 2 < args.size() && QFileInfo(args.at(i)).fileName() == QLatin1String("appimagemanager")
+        && args.at(i + 1) == QLatin1String("--run"))
+        i += 2;
     return i < args.size() ? QDir::cleanPath(args.at(i)) : QString();
 }
 
@@ -159,7 +164,15 @@ bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
 {
     // A literal % must be %% in Exec= (else it starts a field code like %U); the app's own
     // execArgs keep theirs.
-    QString execStr = environmentExecPrefix(loadEnvironment(appImagePath)) + KShell::quoteArg(appImagePath);
+    // Sandboxed: appimagemanager --run sets everything up itself.
+    const QStringList command = launchCommand(appImagePath);
+    QString execStr;
+    if (command.size() > 1) {
+        for (const QString &part : command)
+            execStr += (execStr.isEmpty() ? QString() : QStringLiteral(" ")) + KShell::quoteArg(part);
+    } else {
+        execStr = environmentExecPrefix(launchVariables(appImagePath)) + KShell::quoteArg(appImagePath);
+    }
     execStr.replace(QLatin1Char('%'), QStringLiteral("%%"));
     if (!info.execArgs.isEmpty())
         execStr += QLatin1Char(' ') + info.execArgs;
@@ -292,16 +305,26 @@ bool isDesktopLinkEnabled(const QString &appImagePath, const AppImageInfo &info)
         || !entriesLaunching(appImagePath).isEmpty();
 }
 
+static QList<CorpseEntry> matchingDirs(const AppImageInfo &info, const QStringList &baseDirs, bool withSize);
+
 QList<CorpseEntry> findCorpses(const AppImageInfo &info)
 {
-    if (info.appId.isEmpty() && info.appName.isEmpty())
-        return {};
-
-    const QStringList baseDirs = {
+    return matchingDirs(info, {
         QStandardPaths::writableLocation(QStandardPaths::ConfigLocation),
         QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation),
         QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation),
-    };
+    }, true);
+}
+
+QList<CorpseEntry> findConfigDirs(const AppImageInfo &info)
+{
+    return matchingDirs(info, { QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) }, false);
+}
+
+static QList<CorpseEntry> matchingDirs(const AppImageInfo &info, const QStringList &baseDirs, bool withSize)
+{
+    if (info.appId.isEmpty() && info.appName.isEmpty())
+        return {};
 
     const QString idLower = info.appId.toLower();
 
@@ -328,10 +351,10 @@ QList<CorpseEntry> findCorpses(const AppImageInfo &info)
             const QString subLower = sub.toLower();
             if (!idLower.isEmpty() && subLower == idLower) {
                 seen.insert(fullPath);
-                result.append({fullPath, dirSize(fullPath), CorpseConfidence::High});
+                result.append({fullPath, withSize ? dirSize(fullPath) : 0, CorpseConfidence::High});
             } else if (lowCandidates.contains(subLower)) {
                 seen.insert(fullPath);
-                result.append({fullPath, dirSize(fullPath), CorpseConfidence::Low});
+                result.append({fullPath, withSize ? dirSize(fullPath) : 0, CorpseConfidence::Low});
             }
         }
     }
