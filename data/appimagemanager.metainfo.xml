@@ -17,7 +17,7 @@
     </p>
     <p>Features include:</p>
     <ul>
-      <li>Dolphin context menu integration for quick installation.</li>
+      <li>Open an AppImage with AppImage Manager from Dolphin to install it.</li>
       <li>Drag-and-drop support into a centralized dashboard.</li>
       <li>Extracts rich metadata, icons, and descriptions directly from the AppImages.</li>
       <li>Source-agnostic architecture supporting custom JSON repository sources in the Discover settings.</li>

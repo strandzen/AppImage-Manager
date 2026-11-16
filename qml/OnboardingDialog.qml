@@ -135,7 +135,7 @@ Kirigami.Dialog {
         Item { Layout.fillHeight: true }
 
         Controls.Label {
-            text: i18n("Tip: right-click an AppImage in Dolphin and choose Manage AppImage.")
+            text: i18n("Tip: in Dolphin, right-click an AppImage and open it with AppImage Manager.")
             wrapMode: Text.WordWrap
             color: Kirigami.Theme.disabledTextColor
             Layout.fillWidth: true

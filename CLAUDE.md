@@ -6,7 +6,7 @@ This file is the authoritative reference for working on AppImage Manager.
 
 > **Disclaimer:** This project and its author are in no way affiliated with KDE or the KDE e.V. organization. While the project's goal is to provide a native-like experience on the Plasma desktop, it is an independent, community-driven project authored by the user. It should not pretend to be an official KDE product (e.g., `org.kde.*`).
 
-**AppImage Manager** is a lightweight KDE Plasma 6 utility for installing, managing, updating, and removing AppImage files. It integrates with Dolphin via a right-click context menu plugin and provides a standalone dashboard for browsing, batch-managing, and updating all installed AppImages.
+**AppImage Manager** is a lightweight KDE Plasma 6 utility for installing, managing, updating, and removing AppImage files. It integrates with Dolphin through Open With (the `.desktop` file's `MimeType=`) and provides a standalone dashboard for browsing, batch-managing, and updating all installed AppImages.
 
 **Distribution target:** KDE Store and AUR.  
 **Philosophy:** Simplicity, efficiency, and complete source agnosticism. No unnecessary abstractions. Every feature must justify its existence. The utility strives to remain entirely agnostic to where AppImages are sourced from, supporting custom repository configurations natively.  
@@ -45,11 +45,9 @@ Planned work lives in [Todo.md](Todo.md).
 cmake --preset dev
 cmake --build --preset dev
 
-# Install to /usr (required for Dolphin plugin discovery)
+# Install to /usr
 sudo cmake --install build/dev
 
-# Reload Dolphin plugin without logout
-kquitapp6 dolphin && dolphin &
 
 # Install as a pacman package from this checkout (replaces the old install.sh)
 cd packaging && makepkg -si
@@ -83,7 +81,6 @@ Build output: `build/<presetName>/`. Unit tests in [tests/](tests/) cover `appim
 | [src/core/](src/core/) | Pure C++ — reader, cache, manager, settings, GitHub checker, daemon |
 | [src/gui/](src/gui/) | Qt Quick backend classes (windows, models, providers, update manager, download watcher) |
 | [src/dbus/](src/dbus/) | D-Bus adaptor exposing read-only model state |
-| [src/plugin/](src/plugin/) | Dolphin `KAbstractFileItemActionPlugin` |
 | [qml/](qml/) | All QML files (top-level, NOT under `src/`) |
 | [tests/](tests/) | Unit tests (`tst_*.cpp`) |
 | [data/](data/) | Desktop files, icons, autostart, .pot |
@@ -97,10 +94,9 @@ Build output: `build/<presetName>/`. Unit tests in [tests/](tests/) cover `appim
 |--------|------|-------------|
 | `appimagemanager_core` | Object library | Pure C++, zero Qt Quick dependency. Reader, cache, manager |
 | `appimagemanager_qml` | Shared lib + QML module `appimagemanager` | All GUI backend classes + the D-Bus adaptor + the QML files |
-| `appimagemanager` (plugin `.so`) | `KAbstractFileItemActionPlugin` | Dolphin right-click plugin, auto-discovered via JSON metadata |
 | `appimagemanager_bin` → `appimagemanager` | Executable | Service menu launcher + CLI. No args → dashboard. With file arg → manage window. `--daemon` → background update + download watcher |
 
-Both the plugin `.so` and the binary link `appimagemanager_qml` — identical logic, three entry points (plugin, dashboard, daemon).
+The binary links `appimagemanager_qml` and has three entry points: manage window (a file argument, from Dolphin's Open With), dashboard, daemon. There is no Dolphin plugin or service menu (removed after 2.1.0: Open With is the one way in).
 
 ---
 
@@ -144,12 +140,6 @@ Both the plugin `.so` and the binary link `appimagemanager_qml` — identical lo
 | Class | Files | Role |
 |-------|-------|------|
 | `AppImageDBusAdaptor` | `appimagedbusadaptor.h/.cpp` | `QDBusAbstractAdaptor` mounted on object path `/io/github/appimagemanager/Manager`, interface `io.github.appimagemanager.Manager1`. Read-only: `InstalledAppImages()` returns `QVariantList` of `{path, name, version, hasDesktopLink}` maps; `Version()` returns project version string |
-
-### Plugin (`src/plugin/`)
-
-| Class | Files | Role |
-|-------|-------|------|
-| `AppImageActionPlugin` | `appimageactionplugin.h/.cpp` | Dolphin plugin. `actions()` returns "Manage AppImage" `QAction` that launches `appimagemanager <path>` via `QProcess::startDetached` |
 
 ---
 
@@ -386,7 +376,6 @@ Four `inline` utilities defined at file scope in `appimageinfo.h` (included by e
 | **`discoverEnabled` defaults to `true`** | Deliberate: existing installs keep Discover without a migration. New installs get opt-in behaviour because `OnboardingDialog.onOpened` sets it to `false` on first run. "Restore Defaults" turns it back on |
 | **No PKGBUILD in the repo root** | makepkg uses `<PKGBUILD dir>/src` as `$srcdir`; in the root that is the project's `src/` (and `makepkg -C` deletes it). The local PKGBUILD lives in `packaging/` and builds `$startdir/..` |
 | **Apps write their own menu entries** | Some AppImages (and vendor launchers such as ArtCraft Launcher) write `~/.local/share/applications/<their id>.desktop` themselves. Never assume our file is the only entry: detect by `Exec` target, name ours after the app's id, and only ever delete our own `appimage_*` files automatically |
-| **Dolphin plugin and servicemenu both ship** | `src/plugin/` (KFileItemAction `.so`) and `data/servicemenus/appimagemanager.desktop` both add "Manage AppImage" (same command). Undecided which to keep — ask before removing either |
 | **`verifySignature()` requires `gpg` or `gpg2` on PATH** | If neither is found, `verifySignature()` returns `GpgUnavailable`. The QML treats this like `Valid` (proceeds without dialog) so users without gpg installed are not blocked. Don't treat `GpgUnavailable` as a failure — log a debug message at most |
 
 ---
@@ -396,8 +385,8 @@ Four `inline` utilities defined at file scope in `appimageinfo.h` (included by e
 After any change, build and verify:
 
 1. `cmake --build --preset dev` → zero errors. `ctest --test-dir build/dev --output-on-failure` → all green.
-2. `sudo cmake --install build/dev` + `kquitapp6 dolphin && dolphin &`.
-3. Right-click an uninstalled `.AppImage` → "Manage AppImage" → window opens at correct fixed size.
+2. `sudo cmake --install build/dev`.
+3. Right-click an uninstalled `.AppImage` in Dolphin → Open With → AppImage Manager → window opens at its fixed size (no "Manage AppImage" entry any more).
 4. Drag icon to folder → install animates → folder column fades → icon centers.
 5. Click installed icon → app launches.
 6. Click Remove → `UninstallDialog` opens inline → corpse list populates → trash works → window closes.
@@ -427,7 +416,7 @@ After any change, build and verify:
 30. Update source: pick an AppImage with no built-in update info → detail `⋯` → Update Source… → paste a GitHub `owner/repo`, a Codeberg/Forgejo repository URL, a `.zsync` URL or a direct `.AppImage` URL → the line under the field names the detected kind (Type menu overrides) → Save → Details shows it under Updates → "Check for Updates" → a newer release (or a newer build for a direct URL) is offered; Update downloads it. A second check reports it up to date. "foo" shows the error. "Use Built-in" clears it.
 31. Update source with "Include pre-releases" on a repo whose newest release is a pre-release → that version is offered; off → only the latest stable.
 32. Fresh config (`mv ~/.config/appimagemanagerrc{,.bak}`) → single-page onboarding with Discover off → Discover page shows "Discover is turned off" and no network requests happen; "Turn On Discover" loads the catalogs. Get Started without enabling → Discover stays off. Restore the config afterwards.
-33. `cd packaging && makepkg -si` → package builds and installs; `pacman -Ql appimage-manager-plasma` lists the binary, plugin, and QML module.
+33. `cd packaging && makepkg -si` → package builds and installs; `pacman -Ql appimage-manager-plasma` lists the binary and the QML module.
 34. Environment: detail `⋯` → Environment Variables… → `WEBKIT_DISABLE_DMABUF_RENDERER=1` → Save → Details lists it; Launch and the app menu entry both start the app with it (`cat /proc/<pid>/environ`). A line like `not a var` is refused with its line number.
 35. Direct download URL that answers with a web page (e.g. a project's download landing page) → the check fails quietly / the download is refused and the installed AppImage stays intact.
 36. Sort Installed by category and by date added → section headers appear; Discover without a category filter shows category headers, with one filtered none.

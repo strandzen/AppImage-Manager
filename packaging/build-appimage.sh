@@ -1,5 +1,5 @@
 #!/bin/bash
-# Packages AppImage Manager as an AppImage (no Dolphin plugin).
+# Packages AppImage Manager as an AppImage.
 # Run from the project root or from packaging/:
 #   ./packaging/build-appimage.sh
 #
@@ -43,7 +43,6 @@ echo "[build] Configuring..."
 cmake -S "$PROJECT_DIR" -B "$BUILD_DIR" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DBUILD_DOLPHIN_PLUGIN=OFF \
     -DBUILD_TESTING=OFF \
     -GNinja
 

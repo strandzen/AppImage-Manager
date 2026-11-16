@@ -117,19 +117,11 @@ sudo zypper in gcc-c++ cmake extra-cmake-modules ninja \
 
 </details>
 
-### After installing
-
-Restart Dolphin to get **Manage AppImage** in its right-click menu:
-
-```sh
-kquitapp6 dolphin && dolphin &
-```
-
 ## Usage
 
 The first time you open AppImage Manager, one page asks for your Applications folder, whether to notify you about downloads, and whether to turn on Discover. You can change all of it later in Settings.
 
-- **Install:** drag an AppImage onto the window or the drop box under the list, click +, or right-click the file in Dolphin and choose **Manage AppImage**. If the app is already installed, the window says which version you have and asks whether to replace it or keep both.
+- **Install:** drag an AppImage onto the window or the drop box under the list, click +, or right-click the file in Dolphin and open it with **AppImage Manager**. If the app is already installed, the window says which version you have and asks whether to replace it or keep both.
 - **Update:** click ⟳ in the toolbar (or ☰ → **Check for Updates**). A note at the bottom counts the AppImages as they are checked, then shows the result. Apps with an update move to the top of the list with their new version in green, and get an **Update to …** button; with several, **Update All** appears in the toolbar.
 - **Tray:** click the AppImage Manager entry in the system tray for an overview of your AppImages and their update state; click an app to open it here. Middle-click checks for updates; right-click shows the menu.
 - **More options:** select an app and click ⋯ for **Show in App Menu**, **Update Source…**, **Environment Variables…** and **Remove…**.
@@ -176,6 +168,8 @@ Open them from the menu (☰), or with Ctrl+,. The pages are listed on the left:
 **I rebuilt with makepkg but nothing changed.** Use `makepkg -sif`, see [Arch Linux](#arch-linux). Then close AppImage Manager completely and start it again: a window that is still open just comes to the front.
 
 **pacman says files already exist.** They came from an earlier `sudo cmake --install`. Remove them with `sudo xargs rm < build/release/install_manifest.txt` (or `build/dev/…`), then install again.
+
+**Dolphin still shows "Manage AppImage".** Versions up to 2.1.0 added that entry; it is gone now that AppImage Manager is under **Open With**. If you installed with CMake, remove the old files: `sudo rm /usr/lib/qt6/plugins/kf6/fileitemaction/appimagemanager.so /usr/share/kio/servicemenus/appimagemanager.desktop`. The package does this for you.
 
 **I want to see what AppImage Manager is doing.** Turn on its debug output in `kdebugsettings` (search for "appimagemanager"), or start it from a terminal with:
 

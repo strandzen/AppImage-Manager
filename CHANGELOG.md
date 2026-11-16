@@ -20,6 +20,7 @@
 - Two AppImages of the same app: the older one is marked "Older copy of …".
 
 ### Changed
+- Dolphin: AppImages open with AppImage Manager through **Open With**; the separate "Manage AppImage" right-click entry (a Dolphin plugin and a service menu that both added it) is gone.
 - The main window and the tray share check results: what one checked, the other shows, including the reason a check failed.
 - Categories are shown in plain words ("Graphics", "Internet") instead of the raw list ("Graphics, 2DGraphics, VectorGraphics, X-Design").
 - Updates in progress show a progress bar in the list row.

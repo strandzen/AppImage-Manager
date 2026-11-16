@@ -9,7 +9,7 @@ ecm_qt_declare_logging_category(LOGGING_SRCS
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Core object library — pure logic, no Qt Quick / QML dependency.
-# Both the plugin and the binary link against this.
+# Linked into the QML module.
 # ──────────────────────────────────────────────────────────────────────────────
 kconfig_add_kcfg_files(KCFG_SRCS core/appimagemanagersettings.kcfgc)
 
@@ -36,7 +36,6 @@ target_link_libraries(appimagemanager_core PUBLIC
     KF6::ConfigCore
     KF6::ConfigGui
     KF6::KIOCore
-    KF6::KIOWidgets
 )
 target_link_libraries(appimagemanager_core PUBLIC libappimage)
 
@@ -44,7 +43,7 @@ include(GenerateExportHeader)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # QML module — contains all C++ QML_ELEMENT types AND the QML files.
-# Linked by both the plugin and the binary.
+# Linked by the binary and the tests.
 # ──────────────────────────────────────────────────────────────────────────────
 set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/qml/ManageWindow.qml
@@ -186,25 +185,7 @@ if(Canberra_FOUND)
 endif()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Dolphin plugin — KAbstractFileItemActionPlugin (.so)
-# Auto-discovered by Dolphin via plugin JSON metadata.
-# ──────────────────────────────────────────────────────────────────────────────
-option(BUILD_DOLPHIN_PLUGIN "Build the Dolphin file item action plugin" ON)
-
-if(BUILD_DOLPHIN_PLUGIN)
-    kcoreaddons_add_plugin(appimagemanager
-        SOURCES plugin/appimageactionplugin.cpp
-        INSTALL_NAMESPACE "kf6/fileitemaction"
-    )
-    target_include_directories(appimagemanager PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_BINARY_DIR}
-    )
-    target_link_libraries(appimagemanager PRIVATE appimagemanager_qml)
-endif()
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Standalone binary — launched per-file from the service menu,
+# Standalone binary — launched per-file from Open With (the .desktop MimeType),
 # or directly from the command line.
 # ──────────────────────────────────────────────────────────────────────────────
 add_executable(appimagemanager_bin

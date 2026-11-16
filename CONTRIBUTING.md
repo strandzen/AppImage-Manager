@@ -17,12 +17,6 @@ sudo cmake --install build/dev
 
 On Arch, `cd packaging && makepkg -sif` builds this checkout as a pacman package instead.
 
-To reload Dolphin after install without a full logout:
-
-```bash
-kquitapp6 dolphin && dolphin &
-```
-
 ### Clean rebuild
 
 ```bash
@@ -35,10 +29,9 @@ rm -rf build/ && cmake --preset dev && cmake --build --preset dev
 |--------|------|-------------|
 | `appimagemanager_core` | Object library | Pure C++, no QML. `AppImageReader`, `AppImageCache`, `AppImageManager`, `AppImageInfo`, update sources, launch environment |
 | `appimagemanager_qml` | QML module | GUI backend classes (models, `AppSettings`, `ReleaseChecker`, update manager, daemon) + QML files (all windows and dialogs) |
-| `appimagemanager` (plugin) | `KAbstractFileItemActionPlugin` | Dolphin right-click integration |
 | `appimagemanager` (binary) | Executable | Dashboard, manage window for one file, or `--daemon` |
 
-**One binary, three modes.** The Dolphin plugin and the service menu both run `appimagemanager <path>`, which opens `AppImageWindow::open(path)`. Without arguments the binary opens the dashboard; `--daemon` runs the background update checker.
+**One binary, three modes.** Dolphin's Open With (the `MimeType=` in the `.desktop` file) runs `appimagemanager <path>`, which opens `AppImageWindow::open(path)`. Without arguments the binary opens the dashboard; `--daemon` runs the background update checker.
 
 **Data flow:**
 ```

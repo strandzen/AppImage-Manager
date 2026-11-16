@@ -19,7 +19,6 @@ $XGETTEXT \
     src/gui/amstoremodel.cpp \
     src/gui/dashboardwindow.cpp \
     src/gui/traymodel.cpp \
-    src/plugin/appimageactionplugin.cpp \
     --keyword=i18n:1 \
     --keyword=i18nc:1c,2 \
     --keyword=i18np:1,2 \

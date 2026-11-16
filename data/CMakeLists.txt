@@ -13,9 +13,6 @@ if(MSGFMT_EXECUTABLE)
     set(DESKTOP_IN "${CMAKE_CURRENT_SOURCE_DIR}/io.github.strandzen.AppImageManager.desktop")
     set(DESKTOP_OUT "${CMAKE_CURRENT_BINARY_DIR}/io.github.strandzen.AppImageManager.desktop")
     
-    set(SERVICE_IN "${CMAKE_CURRENT_SOURCE_DIR}/servicemenus/appimagemanager.desktop")
-    set(SERVICE_OUT "${CMAKE_CURRENT_BINARY_DIR}/servicemenus_appimagemanager.desktop")
-    
     set(MERGE_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/merge_desktop.cmake")
     file(WRITE "${MERGE_SCRIPT}" "
 file(GLOB PO_DIRS \"${CMAKE_SOURCE_DIR}/po/*\")
@@ -38,28 +35,19 @@ execute_process(
 if(NOT ret EQUAL 0)
     message(FATAL_ERROR \"msgfmt --desktop failed\")
 endif()
-execute_process(
-    COMMAND ${MSGFMT_EXECUTABLE} --desktop --template \"${SERVICE_IN}\" -d \"${CMAKE_CURRENT_BINARY_DIR}/po_flat\" -o \"${SERVICE_OUT}\"
-    RESULT_VARIABLE ret
-)
-if(NOT ret EQUAL 0)
-    message(FATAL_ERROR \"msgfmt --desktop failed for service menu\")
-endif()
 ")
 
     add_custom_command(
-        OUTPUT "${DESKTOP_OUT}" "${SERVICE_OUT}"
+        OUTPUT "${DESKTOP_OUT}"
         COMMAND ${CMAKE_COMMAND} -P "${MERGE_SCRIPT}"
-        DEPENDS "${DESKTOP_IN}" "${SERVICE_IN}" "${CMAKE_SOURCE_DIR}/po"
+        DEPENDS "${DESKTOP_IN}" "${CMAKE_SOURCE_DIR}/po"
         COMMENT "Merging translations into desktop files..."
     )
-    add_custom_target(desktop_translations ALL DEPENDS "${DESKTOP_OUT}" "${SERVICE_OUT}")
+    add_custom_target(desktop_translations ALL DEPENDS "${DESKTOP_OUT}")
     
     install(FILES "${DESKTOP_OUT}" DESTINATION ${KDE_INSTALL_APPDIR})
-    install(FILES "${SERVICE_OUT}" DESTINATION ${KDE_INSTALL_DATADIR}/kio/servicemenus RENAME appimagemanager.desktop)
 else()
     install(FILES io.github.strandzen.AppImageManager.desktop DESTINATION ${KDE_INSTALL_APPDIR})
-    install(FILES servicemenus/appimagemanager.desktop DESTINATION ${KDE_INSTALL_DATADIR}/kio/servicemenus)
 endif()
 
 # System tray widget (Plasma): the tray entry on Plasma, a view of the daemon over D-Bus.
