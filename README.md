@@ -14,7 +14,13 @@ This is version 2.2.0 (see [CHANGELOG.md](CHANGELOG.md)). I mostly test it on my
 > [!NOTE]
 > This project built with heavy AI assistance. It is an independent project and is not affiliated with or endorsed by KDE or KDE e.V.
 
-## Screenshots - Coming Soon
+## Screenshots
+
+![Overview of installed AppImages](assets/screenshot-overview.png)
+
+![Details of an installed AppImage](assets/screenshot-details-appimage.png)
+
+![Discover page for finding new AppImages](assets/screenshot-discover.png)
 
 ## Features
 
