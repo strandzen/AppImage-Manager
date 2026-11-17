@@ -362,6 +362,10 @@ bool AppImageBackend::finishReplace()
     const UpdateSource source = loadUpdateSource(m_existingPath);
     saveUpdateSource(m_appImagePath, source);  // the installed tag is not carried
     saveUpdateSource(m_existingPath, {});
+    if (isPinned(m_existingPath)) {
+        setPinned(m_appImagePath, true);
+        setPinned(m_existingPath, false);
+    }
     saveEnvironment(m_appImagePath, loadEnvironment(m_existingPath));
     saveEnvironment(m_existingPath, {});
     setConfigFolderName(m_appImagePath, configFolderName(m_existingPath));

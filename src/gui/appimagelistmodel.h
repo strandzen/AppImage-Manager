@@ -38,6 +38,7 @@ class APPIMAGEMANAGER_EXPORT AppImageListModel : public QAbstractListModel
     Q_PROPERTY(int  failedCount     READ failedCount      NOTIFY stateSummaryChanged)
     Q_PROPERTY(int  notCheckedCount READ notCheckedCount  NOTIFY stateSummaryChanged)
     Q_PROPERTY(int  noSourceCount   READ noSourceCount    NOTIFY stateSummaryChanged)
+    Q_PROPERTY(int  pinnedCount     READ pinnedCount      NOTIFY stateSummaryChanged)
     Q_PROPERTY(QString totalSizeText READ totalSizeText   NOTIFY stateSummaryChanged)
     // "14:02", "yesterday 14:02", …; empty when never checked (here or by the daemon).
     Q_PROPERTY(QString lastCheckTime READ lastCheckTime   NOTIFY stateSummaryChanged)
@@ -117,6 +118,7 @@ public:
     int  failedCount()     const { return m_failedCount; }
     int  notCheckedCount() const { return m_notCheckedCount; }
     int  noSourceCount()   const { return m_noSourceCount; }
+    int  pinnedCount()     const { return m_pinnedCount; }
     QString totalSizeText() const;
     QString lastCheckTime() const;
     int  sectionMode() const { return m_sectionMode; }
@@ -179,7 +181,9 @@ public:
     // Sandbox: { enabled, folders, available (bwrap installed), settingsFolder }.
     Q_INVOKABLE QVariantMap sandbox(int row) const;
     // Saves it; turning it on gives the app a settings folder if it has none.
-    Q_INVOKABLE void setSandbox(int row, bool enabled, const QStringList &folders);
+    Q_INVOKABLE void setSandbox(int row, bool enabled, const QStringList &folders, bool network = true);
+    // "Don't Update": never checked or offered updates.
+    Q_INVOKABLE void setPinned(int row, bool pinned);
 
 private Q_SLOTS:
     // Re-reads the shared check results (checkresults.h); the daemon wrote new ones.
@@ -241,6 +245,7 @@ private:
     int                    m_failedCount     = 0;
     int                    m_notCheckedCount = 0;
     int                    m_noSourceCount   = 0;
+    int                    m_pinnedCount     = 0;
     qint64                 m_totalSize       = 0;
     int                    m_sectionMode     = 0;
     int                    m_checkDone  = 0;

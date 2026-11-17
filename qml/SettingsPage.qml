@@ -21,7 +21,7 @@ Kirigami.Page {
         { name: i18n("General"),  icon: "configure" },
         { name: i18n("Updates"),  icon: "system-software-update" },
         { name: i18n("Security"), icon: "security-high" },
-        { name: i18n("Discover"), icon: "plasma-discover" },
+        { name: i18nc("settings page for the Browse tab", "Browse"), icon: "globe" },
     ]
 
     // One settings page: a scrollable column, capped to formWidth and centered (as in Sirkel).
@@ -154,7 +154,7 @@ Kirigami.Page {
                         AppSettings.resetToDefaults()
                         pathField.text = AppSettings.applicationsPath
                     }
-                    Controls.ToolTip.text: i18n("Restores every setting on all pages. Catalogs are reset under Discover.")
+                    Controls.ToolTip.text: i18n("Restores every setting on all pages. Catalogs are reset under Browse.")
                     Controls.ToolTip.visible: hovered
                     Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                 }
@@ -223,12 +223,13 @@ Kirigami.Page {
                         onToggled: AppSettings.configInApplications = checked
                     }
                     Hint {
-                        text: i18n("Apps installed from now on keep their settings in Applications/.config instead of ~/.config, so the folder holds everything. Change it for one app with ⋯ → Keep Settings in Applications. Programs an app starts, such as a browser, use the same folder.")
+                        text: i18n("Apps installed from now on keep their settings in Applications/.config instead of ~/.config, so the folder holds everything. Change it for one app with ⋯ → Keep Settings in “Applications”. Programs an app starts, such as a browser, use the same folder.")
                     }
 
                     Controls.Switch {
                         Kirigami.FormData.label: i18n("Drop zone:")
-                        text: i18n("Show below the Installed list")
+                        text: i18n("Show in the overview")
+                        enabled: AppSettings.showOverview
                         checked: AppSettings.showInstallBox
                         onToggled: AppSettings.showInstallBox = checked
                     }
@@ -346,7 +347,7 @@ Kirigami.Page {
                     }
                     Hint {
                         text: AppSettings.sandboxAvailable
-                            ? i18n("Each app sees only its own folder in Applications/.config and the folders below; the rest of your home folder and other drives are hidden, so an app starts without the settings it had in ~/.config unless you move them first with ⋯ → Keep Settings in Applications. Leave one app out with ⋯ → Sandbox….")
+                            ? i18n("Each app sees only its own folder in Applications/.config and the folders below; the rest of your home folder and other drives are hidden, so an app starts without the settings it had in ~/.config unless you move them first with ⋯ → Keep Settings in “Applications”. Leave one app out with ⋯ → Sandbox….")
                             : i18n("Needs bubblewrap. Install the “bubblewrap” package to use the sandbox.")
                     }
 
@@ -431,7 +432,7 @@ Kirigami.Page {
 
                     Kirigami.Separator {
                         Kirigami.FormData.isSection: true
-                        Kirigami.FormData.label: i18n("Discover")
+                        Kirigami.FormData.label: i18nc("the Browse tab", "Browse")
                     }
 
                     Controls.Switch {
@@ -441,7 +442,7 @@ Kirigami.Page {
                         onToggled: AppSettings.discoverEnabled = checked
                     }
                     Hint {
-                        text: i18n("The catalogs are downloaded from the internet when you open Discover.")
+                        text: i18n("The catalogs are downloaded from the internet when you open Browse.")
                     }
                 }
 
@@ -575,9 +576,20 @@ Kirigami.Page {
                                                 elide: Text.ElideMiddle
                                                 Layout.fillWidth: true
                                             }
+                                            // Built-in catalogs: what to expect (AppImage Hub, AM, other CPUs).
+                                            Controls.Label {
+                                                visible: text !== ""
+                                                text: model.note ?? ""
+                                                font: Kirigami.Theme.smallFont
+                                                color: Kirigami.Theme.disabledTextColor
+                                                wrapMode: Text.WordWrap
+                                                Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                            }
                                         }
 
                                         Controls.Switch {
+                                            enabled: model.available ?? true
                                             checked: model.enabled
                                             onToggled: amStoreModel.updateSource(model.id, model.name, model.url, model.type, checked)
                                             Controls.ToolTip.text: checked ? i18n("Searched") : i18n("Not searched")
@@ -721,7 +733,8 @@ Kirigami.Page {
                     model: [
                         { "text": i18n("AppImage Hub JSON (Direct Download)"), "value": "appimagehub" },
                         { "text": i18n("AM Database Text (Recipe Script)"), "value": "am-database" },
-                        { "text": i18n("Universal JSON Feed (Direct Download)"), "value": "universal" }
+                        { "text": i18n("Universal JSON Feed (Direct Download)"), "value": "universal" },
+                        { "text": i18n("pkgforge JSON (Direct Download)"), "value": "pkgforge" }
                     ]
                 }
             }
@@ -778,6 +791,8 @@ Kirigami.Page {
                 sourceTypeCombo.currentIndex = 1
             } else if (sourceData.type === "universal") {
                 sourceTypeCombo.currentIndex = 2
+            } else if (sourceData.type === "pkgforge") {
+                sourceTypeCombo.currentIndex = 3
             } else {
                 sourceTypeCombo.currentIndex = 0
             }

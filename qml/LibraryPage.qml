@@ -23,6 +23,7 @@ Kirigami.Page {
     readonly property int stateUpdateAvailable: 2
     readonly property int stateNoSource: 3
     readonly property int stateFailed: 4
+    readonly property int statePinned: 6
 
     // The summary on the right while nothing is selected (Settings → General → Overview).
     readonly property bool overviewShown: AppSettings.showOverview && listView.currentIndex < 0
@@ -37,6 +38,7 @@ Kirigami.Page {
             return version ? i18nc("old → new version", "%1 → %2", version, newVersion) : newVersion
         case stateUpToDate: return withVersion(i18n("Up to date"))
         case stateNoSource: return withVersion(i18n("No update source"))
+        case statePinned:   return withVersion(i18nc("app is never updated", "Pinned"))
         case stateFailed:   return withVersion(i18n("Check failed"))
         default:            return version
         }
@@ -49,6 +51,7 @@ Kirigami.Page {
         case stateFailed:          return i18np("1 check failed", "%1 checks failed", count)
         case stateUpToDate:        return i18np("1 up to date", "%1 up to date", count)
         case stateNoSource:        return i18np("1 without an update source", "%1 without an update source", count)
+        case statePinned:          return i18np("1 pinned (never updated)", "%1 pinned (never updated)", count)
         default:                   return i18np("1 not checked yet", "%1 not checked yet", count)
         }
     }
@@ -58,6 +61,7 @@ Kirigami.Page {
         case stateFailed:          return i18n("Check failed")
         case stateUpToDate:        return i18n("Up to date")
         case stateNoSource:        return i18n("No update source")
+        case statePinned:          return i18nc("app is never updated", "Pinned")
         default:                   return i18n("Not checked yet")
         }
     }
@@ -365,10 +369,6 @@ Kirigami.Page {
                 Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    // With the drop box shown, the list is only as tall as its rows and the box
-                    // takes the rest; once rows outgrow the space, the list scrolls above the box.
-                    Layout.preferredHeight: listView.contentHeight
-                    Layout.maximumHeight: dropBox.visible ? listView.contentHeight : Number.POSITIVE_INFINITY
 
                     // The desktop ScrollView reserves room for the scrollbar beside the rows (no overlap)
                     // and adds Kirigami.WheelHandler for desktop-speed wheel scrolling.
@@ -480,7 +480,8 @@ Kirigami.Page {
                                                 color: delegateRoot.highlighted ? Kirigami.Theme.highlightedTextColor
                                                      : parent.hasUpdate ? Kirigami.Theme.positiveTextColor
                                                      : Kirigami.Theme.disabledTextColor
-                                                opacity: !delegateRoot.highlighted && model.updateState === pageRoot.stateNoSource
+                                                opacity: !delegateRoot.highlighted && (model.updateState === pageRoot.stateNoSource
+                                                                                         || model.updateState === pageRoot.statePinned)
                                                          ? 0.7 : 1
                                             }
                                         }
@@ -516,62 +517,6 @@ Kirigami.Page {
                     }
                 }
 
-                // Drop box: fills the space under the list, never smaller than a few rows.
-                Rectangle {
-                    id: dropBox
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.minimumHeight: Kirigami.Units.gridUnit * 6
-                    Layout.preferredHeight: Kirigami.Units.gridUnit * 6
-                    Layout.margins: Kirigami.Units.smallSpacing
-                    visible: AppSettings.showInstallBox
-                             && !(listView.count === 0 && proxyModel.filterText !== "")
-                    radius: Kirigami.Units.cornerRadius
-                    color: "transparent"
-                    border.width: 1
-                    border.color: globalDropArea.containsDrag
-                        ? Kirigami.Theme.highlightColor
-                        : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor,
-                                                                  Kirigami.Theme.textColor, 0.2)
-
-                    // Tint while an AppImage is dragged over the window (the window's DropArea
-                    // takes the drop).
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: parent.radius
-                        color: Kirigami.Theme.highlightColor
-                        opacity: globalDropArea.containsDrag ? 0.1 : 0
-                        Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
-                    }
-
-                    ColumnLayout {
-                        anchors.centerIn: parent
-                        spacing: Kirigami.Units.smallSpacing
-                        opacity: globalDropArea.containsDrag ? 1.0 : 0.6
-                        Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
-
-                        Kirigami.Icon {
-                            source: "list-add"
-                            implicitWidth:  Kirigami.Units.iconSizes.medium
-                            implicitHeight: Kirigami.Units.iconSizes.medium
-                            Layout.alignment: Qt.AlignHCenter
-                        }
-                        Controls.Label {
-                            text: i18n("Drop an AppImage to install it")
-                            Layout.alignment: Qt.AlignHCenter
-                            font: Kirigami.Theme.smallFont
-                        }
-                    }
-                }
-
-                Kirigami.InlineMessage {
-                    Layout.fillWidth: true
-                    Layout.margins: Kirigami.Units.smallSpacing
-                    visible: AppSettings.showInstallBox && AppSettings.showDisclaimer
-                    type: Kirigami.MessageType.Warning
-                    text: i18n("AppImages are unverified executables. Only install from sources you trust.")
-                    showCloseButton: false
-                }
             }
         }
 
@@ -628,6 +573,7 @@ Kirigami.Page {
                         { state: pageRoot.stateUpToDate,        count: listModel.upToDateCount,   icon: "checkmark" },
                         { state: pageRoot.stateNotChecked,      count: listModel.notCheckedCount, icon: "dialog-question" },
                         { state: pageRoot.stateNoSource,        count: listModel.noSourceCount,   icon: "action-unavailable-symbolic" },
+                        { state: pageRoot.statePinned,          count: listModel.pinnedCount,     icon: "pin" },
                     ].filter(entry => entry.count > 0)
 
                     delegate: Controls.ItemDelegate {
@@ -675,6 +621,59 @@ Kirigami.Page {
                     color: Kirigami.Theme.disabledTextColor
                     font: Kirigami.Theme.smallFont
                     wrapMode: Text.WordWrap
+                }
+
+                // Drop box: as wide as the overview, three quarters as tall (never under 6 rows).
+                Rectangle {
+                    id: dropBox
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.largeSpacing
+                    Layout.preferredHeight: Math.max(Kirigami.Units.gridUnit * 6, width * 0.75)
+                    visible: AppSettings.showInstallBox
+                    radius: Kirigami.Units.cornerRadius
+                    color: "transparent"
+                    border.width: 1
+                    border.color: globalDropArea.containsDrag
+                        ? Kirigami.Theme.highlightColor
+                        : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor,
+                                                                  Kirigami.Theme.textColor, 0.2)
+
+                    // Tint while an AppImage is dragged over the window (the window's DropArea
+                    // takes the drop).
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Kirigami.Theme.highlightColor
+                        opacity: globalDropArea.containsDrag ? 0.1 : 0
+                        Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+                    }
+
+                    ColumnLayout {
+                        anchors.centerIn: parent
+                        spacing: Kirigami.Units.smallSpacing
+                        opacity: globalDropArea.containsDrag ? 1.0 : 0.6
+                        Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+
+                        Kirigami.Icon {
+                            source: "list-add"
+                            implicitWidth:  Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            Layout.alignment: Qt.AlignHCenter
+                        }
+                        Controls.Label {
+                            text: i18n("Drop an AppImage to install it")
+                            Layout.alignment: Qt.AlignHCenter
+                            font: Kirigami.Theme.smallFont
+                        }
+                    }
+                }
+
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    visible: AppSettings.showInstallBox && AppSettings.showDisclaimer
+                    type: Kirigami.MessageType.Warning
+                    text: i18n("AppImages are unverified executables. Only install from sources you trust.")
+                    showCloseButton: false
                 }
             }
         }
@@ -802,6 +801,7 @@ Kirigami.Page {
                             id: moreMenu
 
                             Controls.MenuItem {
+                                icon.name: "quickview"
                                 text: i18n("Show in App Menu")
                                 checkable: true
                                 checked: detailInner.item.hasDesktopLink ?? false
@@ -821,13 +821,27 @@ Kirigami.Page {
                                 onTriggered: releaseNotesDialog.openFor(listView.currentIndex, detailInner.item)
                             }
                             Controls.MenuItem {
+                                icon.name: "pin"
+                                text: i18n("Don't Update")
+                                checkable: true
+                                checked: detailInner.item.pinned ?? false
+                                enabled: !(detailInner.item.isUpdating ?? false)
+                                onTriggered: {
+                                    proxyModel.setPinned(listView.currentIndex, checked)
+                                    showPassiveNotification(checked
+                                        ? i18n("%1 won't be checked for updates.", detailInner.item.displayName ?? "")
+                                        : i18n("%1 is checked for updates again.", detailInner.item.displayName ?? ""))
+                                }
+                            }
+                            Controls.MenuItem {
                                 icon.name: "configure"
                                 text: i18n("Update Source…")
                                 onTriggered: updateSourceDialog.openFor(listView.currentIndex,
                                                                         detailInner.item.displayName ?? "")
                             }
                             Controls.MenuItem {
-                                text: i18n("Keep Settings in Applications")
+                                icon.name: "folder-stash-symbolic"
+                                text: i18n("Keep Settings in “Applications”")
                                 checkable: true
                                 // A sandboxed app always keeps its settings there.
                                 enabled: !(detailInner.item.sandboxed ?? false)
@@ -923,7 +937,8 @@ Kirigami.Page {
                         const settings = item.configFolder ?? ""
                         return [
                             [i18n("Environment"), env.length > 0 ? env.join("\n") : i18n("Default")],
-                            [i18n("Sandbox"), item.sandboxed ? i18n("On") : i18n("Off")],
+                            [i18n("Sandbox"), !item.sandboxed ? i18n("Off")
+                                              : item.sandboxNetwork === false ? i18nc("sandbox state", "On · no network") : i18n("On")],
                             [i18n("Settings"), settings !== "" ? (settings.startsWith(home) ? "~" + settings.slice(home.length) : settings)
                                                                : i18n("In ~/.config")],
                             [i18n("File"), path.startsWith(home) ? "~" + path.slice(home.length) : path],
@@ -942,6 +957,8 @@ Kirigami.Page {
                             return item.updateReason ? i18n("Check failed: %1", item.updateReason) : i18n("Check failed")
                         case pageRoot.stateNoSource:
                             return i18n("The AppImage does not say where its updates come from.")
+                        case pageRoot.statePinned:
+                            return i18n("Pinned: never checked or updated (⋯ → Don't Update)")
                         default: return i18n("Not checked yet")
                         }
                     }

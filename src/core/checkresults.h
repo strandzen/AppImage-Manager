@@ -13,7 +13,7 @@
 // dashboard on UpdatesChanged), and both re-read.
 
 // The order matches TrayModel::State and the values QML compares against.
-enum class UpdateState { NotChecked = 0, UpToDate, UpdateAvailable, NoSource, Failed, Updating };
+enum class UpdateState { NotChecked = 0, UpToDate, UpdateAvailable, NoSource, Failed, Updating, Pinned };
 
 struct CheckResult {
     UpdateState state = UpdateState::NotChecked;

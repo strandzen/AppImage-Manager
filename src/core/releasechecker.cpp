@@ -60,9 +60,9 @@ void ReleaseChecker::check(const QString &filePath, const QString &embeddedUpdat
 
     if (kind == QLatin1String("gh-releases-zsync") && m_parts.size() >= 3) {
         // /releases/latest never returns a pre-release; the list does, newest first.
-        checkReleases(QUrl(source.prerelease
+        checkGithubFeedFirst(QUrl(source.prerelease
             ? QStringLiteral("https://api.github.com/repos/%1/%2/releases?per_page=10").arg(m_parts.at(1), m_parts.at(2))
-            : QStringLiteral("https://api.github.com/repos/%1/%2/releases/latest").arg(m_parts.at(1), m_parts.at(2))), true);
+            : QStringLiteral("https://api.github.com/repos/%1/%2/releases/latest").arg(m_parts.at(1), m_parts.at(2))));
     } else if (kind == QLatin1String("forgejo-releases") && m_parts.size() >= 4) {
         // Forgejo/Gitea mirror GitHub's release JSON (tag_name, assets[].browser_download_url).
         const QString base = QStringLiteral("https://%1/api/v1/repos/%2/%3/releases").arg(m_parts.at(1), m_parts.at(2), m_parts.at(3));
@@ -197,20 +197,42 @@ void ReleaseChecker::checkDirect(const QUrl &url)
     });
 }
 
-void ReleaseChecker::finishWithTag(const QString &tag, const QString &url)
+bool ReleaseChecker::isNewerThanInstalled(const QString &tag) const
 {
     const QString remoteVer = normalizeVersion(tag);
     const QString localVer = normalizeVersion(m_currentVersion);
-
-    bool newer;
     if (!m_installedTag.isEmpty() && normalizeVersion(m_installedTag) == remoteVer)
-        newer = false; // this exact release was installed by our last update
-    else if (QVersionNumber::fromString(localVer).isNull())
-        newer = true;  // installed version unknown; installedTag tracks it after one update
-    else
-        newer = isNewerVersion(remoteVer, localVer);
+        return false; // this exact release was installed by our last update
+    if (QVersionNumber::fromString(localVer).isNull())
+        return true;  // installed version unknown; installedTag tracks it after one update
+    return isNewerVersion(remoteVer, localVer);
+}
 
-    if (!newer) {
+void ReleaseChecker::checkGithubFeedFirst(const QUrl &apiUrl)
+{
+    QNetworkRequest request(QUrl(QStringLiteral("https://github.com/%1/%2/releases.atom").arg(m_parts.at(1), m_parts.at(2))));
+    request.setRawHeader("User-Agent", "AppImageManager-UpdateCheck/1.0");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setTransferTimeout(10'000);
+
+    QNetworkReply *reply = m_nam->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, apiUrl]() {
+        reply->deleteLater();
+        const QString tag = reply->error() == QNetworkReply::NoError ? feedNewestTag(reply->readAll()) : QString();
+        // Nothing newer in the feed: up to date without an API request. With pre-releases off,
+        // a newer pre-release in the feed still goes to the API, which then answers correctly.
+        if (!tag.isEmpty() && !isNewerThanInstalled(tag)) {
+            Q_EMIT checkFinished(Result::UpToDate, {}, {});
+            return;
+        }
+        checkReleases(apiUrl, true);
+    });
+}
+
+void ReleaseChecker::finishWithTag(const QString &tag, const QString &url)
+{
+    const QString remoteVer = normalizeVersion(tag);
+    if (!isNewerThanInstalled(tag)) {
         Q_EMIT checkFinished(Result::UpToDate, {}, {});
         return;
     }
@@ -247,29 +269,7 @@ void ReleaseChecker::checkAtomFeed()
             return;
         }
 
-        const QByteArray xmlData = reply->readAll();
-        QXmlStreamReader xml(xmlData);
-
-        QString latestTag;
-        bool inEntry = false;
-
-        while (!xml.atEnd() && !xml.hasError()) {
-            const auto token = xml.readNext();
-
-            if (token == QXmlStreamReader::StartElement) {
-                const auto name = xml.name();
-                if (name == QLatin1String("entry")) {
-                    inEntry = true;
-                } else if (name == QLatin1String("title") && inEntry) {
-                    latestTag = xml.readElementText().trimmed();
-                    break; // the first entry is the latest release!
-                }
-            } else if (token == QXmlStreamReader::EndElement) {
-                if (xml.name() == QLatin1String("entry")) {
-                    inEntry = false;
-                }
-            }
-        }
+        const QString latestTag = feedNewestTag(reply->readAll());
 
         if (latestTag.isEmpty()) {
             m_error = i18n("No releases found");
@@ -293,6 +293,37 @@ void ReleaseChecker::checkAtomFeed()
         qCDebug(AIM_LOG) << "GitHub Atom feed fallback: latest tag:" << latestTag << "zsync URL:" << zsyncUrl;
         finishWithTag(latestTag, zsyncUrl);
     });
+}
+
+QString ReleaseChecker::feedNewestTag(const QByteArray &atom)
+{
+    QXmlStreamReader xml(atom);
+    QString id, title;
+    while (!xml.atEnd()) {
+        xml.readNext();
+        if (!xml.isStartElement() || xml.name() != QLatin1String("entry"))
+            continue;
+        // The first entry is the newest release.
+        while (xml.readNextStartElement()) {
+            if (xml.name() == QLatin1String("link")) {
+                const QString href = xml.attributes().value(QLatin1String("href")).toString();
+                const qsizetype at = href.indexOf(QLatin1String("/releases/tag/"));
+                if (at >= 0)
+                    return QUrl::fromPercentEncoding(href.mid(at + 14).toUtf8());
+                xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("id")) {
+                id = xml.readElementText().trimmed();
+            } else if (xml.name() == QLatin1String("title")) {
+                title = xml.readElementText().trimmed();
+            } else {
+                xml.skipCurrentElement();
+            }
+        }
+        if (id.contains(QLatin1Char('/')))
+            return id.section(QLatin1Char('/'), -1);
+        return title;
+    }
+    return {};
 }
 
 // ── Asset selection (ported from Shelly's selectReleaseAssetUrl) ─────────────

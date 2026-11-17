@@ -49,6 +49,13 @@ int main(int argc, char *argv[])
 
     KCrash::initialize();
 
+    // The page a dashboard invocation asks for (also for arguments forwarded to a running one).
+    const auto requestedPage = [](const QCommandLineParser &p) {
+        if (p.isSet(QStringLiteral("welcome")))
+            return QStringLiteral("welcome");
+        return p.isSet(QStringLiteral("settings")) ? QStringLiteral("settings") : QString();
+    };
+
     // Also used to read the arguments a second dashboard invocation forwards (activateRequested).
     const auto setupParser = [](QCommandLineParser &p) {
         p.addPositionalArgument(
@@ -58,6 +65,7 @@ int main(int argc, char *argv[])
         p.addOption(QCommandLineOption(QStringLiteral("daemon"),    i18n("Run in background as an update daemon")));
         p.addOption(QCommandLineOption(QStringLiteral("dashboard"), i18n("Open the dashboard window")));
         p.addOption(QCommandLineOption(QStringLiteral("settings"),  i18n("Open the dashboard on its Settings page")));
+        p.addOption(QCommandLineOption(QStringLiteral("welcome"),   i18n("Show the welcome page again")));
         p.addOption(QCommandLineOption(QStringLiteral("select"),
                                        i18n("Open the dashboard with this installed AppImage selected"),
                                        QStringLiteral("path")));
@@ -87,13 +95,12 @@ int main(int argc, char *argv[])
 
     if (isDashboard) {
         QObject::connect(&service, &KDBusService::activateRequested,
-                         &app, [setupParser](const QStringList &arguments, const QString &) {
+                         &app, [setupParser, requestedPage](const QStringList &arguments, const QString &) {
             QCommandLineParser forwarded;
             setupParser(forwarded);
             forwarded.parse(arguments);
             // Raises the existing instance, on the requested page.
-            DashboardWindow::open(forwarded.isSet(QStringLiteral("settings")) ? QStringLiteral("settings") : QString(),
-                                  forwarded.value(QStringLiteral("select")));
+            DashboardWindow::open(requestedPage(forwarded), forwarded.value(QStringLiteral("select")));
         });
     }
 
@@ -106,8 +113,7 @@ int main(int argc, char *argv[])
     if (isFileMode)
         AppImageWindow::open(args.first());
     else
-        DashboardWindow::open(parser.isSet(QStringLiteral("settings")) ? QStringLiteral("settings") : QString(),
-                              parser.value(QStringLiteral("select")));
+        DashboardWindow::open(requestedPage(parser), parser.value(QStringLiteral("select")));
 
     return app.exec();
 }

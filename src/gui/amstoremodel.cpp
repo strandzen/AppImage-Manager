@@ -22,12 +22,60 @@
 #include "appimagereader.h"
 #include "appimagemanager.h"
 #include "appsettings.h"
+#include "releasechecker.h"
+#include "updatesource.h"
+#include <QSysInfo>
 
 static bool isFileFresh(const QString &path, qint64 maxAgeHours = 24)
 {
     const QFileInfo fi(path);
     if (!fi.exists()) return false;
     return fi.lastModified().secsTo(QDateTime::currentDateTime()) < maxAgeHours * 3600LL;
+}
+
+// The CPU the pkgforge and AM lists are published for: x86_64 or aarch64 (empty for others).
+static QString catalogArch()
+{
+    const QString cpu = QSysInfo::currentCpuArchitecture();
+    if (cpu == QLatin1String("x86_64"))
+        return QStringLiteral("x86_64");
+    if (cpu == QLatin1String("arm64"))
+        return QStringLiteral("aarch64");
+    return {};
+}
+
+// pkgforge and AM publish one list per CPU: a stored address of either CPU's list is pointed
+// at this computer's (so a list set up on another computer stays right). Empty when there is
+// no list for this CPU.
+static QString effectiveUrl(const StoreSource &src)
+{
+    static const QRegularExpression perCpu(QStringLiteral(R"((?:/pkgcache/|/programs/)(x86_64|aarch64)(?:-Linux\.json|-appimages)$)"));
+    QString url = src.url;
+    const QRegularExpressionMatch m = perCpu.match(url);
+    if (!m.hasMatch())
+        return url;
+    const QString arch = catalogArch();
+    if (arch.isEmpty())
+        return {};
+    return url.replace(m.capturedStart(1), m.capturedLength(1), arch);
+}
+
+static bool amInstalledOnSystem()
+{
+    return !QStandardPaths::findExecutable(QStringLiteral("am")).isEmpty()
+        || !QStandardPaths::findExecutable(QStringLiteral("appman")).isEmpty()
+        || QFile::exists(QDir::homePath() + QStringLiteral("/.local/bin/appman"));
+}
+
+static StoreSource pkgforgeSource()
+{
+    StoreSource src;
+    src.id = QStringLiteral("pkgforge");
+    src.name = QStringLiteral("pkgforge");
+    src.url = QStringLiteral("https://meta.pkgforge.dev/pkgcache/x86_64-Linux.json");
+    src.type = QStringLiteral("pkgforge");
+    src.enabled = true;
+    return src;
 }
 
 static QString normalizeForMatch(const QString &name)
@@ -49,6 +97,7 @@ AMStoreModel::AMStoreModel(QObject *parent)
     , m_isInstalling(false)
     , m_installStage(0)
     , m_process(nullptr)
+    , m_amInstalled(amInstalledOnSystem())
     , m_initialized(false)
     , m_filterGeneration(0)
 {
@@ -205,6 +254,12 @@ void AMStoreModel::sync()
     load(true);
 }
 
+QString AMStoreModel::amScriptBase() const
+{
+    return QStringLiteral("https://github.com/ivan-hc/AM/blob/main/programs/%1/")
+        .arg(catalogArch().isEmpty() ? QStringLiteral("x86_64") : catalogArch());
+}
+
 QVariantList AMStoreModel::sources() const
 {
     QVariantList list;
@@ -212,9 +267,19 @@ QVariantList AMStoreModel::sources() const
         QVariantMap map;
         map[QStringLiteral("id")] = src.id;
         map[QStringLiteral("name")] = src.name;
-        map[QStringLiteral("url")] = src.url;
+        const QString url = effectiveUrl(src);
+        map[QStringLiteral("url")] = url.isEmpty() ? src.url : url;
         map[QStringLiteral("type")] = src.type;
         map[QStringLiteral("enabled")] = src.enabled;
+        map[QStringLiteral("available")] = !url.isEmpty();
+        QString note;
+        if (url.isEmpty())
+            note = i18n("Not available for this computer's processor.");
+        else if (src.type == QStringLiteral("appimagehub"))
+            note = i18n("More apps, from each project's releases. Some projects no longer publish AppImages, so an install can fail.");
+        else if (src.type == QStringLiteral("am-database") && !m_amInstalled)
+            note = i18n("Needs AM or AppMan installed (github.com/ivan-hc/AM). Without it, only apps also on AppImage Hub can be installed.");
+        map[QStringLiteral("note")] = note;
         list.append(map);
     }
     return list;
@@ -250,19 +315,32 @@ void AMStoreModel::loadSources()
         hub.name = QStringLiteral("AppImage Hub");
         hub.url = QStringLiteral("https://appimage.github.io/feed.json");
         hub.type = QStringLiteral("appimagehub");
-        hub.enabled = true;
+        hub.enabled = false; // an option for more apps; pkgforge is the default
 
         StoreSource am;
         am.id = QStringLiteral("am-database");
         am.name = QStringLiteral("AM Database");
         am.url = QStringLiteral("https://raw.githubusercontent.com/ivan-hc/AM/main/programs/x86_64-appimages");
         am.type = QStringLiteral("am-database");
-        am.enabled = true;
+        am.enabled = false; // needs AM or AppMan installed
 
+        // pkgforge first and on: direct downloads that just work. Existing lists are kept.
+        m_sources.append(pkgforgeSource());
         m_sources.append(hub);
         m_sources.append(am);
+        s.setValue(QStringLiteral("Store/addedPkgforge"), true);
 
         saveSources();
+    } else if (!s.value(QStringLiteral("Store/addedPkgforge"), false).toBool()) {
+        // pkgforge became a built-in catalog in 2.3: added once to existing lists (after the
+        // others, on), and not again if the user removes it.
+        s.setValue(QStringLiteral("Store/addedPkgforge"), true);
+        const bool present = std::any_of(m_sources.cbegin(), m_sources.cend(),
+                                         [](const StoreSource &src) { return src.type == QStringLiteral("pkgforge"); });
+        if (!present) {
+            m_sources.append(pkgforgeSource());
+            saveSources();
+        }
     }
     Q_EMIT sourcesChanged();
 }
@@ -413,7 +491,7 @@ void AMStoreModel::load(bool forceNetwork)
 
     QList<StoreSource> enabledSources;
     for (const auto &src : m_sources) {
-        if (src.enabled) {
+        if (src.enabled && !effectiveUrl(src).isEmpty()) {
             enabledSources.append(src);
         }
     }
@@ -448,6 +526,8 @@ void AMStoreModel::load(bool forceNetwork)
                         return AMStoreModel::parseFeedJsonSync(data);
                     } else if (src.type == QStringLiteral("universal")) {
                         return AMStoreModel::parseUniversalJsonSync(data);
+                    } else if (src.type == QStringLiteral("pkgforge")) {
+                        return AMStoreModel::parsePkgforgeJsonSync(data);
                     } else {
                         return AMStoreModel::parseAmDatabaseSync(QString::fromUtf8(data));
                     }
@@ -456,7 +536,7 @@ void AMStoreModel::load(bool forceNetwork)
             }
         }
 
-        QNetworkRequest req(QUrl(src.url));
+        QNetworkRequest req((QUrl(effectiveUrl(src))));
         req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
         QNetworkReply *reply = m_nam->get(req);
         m_activeReplies.insert(reply, src.id);
@@ -510,6 +590,8 @@ void AMStoreModel::onReplyFinished()
             return AMStoreModel::parseFeedJsonSync(data);
         } else if (src.type == QStringLiteral("universal")) {
             return AMStoreModel::parseUniversalJsonSync(data);
+        } else if (src.type == QStringLiteral("pkgforge")) {
+            return AMStoreModel::parsePkgforgeJsonSync(data);
         } else {
             return AMStoreModel::parseAmDatabaseSync(QString::fromUtf8(data));
         }
@@ -592,7 +674,10 @@ void AMStoreModel::checkAllLoaded()
                         if (existing.author.isEmpty()) existing.author = app.author;
                         if (existing.license.isEmpty()) existing.license = app.license;
                         if (!app.homepage.isEmpty()) existing.homepage = app.homepage;
-                        if (!app.downloadUrl.isEmpty()) existing.downloadUrl = app.downloadUrl;
+                        if (!app.downloadUrl.isEmpty()) {
+                            existing.downloadUrl = app.downloadUrl;
+                            existing.repoUrl = app.repoUrl;
+                        }
                         if (!app.iconSource.isEmpty()) existing.iconSource = app.iconSource;
                         if (existing.packageName.isEmpty()) existing.packageName = app.packageName;
                     }
@@ -663,7 +748,8 @@ QVector<StoreApp> AMStoreModel::parseAmDatabaseSync(const QString &rawText)
         app.displayName = cleanName(app.packageName);
         app.description = cleaned.mid(sep + 3).trimmed();
         app.iconSource  = app.packageName;
-        app.homepage    = QStringLiteral("https://github.com/ivan-hc/AM/blob/main/programs/x86_64/%1").arg(app.packageName);
+        app.homepage    = QStringLiteral("https://github.com/ivan-hc/AM/blob/main/programs/%1/%2")
+                              .arg(catalogArch().isEmpty() ? QStringLiteral("x86_64") : catalogArch(), app.packageName);
         app.hasAmScript = true;
         apps.append(std::move(app));
     }
@@ -787,6 +873,74 @@ QVector<StoreApp> AMStoreModel::parseUniversalJsonSync(const QByteArray &data)
         app.hasAmScript = item.value(QStringLiteral("hasAmScript")).toBool(false);
         app.hasFeedData = !app.downloadUrl.isEmpty();
 
+        apps.append(std::move(app));
+    }
+    return apps;
+}
+
+QVector<StoreApp> AMStoreModel::parsePkgforgeJsonSync(const QByteArray &data)
+{
+    // A JSON array of packages; pkg_type "appimage" are AppImages. Flags are strings ("false").
+    const auto flag = [](const QJsonValue &v) { return v.isBool() ? v.toBool() : v.toString() == QLatin1String("true"); };
+    const auto first = [](const QJsonValue &v) {
+        if (!v.isArray())
+            return v.toString();
+        const QJsonArray a = v.toArray();
+        return a.isEmpty() ? QString() : a.at(0).toString();
+    };
+
+    QVector<StoreApp> apps;
+    QHash<QString, qsizetype> byName;
+    QSet<QString> prerelease;
+    const QJsonArray packages = QJsonDocument::fromJson(data).array();
+    for (const QJsonValue &value : packages) {
+        const QJsonObject pkg = value.toObject();
+        if (pkg.value(QLatin1String("pkg_type")).toString() != QLatin1String("appimage")
+            || flag(pkg.value(QLatin1String("_disabled"))) || flag(pkg.value(QLatin1String("deprecated")))
+            || !flag(pkg.value(QLatin1String("installable"))))
+            continue;
+        const QString name = pkg.value(QLatin1String("pkg_name")).toString();
+        const QString url = pkg.value(QLatin1String("download_url")).toString();
+        if (name.isEmpty() || url.isEmpty())
+            continue;
+
+        StoreApp app;
+        app.packageName = name;
+        app.displayName = cleanName(name);
+        app.description = pkg.value(QLatin1String("description")).toString();
+        QStringList categories;
+        for (const QJsonValue &c : pkg.value(QLatin1String("category")).toArray())
+            categories << c.toString();
+        app.categories = categories.join(QLatin1Char(';'));
+        app.homepage = first(pkg.value(QLatin1String("homepage")));
+        app.license = first(pkg.value(QLatin1String("license")));
+        app.downloadUrl = url;
+        app.hasFeedData = true;
+        // Copied from the project's own releases: those releases are its update source.
+        bool upstream = false;
+        for (const QJsonValue &note : pkg.value(QLatin1String("note")).toArray())
+            upstream = upstream || note.toString().contains(QLatin1String("Fetched from Upstream"), Qt::CaseInsensitive);
+        const QString source = first(pkg.value(QLatin1String("src_url")));
+        if (upstream && (source.startsWith(QLatin1String("https://github.com/")) || source.startsWith(QLatin1String("https://codeberg.org/"))))
+            app.repoUrl = source;
+        // Raster icons only: SVGs with CSS mesh gradients crash Qt's renderer (see the Hub).
+        const QString icon = pkg.value(QLatin1String("icon")).toString();
+        if (!icon.contains(QLatin1String(".svg"), Qt::CaseInsensitive))
+            app.iconSource = icon;
+
+        // The same app may come as a stable and a prerelease build: keep the stable one.
+        const bool isPrerelease = pkg.value(QLatin1String("pkg_id")).toString().contains(QLatin1String("prerelease"));
+        const auto it = byName.constFind(name);
+        if (it != byName.cend()) {
+            if (prerelease.contains(name) && !isPrerelease) {
+                apps[*it] = app;
+                prerelease.remove(name);
+            }
+            continue;
+        }
+        byName.insert(name, apps.size());
+        if (isPrerelease)
+            prerelease.insert(name);
         apps.append(std::move(app));
     }
     return apps;
@@ -985,7 +1139,7 @@ void AMStoreModel::installApp(const QString &packageName, bool forceDownload)
         connect(m_process, &QProcess::readyReadStandardOutput, this, &AMStoreModel::readProcessOutput);
         connect(m_process, &QProcess::finished, this, &AMStoreModel::onProcessFinished);
 
-        Q_EMIT logReceived(packageName, i18n("Running: %1 -i %2").arg(cmd, packageName));
+        Q_EMIT logReceived(packageName, i18n("Running: %1 -i %2", cmd, packageName));
         m_process->start(cmd, {QStringLiteral("-i"), packageName});
     } else {
         if (app.downloadUrl.isEmpty()) {
@@ -997,36 +1151,119 @@ void AMStoreModel::installApp(const QString &packageName, bool forceDownload)
             return;
         }
 
-        Q_EMIT logReceived(packageName, i18n("Starting direct download from Hub..."));
+        resolveAndDownload(app);
+    }
+}
+
+// Ends an install that failed before or during the download.
+void AMStoreModel::failInstall(const QString &packageName, const QString &message)
+{
+    Q_EMIT logReceived(packageName, message);
+    m_isInstalling = false;
+    Q_EMIT isInstallingChanged();
+    setInstallStage(0);
+    Q_EMIT installationFinished(packageName, false);
+}
+
+// Catalog links are mostly not files: AppImage Hub's "Download" link is nearly always the
+// project's GitHub releases page. A GitHub (or Codeberg/Forgejo/Gitea) repository link is
+// resolved to its latest release's AppImage for this CPU; anything else is downloaded and
+// checked (a web page is refused).
+void AMStoreModel::resolveAndDownload(const StoreApp &app)
+{
+    const QString packageName = app.packageName;
+    const QUrl link(app.downloadUrl);
+    if (link.path().endsWith(QLatin1String(".AppImage"), Qt::CaseInsensitive)) {
+        startDownload(packageName, link, app.repoUrl);
+        return;
+    }
+    static const QRegularExpression repoLink(QStringLiteral(R"(^https?://([^/]+)/([^/]+)/([^/#?]+))"));
+    const QRegularExpressionMatch m = repoLink.match(app.downloadUrl);
+    const QString host = m.captured(1).toLower();
+    const bool github = host == QLatin1String("github.com");
+    // Forgejo/Gitea hosts: only links to a release page, so arbitrary sites aren't probed.
+    const bool forgejo = !github && m.hasMatch() && app.downloadUrl.contains(QLatin1String("/releases"));
+    if (!m.hasMatch() || (!github && !forgejo)) {
+        startDownload(packageName, link, app.repoUrl);
+        return;
+    }
+    const QString owner = m.captured(2);
+    const QString repo = m.captured(3).endsWith(QLatin1String(".git")) ? m.captured(3).chopped(4) : m.captured(3);
+    const QString repoPage = QStringLiteral("https://%1/%2/%3").arg(host, owner, repo);
+    const QUrl api(github ? QStringLiteral("https://api.github.com/repos/%1/%2/releases/latest").arg(owner, repo)
+                          : QStringLiteral("https://%1/api/v1/repos/%2/%3/releases/latest").arg(host, owner, repo));
+
+    Q_EMIT logReceived(packageName, i18n("Looking for the latest release of %1…", repoPage));
+    QNetworkRequest request(api);
+    request.setRawHeader("User-Agent", "AppImageManager/1.0");
+    request.setRawHeader("Accept", github ? "application/vnd.github+json" : "application/json");
+    request.setTransferTimeout(20000);
+    QNetworkReply *reply = m_nam->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, packageName, repoPage]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) {
+            failInstall(packageName, i18n("Error: Could not read the releases of %1: %2", repoPage,
+                                          ReleaseChecker::describeReplyError(reply, true)));
+            return;
+        }
+        const QJsonObject release = QJsonDocument::fromJson(reply->readAll()).object();
+        const QString arch = QSysInfo::currentCpuArchitecture();
+        QJsonArray appImages;
+        for (const QJsonValue &asset : release.value(QLatin1String("assets")).toArray()) {
+            const QString name = asset.toObject().value(QLatin1String("name")).toString();
+            if (name.endsWith(QLatin1String(".AppImage"), Qt::CaseInsensitive)
+                && ReleaseChecker::matchesArchitecture(name, arch))
+                appImages.append(asset);
+        }
+        if (appImages.isEmpty()) {
+            failInstall(packageName, i18n("Error: The latest release of %1 has no AppImage for this computer.", repoPage));
+            return;
+        }
+        // Several fitting files: the one named like the app, else the first.
+        QString url = ReleaseChecker::pickAsset(appImages, {}, packageName + QStringLiteral(".AppImage"), arch);
+        if (url.isEmpty())
+            url = appImages.first().toObject().value(QLatin1String("browser_download_url")).toString();
+        startDownload(packageName, QUrl(url), repoPage);
+    });
+}
+
+// repoPage: the repository the file came from (it becomes the update source when the
+// AppImage doesn't name one itself), or empty.
+void AMStoreModel::startDownload(const QString &packageName, const QUrl &url, const QString &repoPage)
+{
+        Q_EMIT logReceived(packageName, i18n("Downloading %1", url.toDisplayString()));
         setInstallStage(2);
 
         const QString applicationsDir = AppSettings::instance()->applicationsPath();
         QDir().mkpath(applicationsDir);
-        const QString targetPath = applicationsDir + QLatin1Char('/') + app.packageName + QStringLiteral(".AppImage");
+        const QString targetPath = applicationsDir + QLatin1Char('/') + packageName + QStringLiteral(".AppImage");
         const QString tempPath = targetPath + QStringLiteral(".new");
 
         m_downloadFile = new QFile(tempPath, this);
         if (!m_downloadFile->open(QIODevice::WriteOnly)) {
-            Q_EMIT logReceived(packageName, i18n("Error: Failed to open temporary file for writing: %1").arg(tempPath));
             m_downloadFile->deleteLater();
             m_downloadFile = nullptr;
-            m_isInstalling = false;
-            Q_EMIT isInstallingChanged();
-            setInstallStage(0);
-            Q_EMIT installationFinished(packageName, false);
+            failInstall(packageName, i18n("Error: Failed to open temporary file for writing: %1", tempPath));
             return;
         }
 
-        QNetworkRequest request(QUrl(app.downloadUrl));
+        QNetworkRequest request(url);
         request.setRawHeader("User-Agent", "AppImageManager/1.0");
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
         m_downloadReply = m_nam->get(request);
 
         connect(m_downloadReply, &QNetworkReply::readyRead, this, [this]() {
-            if (m_downloadReply && m_downloadFile) {
-                m_downloadFile->write(m_downloadReply->readAll());
+            if (!m_downloadReply || !m_downloadFile)
+                return;
+            // A web page (a download page, an error page) is never an AppImage: stop at once.
+            if (m_downloadFile->pos() == 0 && ReleaseChecker::isNonBinaryContentType(
+                    m_downloadReply->header(QNetworkRequest::ContentTypeHeader).toString())) {
+                m_downloadReply->setProperty("webPage", true);
+                m_downloadReply->abort();
+                return;
             }
+            m_downloadFile->write(m_downloadReply->readAll());
         });
 
         connect(m_downloadReply, &QNetworkReply::downloadProgress, this, [this](qint64 bytesReceived, qint64 bytesTotal) {
@@ -1035,12 +1272,12 @@ void AMStoreModel::installApp(const QString &packageName, bool forceDownload)
                 static int lastPercent = -1;
                 if (percent / 5 != lastPercent / 5) {
                     lastPercent = percent;
-                    Q_EMIT logReceived(m_activePackage, i18n("Downloading: %1%").arg(percent));
+                    Q_EMIT logReceived(m_activePackage, i18n("Downloading: %1%", percent));
                 }
             }
         });
 
-        connect(m_downloadReply, &QNetworkReply::finished, this, [this, targetPath, tempPath, packageName]() {
+        connect(m_downloadReply, &QNetworkReply::finished, this, [this, targetPath, tempPath, packageName, url, repoPage]() {
             if (!m_downloadReply) return;
             
             QNetworkReply *reply = m_downloadReply;
@@ -1053,17 +1290,27 @@ void AMStoreModel::installApp(const QString &packageName, bool forceDownload)
                 m_downloadFile = nullptr;
             }
 
+            if (reply->property("webPage").toBool()) {
+                QFile::remove(tempPath);
+                failInstall(packageName, i18n("Error: %1 is a web page, not an AppImage. Download it from there in your browser.",
+                                              url.toDisplayString()));
+                return;
+            }
             if (reply->error() != QNetworkReply::NoError) {
                 QFile::remove(tempPath);
-                if (reply->error() == QNetworkReply::OperationCanceledError) {
-                    Q_EMIT logReceived(packageName, i18n("Download cancelled."));
-                } else {
-                    Q_EMIT logReceived(packageName, i18n("Download failed: %1").arg(reply->errorString()));
-                }
-                m_isInstalling = false;
-                Q_EMIT isInstallingChanged();
-                setInstallStage(0);
-                Q_EMIT installationFinished(packageName, false);
+                failInstall(packageName, reply->error() == QNetworkReply::OperationCanceledError
+                                             ? i18n("Download cancelled.")
+                                             : i18n("Download failed: %1", reply->errorString()));
+                return;
+            }
+
+            // Only an AppImage goes into Applications: an ELF file with the AppImage mark ("AI").
+            QFile check(tempPath);
+            const QByteArray head = check.open(QIODevice::ReadOnly) ? check.read(10) : QByteArray();
+            check.close();
+            if (!head.startsWith("\x7f" "ELF") || head.mid(8, 2) != "AI") {
+                QFile::remove(tempPath);
+                failInstall(packageName, i18n("Error: The downloaded file is not an AppImage (%1).", url.toDisplayString()));
                 return;
             }
 
@@ -1071,22 +1318,14 @@ void AMStoreModel::installApp(const QString &packageName, bool forceDownload)
             setInstallStage(4);
 
             if (QFile::exists(targetPath) && !QFile::remove(targetPath)) {
-                Q_EMIT logReceived(packageName, i18n("Error: Could not overwrite existing file: %1").arg(targetPath));
                 QFile::remove(tempPath);
-                m_isInstalling = false;
-                Q_EMIT isInstallingChanged();
-                setInstallStage(0);
-                Q_EMIT installationFinished(packageName, false);
+                failInstall(packageName, i18n("Error: Could not overwrite existing file: %1", targetPath));
                 return;
             }
 
             if (!QFile::rename(tempPath, targetPath)) {
-                Q_EMIT logReceived(packageName, i18n("Error: Failed to finalize file renaming."));
                 QFile::remove(tempPath);
-                m_isInstalling = false;
-                Q_EMIT isInstallingChanged();
-                setInstallStage(0);
-                Q_EMIT installationFinished(packageName, false);
+                failInstall(packageName, i18n("Error: Failed to finalize file renaming."));
                 return;
             }
 
@@ -1096,16 +1335,23 @@ void AMStoreModel::installApp(const QString &packageName, bool forceDownload)
                 QFile::ReadOther | QFile::ExeOther);
 
             auto *watcher = new QFutureWatcher<AppImageInfo>(this);
-            connect(watcher, &QFutureWatcher<AppImageInfo>::finished, this, [this, watcher, targetPath, packageName]() {
+            connect(watcher, &QFutureWatcher<AppImageInfo>::finished, this, [this, watcher, targetPath, packageName, repoPage]() {
                 watcher->deleteLater();
                 const AppImageInfo info = watcher->result();
                 if (!info.isValid) {
-                    Q_EMIT logReceived(packageName, i18n("Error: Extracted AppImage metadata is invalid or file is corrupted."));
-                    m_isInstalling = false;
-                    Q_EMIT isInstallingChanged();
-                    setInstallStage(0);
-                    Q_EMIT installationFinished(packageName, false);
+                    failInstall(packageName, i18n("Error: Extracted AppImage metadata is invalid or file is corrupted."));
                     return;
+                }
+
+                // Found through its repository: updates come from there when the AppImage
+                // itself doesn't say (and the user hasn't set a source already).
+                if (!repoPage.isEmpty() && info.updateInfo.isEmpty()
+                    && loadUpdateSource(targetPath).type == UpdateSourceType::None) {
+                    const UpdateSource source = parseUpdateSourceInput(repoPage, UpdateSourceType::None);
+                    if (source.type != UpdateSourceType::None) {
+                        saveUpdateSource(targetPath, source);
+                        Q_EMIT logReceived(packageName, i18n("Updates will come from %1.", repoPage));
+                    }
                 }
 
                 if (!AppImageManager::createDesktopLink(targetPath, info)) {
@@ -1126,7 +1372,6 @@ void AMStoreModel::installApp(const QString &packageName, bool forceDownload)
                 return reader.read();
             }));
         });
-    }
 }
 
 void AMStoreModel::readProcessOutput()

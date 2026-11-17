@@ -48,7 +48,7 @@ SandboxSettings loadSandbox(const QString &filePath)
 {
     const KConfigGroup group = sandboxGroup(filePath);
     const bool enabled = group.hasKey("Enabled") ? group.readEntry("Enabled", false) : sandboxAllEnabled();
-    return { enabled, group.readEntry("Folders", QStringList()) };
+    return { enabled, group.readEntry("Folders", QStringList()), group.readEntry("Network", true) };
 }
 
 void saveSandbox(const QString &filePath, const SandboxSettings &settings)
@@ -63,6 +63,10 @@ void saveSandbox(const QString &filePath, const SandboxSettings &settings)
         group.deleteEntry("Folders");
     else
         group.writeEntry("Folders", settings.folders);
+    if (settings.network)
+        group.deleteEntry("Network");
+    else
+        group.writeEntry("Network", false);
     if (group.keyList().isEmpty())
         group.deleteGroup();
     group.sync();
@@ -77,7 +81,7 @@ bool sandboxAvailable()
 
 QStringList sandboxArguments(const QString &appImage, const QString &mountPoint, const QString &settingsFolder,
                              const QStringList &folders, const QString &home, const QString &runtimeDir,
-                             const QStringList &args)
+                             const QStringList &args, bool network)
 {
     QStringList a = {
         QStringLiteral("--die-with-parent"),
@@ -123,6 +127,10 @@ QStringList sandboxArguments(const QString &appImage, const QString &mountPoint,
     // The AppImage (some apps look at $APPIMAGE) and its mounted contents.
     a << QStringLiteral("--ro-bind") << appImage << appImage;
     a << QStringLiteral("--ro-bind") << mountPoint << mountPoint;
+    // No network: an empty network namespace (only its own loopback). Display, sound and the
+    // session bus are local sockets and keep working.
+    if (!network)
+        a << QStringLiteral("--unshare-net");
     a << QStringLiteral("--chdir") << home;
     a << mountPoint + QStringLiteral("/AppRun");
     a << args;
@@ -212,7 +220,8 @@ int runAppImage(const QString &filePath, const QStringList &args)
     bwrap.setProgram(QStandardPaths::findExecutable(QStringLiteral("bwrap")));
     QStringList folders = sharedSandboxFolders() + sandbox.folders;
     folders.removeDuplicates();
-    bwrap.setArguments(sandboxArguments(filePath, mountPoint, folder, folders, QDir::homePath(), runtimeDir, args));
+    bwrap.setArguments(sandboxArguments(filePath, mountPoint, folder, folders, QDir::homePath(), runtimeDir, args,
+                                        sandbox.network));
     bwrap.setProcessEnvironment(env);
     bwrap.setProcessChannelMode(QProcess::ForwardedChannels);
     bwrap.start();

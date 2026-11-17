@@ -52,6 +52,9 @@ public:
                              const QString &localFileName, const QString &cpuArch);
     // Whether an asset name fits the given CPU architecture (QSysInfo::currentCpuArchitecture()).
     static bool matchesArchitecture(const QString &assetName, const QString &cpuArch);
+    // The newest release's tag in a GitHub releases.atom feed (from the entry's link, else its
+    // id, else its title); empty when the feed has no entries.
+    static QString feedNewestTag(const QByteArray &atom);
 
 Q_SIGNALS:
     void checkFinished(ReleaseChecker::Result result,
@@ -60,6 +63,10 @@ Q_SIGNALS:
 private:
     void checkReleases(const QUrl &url, bool github);
     void checkAtomFeed();
+    // GitHub: the public release feed first (it doesn't count toward the API's 60 requests per
+    // hour); the API only when the feed shows a newer release, to find its download file.
+    void checkGithubFeedFirst(const QUrl &apiUrl);
+    bool isNewerThanInstalled(const QString &tag) const;
     void checkDirect(const QUrl &url);
     void finishWithTag(const QString &tag, const QString &url);
 

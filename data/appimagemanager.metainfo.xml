@@ -20,7 +20,7 @@
       <li>Open an AppImage with AppImage Manager from Dolphin to install it.</li>
       <li>Drag-and-drop support into a centralized dashboard.</li>
       <li>Extracts rich metadata, icons, and descriptions directly from the AppImages.</li>
-      <li>Source-agnostic architecture supporting custom JSON repository sources in the Discover settings.</li>
+      <li>Source-agnostic architecture supporting custom JSON repository sources in the Browse settings.</li>
       <li>Clean uninstallation by automatically scanning for leftover cache and configuration files.</li>
       <li>Built-in update system using zsync for efficient delta-patching.</li>
       <li>Background download monitoring to notify you when new AppImages are downloaded.</li>
@@ -67,6 +67,19 @@
   </content_rating>
 
   <releases>
+    <release version="2.3.0" date="2026-11-17">
+      <description>
+        <p>AppImages behave more like installed apps, and installing from catalogs works reliably.</p>
+        <ul>
+          <li>App menu entries carry the app's own file types, right-click actions, window class and translations, plus "Manage in AppImage Manager".</li>
+          <li>Installing from AppImage Hub finds the right AppImage in the project's releases instead of saving a web page; installed apps get that project as their update source.</li>
+          <li>pkgforge is the new default catalog, with direct downloads; AppImage Hub and AM can be switched on. ARM computers get their own lists.</li>
+          <li>Don't Update pins an app, and the sandbox can block network access.</li>
+          <li>GitHub update checks rarely count toward GitHub's request limit any more.</li>
+          <li>The Discover tab is now called Browse, the drop box lives in the overview, and the tray's update count is smaller.</li>
+        </ul>
+      </description>
+    </release>
     <release version="2.2.1" date="2026-11-17">
       <description>
         <p>A faster, tidier Discover page.</p>

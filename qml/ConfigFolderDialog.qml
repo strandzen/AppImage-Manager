@@ -22,7 +22,7 @@ Kirigami.Dialog {
 
     signal saved(bool enabled)
 
-    title: enabling ? i18n("Keep Settings in Applications?") : i18n("Keep Settings in ~/.config?")
+    title: enabling ? i18n("Keep Settings in “Applications”?") : i18n("Keep Settings in ~/.config?")
     padding: Kirigami.Units.largeSpacing
     standardButtons: Kirigami.Dialog.Cancel
     preferredWidth: Kirigami.Units.gridUnit * 26

@@ -27,6 +27,7 @@ PlasmoidItem {
     readonly property int stateNoSource: 3
     readonly property int stateFailed: 4
     readonly property int stateUpdating: 5
+    readonly property int statePinned: 6
 
     property var daemonState: ({ updateCount: 0, updatingCount: 0, checking: false, schedule: "", items: [] })
     // False until the background checker answers (D-Bus starts it on our first call).
@@ -37,8 +38,9 @@ PlasmoidItem {
     property bool notTrackedExpanded: false
     readonly property var rows: {
         const items = daemonState.items ?? []
-        const untracked = items.filter(item => item.state === stateNoSource)
-        const rows = items.filter(item => item.state !== stateNoSource)
+        // Pinned apps ("Don't Update") fold away with them.
+        const untracked = items.filter(item => item.state === stateNoSource || item.state === statePinned)
+        const rows = items.filter(item => item.state !== stateNoSource && item.state !== statePinned)
         if (untracked.length > 0) {
             rows.push({ header: true, count: untracked.length })
             if (notTrackedExpanded)
@@ -169,23 +171,26 @@ PlasmoidItem {
             active: compact.containsMouse
         }
 
-        // Update count, bottom right
-        Rectangle {
+        // Update count, top right: a small box just around the digits in the panel's own
+        // colours (as Apdatifier does), with a faint shadow to set it off the icon.
+        Kirigami.ShadowedRectangle {
             visible: root.updateCount > 0
             anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            height: Math.max(Kirigami.Units.iconSizes.small * 0.75, countLabel.implicitHeight)
-            width: Math.max(height, countLabel.implicitWidth + height / 2)
-            radius: height / 2
-            color: Kirigami.Theme.highlightColor
+            anchors.top: parent.top
+            height: Math.ceil(countLabel.contentHeight)
+            width: Math.max(height, Math.ceil(countLabel.contentWidth) + 2)
+            radius: 3
+            color: Qt.alpha(Kirigami.Theme.backgroundColor, 0.85)
+            shadow.size: 2
+            shadow.color: Qt.rgba(0, 0, 0, 0.4)
 
             PlasmaComponents3.Label {
                 id: countLabel
                 anchors.centerIn: parent
+                padding: 0
                 text: root.updateCount > 99 ? "99+" : root.updateCount
-                color: Kirigami.Theme.highlightedTextColor
-                font.pixelSize: Math.max(7, compact.height * 0.4)
-                font.bold: true
+                color: Kirigami.Theme.textColor
+                font.pixelSize: Math.max(7, Math.round(compact.height * 0.33))
             }
         }
     }
@@ -352,6 +357,7 @@ PlasmoidItem {
                                     case root.stateUpdating: return i18nd("appimagemanager", "Updating to %1…", d.newVersion)
                                     case root.stateUpToDate: return i18nd("appimagemanager", "Up to date")
                                     case root.stateNoSource: return i18nd("appimagemanager", "No update source")
+                                    case root.statePinned:   return i18ndc("appimagemanager", "app is never updated", "Pinned")
                                     case root.stateFailed:
                                         return d.reason ? i18nd("appimagemanager", "Check failed: %1", d.reason)
                                                         : i18nd("appimagemanager", "Check failed")

@@ -235,3 +235,21 @@ QString updateSourceWebUrl(const QString &updateInfo)
         return QStringLiteral("https://%1/%2/%3").arg(parts.at(1), parts.at(2), parts.at(3));
     return {};
 }
+
+bool isPinned(const QString &filePath)
+{
+    KSharedConfig::Ptr config = KSharedConfig::openConfig(QStringLiteral("appimagemanagerrc"));
+    config->reparseConfiguration();
+    return config->group(QStringLiteral("Pinned")).readEntry(QFileInfo(filePath).fileName(), false);
+}
+
+void setPinned(const QString &filePath, bool pinned)
+{
+    KSharedConfig::Ptr config = KSharedConfig::openConfig(QStringLiteral("appimagemanagerrc"));
+    KConfigGroup group = config->group(QStringLiteral("Pinned"));
+    if (pinned)
+        group.writeEntry(QFileInfo(filePath).fileName(), true);
+    else
+        group.deleteEntry(QFileInfo(filePath).fileName());
+    config->sync();
+}

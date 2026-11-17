@@ -33,6 +33,7 @@ public:
         NoSource = int(UpdateState::NoSource),
         Failed = int(UpdateState::Failed),
         Updating = int(UpdateState::Updating),
+        Pinned = int(UpdateState::Pinned),
     };
 
     struct Item {

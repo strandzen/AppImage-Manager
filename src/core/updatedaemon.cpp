@@ -418,10 +418,12 @@ void UpdateDaemon::applyMetadata(const QString &path, const AppImageInfo &info)
             QTimer::singleShot(kReadSettle, this, &UpdateDaemon::tick);
         }
     }
-    if (!isSupportedUpdateInfo(effectiveUpdateInfo(info.updateInfo, loadUpdateSource(path))))
+    if (isPinned(path))
+        item.state = TrayModel::Pinned;
+    else if (!isSupportedUpdateInfo(effectiveUpdateInfo(info.updateInfo, loadUpdateSource(path))))
         item.state = TrayModel::NoSource;
-    else if (item.state == TrayModel::NoSource)
-        item.state = TrayModel::NotChecked; // a source was set since
+    else if (item.state == TrayModel::NoSource || item.state == TrayModel::Pinned)
+        item.state = TrayModel::NotChecked; // a source was set, or the pin removed, since
 
     m_model->upsert(item);
 }
@@ -489,7 +491,19 @@ void UpdateDaemon::ReloadState()
     const auto results = loadCheckResults();
     KConfigGroup announced = stateGroup(QStringLiteral("TrayAnnounced"));
     for (const TrayModel::Item &item : QList<TrayModel::Item>(m_model->items())) {
-        if (item.state == TrayModel::Updating || item.state == TrayModel::NoSource)
+        if (item.state == TrayModel::Updating)
+            continue;
+        // Pinned or un-pinned in the main window.
+        if (isPinned(item.path)) {
+            if (item.state != TrayModel::Pinned)
+                m_model->setState(item.path, TrayModel::Pinned, {}, {}, {});
+            continue;
+        }
+        if (item.state == TrayModel::Pinned) {
+            const bool source = isSupportedUpdateInfo(effectiveUpdateInfo(item.updateInfo, loadUpdateSource(item.path)));
+            m_model->setState(item.path, source ? TrayModel::NotChecked : TrayModel::NoSource, {}, {}, {});
+        }
+        if (item.state == TrayModel::NoSource)
             continue;
         const QString key = QFileInfo(item.path).fileName();
         const auto it = results.constFind(key);

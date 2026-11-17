@@ -11,6 +11,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QProcess>
 #include <QStandardPaths>
 #include <QTest>
 #include <QThread>
@@ -129,6 +130,69 @@ private Q_SLOTS:
         QCOMPARE(grp.readEntry("Comment", QString()), QStringLiteral("Design tool"));
         QCOMPARE(grp.readEntry("StartupWMClass", QString()), QStringLiteral("ai.storyteller.figcraft"));
         QVERIFY(!grp.readEntry("MimeType", QString()).isEmpty());
+    }
+
+    // Our own entry carries the app's file types, translations and actions (from its
+    // embedded .desktop) plus our "Manage in AppImage Manager" action.
+    void copiesAppEntry()
+    {
+        AppImageInfo i = info(QStringLiteral("ai.storyteller.figcraft"));
+        i.desktopEntry = QStringLiteral(
+            "[Desktop Entry]\nType=Application\nName=FigCraft\nName[de]=FigCraft Entwurf\n"
+            "Comment=Design tool\nComment[de]=Entwurfswerkzeug\nKeywords=design;svg;\n"
+            "MimeType=image/svg+xml;\nStartupWMClass=figcraft\nExec=AppRun %U\nIcon=figcraft\n"
+            "Actions=new-window;missing;\n\n"
+            "[Desktop Action new-window]\nName=New Window\nName[de]=Neues Fenster\nExec=AppRun --new-window %U\n");
+        const QString path = m_apps + QStringLiteral("/ai.storyteller.figcraft.desktop");
+
+        // Twice: rewriting must not duplicate the copied lines.
+        for (int run = 0; run < 2; ++run) {
+            QVERIFY(AppImageManager::createDesktopLink(m_appImage, i));
+            QVERIFY(!AppImageManager::desktopLinkOutdated(i));
+        }
+        QFile f(path);
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        const QString text = QString::fromUtf8(f.readAll());
+        QCOMPARE(text.count(QStringLiteral("Name[de]=FigCraft Entwurf")), 1);
+        QCOMPARE(text.count(QStringLiteral("Comment[de]=Entwurfswerkzeug")), 1);
+
+        KDesktopFile df(path);
+        const KConfigGroup grp = df.desktopGroup();
+        QCOMPARE(grp.readEntryUntranslated("Name", QString()), QStringLiteral("FigCraft"));
+        QCOMPARE(grp.readEntryUntranslated("Comment", QString()), QStringLiteral("Design tool"));
+        QCOMPARE(grp.readEntry("MimeType", QString()), QStringLiteral("image/svg+xml;"));
+        QCOMPARE(grp.readEntry("StartupWMClass", QString()), QStringLiteral("figcraft"));
+        // The action without a group is dropped; ours is added.
+        QCOMPARE(grp.readEntry("Actions", QString()), QStringLiteral("new-window;appimagemanager-manage;"));
+        const QString actionExec = df.group(QStringLiteral("Desktop Action new-window")).readEntry("Exec", QString());
+        QVERIFY(actionExec.contains(m_appImage));
+        QVERIFY(actionExec.endsWith(QLatin1String("--new-window %U")));
+        QCOMPARE(df.group(QStringLiteral("Desktop Action appimagemanager-manage")).readEntry("Exec", QString()),
+                 QStringLiteral("appimagemanager --select ") + m_appImage);
+
+        // A valid desktop file, when the validator is installed.
+        const QString validator = QStandardPaths::findExecutable(QStringLiteral("desktop-file-validate"));
+        if (!validator.isEmpty()) {
+            QProcess p;
+            p.start(validator, { path });
+            QVERIFY(p.waitForFinished());
+            QVERIFY2(p.exitCode() == 0, p.readAllStandardOutput().constData());
+        }
+    }
+
+    // An entry written before 2.3 (our comment, no marker) is reported for a rewrite once.
+    void outdatedEntryRewritten()
+    {
+        const AppImageInfo i = info(QStringLiteral("ai.storyteller.figcraft"));
+        writeEntry(QStringLiteral("ai.storyteller.figcraft.desktop"), QLatin1Char('"') + m_appImage + QStringLiteral("\" %U"),
+                   QStringLiteral("Comment=Managed by AppImage Manager\n"));
+        QVERIFY(AppImageManager::desktopLinkOutdated(i));
+        QVERIFY(AppImageManager::createDesktopLink(m_appImage, i));
+        QVERIFY(!AppImageManager::desktopLinkOutdated(i));
+        // An entry the app wrote itself is never "outdated" (we don't own it).
+        writeEntry(QStringLiteral("ai.storyteller.figcraft.desktop"), QStringLiteral("\"/old/figcraft.AppImage\" %U"),
+                   QStringLiteral("Comment=Design tool\n"));
+        QVERIFY(!AppImageManager::desktopLinkOutdated(i));
     }
 
     void removeTakesEveryEntry()

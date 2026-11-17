@@ -54,7 +54,7 @@ void AppImageUpdateManager::checkForUpdates(const QList<CheckItem> &items)
     m_checkQueue.clear();
     for (CheckItem item : items) {
         item.updateInfo = effectiveUpdateInfo(item.updateInfo, loadUpdateSource(item.filePath));
-        if (isSupportedUpdateInfo(item.updateInfo))
+        if (isSupportedUpdateInfo(item.updateInfo) && !isPinned(item.filePath))
             m_checkQueue.enqueue(item);
     }
 

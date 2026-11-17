@@ -73,7 +73,7 @@ int TrayModel::group(const Item &item)
 {
     if (item.state == UpdateAvailable || item.state == Updating)
         return 0;
-    return item.state == NoSource ? 2 : 1;
+    return item.state == NoSource || item.state == Pinned ? 2 : 1;
 }
 
 bool TrayModel::lessThan(const Item &a, const Item &b)

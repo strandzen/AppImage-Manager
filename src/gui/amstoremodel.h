@@ -21,6 +21,7 @@ struct StoreApp {
     QString downloadUrl;
     QString author;
     QString license;
+    QString repoUrl;      // the project's releases, when the download is a copy of them (update source)
     bool hasAmScript = false;
     bool hasFeedData = false;
     QStringList sourceIds;
@@ -47,6 +48,10 @@ class AMStoreModel : public QAbstractListModel {
     Q_PROPERTY(int storeSource READ storeSource WRITE setStoreSource NOTIFY storeSourceChanged)
     Q_PROPERTY(QStringList availableCategories READ availableCategories NOTIFY availableCategoriesChanged)
     Q_PROPERTY(QVariantList sources READ sources NOTIFY sourcesChanged)
+    // AM or AppMan is installed (looked up at start): AM-only apps need it.
+    Q_PROPERTY(bool amInstalled READ amInstalled CONSTANT)
+    // Where AM's install scripts for this computer's CPU are browsable.
+    Q_PROPERTY(QString amScriptBase READ amScriptBase CONSTANT)
 
 public:
     enum StoreRoles {
@@ -89,6 +94,8 @@ public:
 
     QStringList availableCategories() const { return m_availableCategories; }
     QVariantList sources() const;
+    bool amInstalled() const { return m_amInstalled; }
+    QString amScriptBase() const;
 
     Q_INVOKABLE void initialize();   // call once when Discover page first opens
     Q_INVOKABLE void sync();
@@ -121,6 +128,9 @@ private Q_SLOTS:
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
 
 private:
+    void failInstall(const QString &packageName, const QString &message);
+    void resolveAndDownload(const StoreApp &app);
+    void startDownload(const QString &packageName, const QUrl &url, const QString &repoPage);
     void load(bool forceNetwork);
     void loadSources();
     void saveSources();
@@ -134,6 +144,8 @@ private:
     static QVector<StoreApp> parseAmDatabaseSync(const QString &rawText);
     static QVector<StoreApp> parseFeedJsonSync(const QByteArray &data);
     static QVector<StoreApp> parseUniversalJsonSync(const QByteArray &data);
+    // pkgforge's package list (the catalog behind Soar): its AppImages only.
+    static QVector<StoreApp> parsePkgforgeJsonSync(const QByteArray &data);
     static QString cleanName(const QString &packageName);
 
     QNetworkAccessManager *m_nam;
@@ -158,6 +170,7 @@ private:
     bool m_isInstalling;
     int m_installStage;
     QProcess *m_process;
+    bool m_amInstalled;
     QString m_activePackage;
 
     QString m_cacheDir;

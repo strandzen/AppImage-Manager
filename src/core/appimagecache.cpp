@@ -22,7 +22,8 @@
 //   3 — added developerName, homepage
 //   4 — migrated storage from QSettings INI to SQLite
 //   5 — appId no longer truncated at the first dot (re-read every AppImage once)
-static constexpr int kCacheVersion = 5;
+//   6 — added desktopEntry (the app's own .desktop text)
+static constexpr int kCacheVersion = 6;
 
 static QString cacheDbPath()
 {
@@ -86,10 +87,13 @@ static QSqlDatabase connectionForCurrentThread(const QString &dbPath)
                     file_size     INTEGER,
                     icon_ext      TEXT,
                     update_info   TEXT,
+                    desktop_entry TEXT,
                     icon_data     BLOB,
                     is_valid      INTEGER DEFAULT 0
                 )
             )"));
+            // Databases from before version 6 lack this column (fails harmlessly when present).
+            q.exec(QStringLiteral("ALTER TABLE metadata ADD COLUMN desktop_entry TEXT"));
         }
     }
     return QSqlDatabase::database(name, false);
@@ -122,7 +126,7 @@ AppImageInfo AppImageCache::load(const QString &path, qint64 mtime)
     q.prepare(QStringLiteral(
         "SELECT cache_version, mtime, original_name, clean_name, app_id, app_name, "
         "       version, categories, comment, description, developer_name, homepage, "
-        "       exec_args, file_size, icon_ext, update_info, icon_data, is_valid "
+        "       exec_args, file_size, icon_ext, update_info, icon_data, is_valid, desktop_entry "
         "FROM metadata WHERE key = ?"));
     q.addBindValue(keyFor(path));
     if (!q.exec()) {
@@ -151,6 +155,7 @@ AppImageInfo AppImageCache::load(const QString &path, qint64 mtime)
     info.updateInfo    = q.value(15).toString();
     info.iconData      = q.value(16).toByteArray();   // stored as BLOB, no base64 needed
     info.isValid       = q.value(17).toBool();
+    info.desktopEntry  = q.value(18).toString();
     return info;
 }
 
@@ -167,8 +172,8 @@ void AppImageCache::store(const QString &path, qint64 mtime, const AppImageInfo 
         "INSERT OR REPLACE INTO metadata "
         "(key, mtime, cache_version, original_name, clean_name, app_id, app_name, "
         " version, categories, comment, description, developer_name, homepage, "
-        " exec_args, file_size, icon_ext, update_info, icon_data, is_valid) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"));
+        " exec_args, file_size, icon_ext, update_info, icon_data, is_valid, desktop_entry) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"));
     q.addBindValue(keyFor(path));
     q.addBindValue(mtime);
     q.addBindValue(kCacheVersion);
@@ -188,6 +193,7 @@ void AppImageCache::store(const QString &path, qint64 mtime, const AppImageInfo 
     q.addBindValue(info.updateInfo);
     q.addBindValue(info.iconData);   // QByteArray → BLOB, no base64 overhead
     q.addBindValue(info.isValid ? 1 : 0);
+    q.addBindValue(info.desktopEntry);
     if (!q.exec())
         qCWarning(AIM_LOG) << "AppImageCache: store failed:" << q.lastError().text();
 }

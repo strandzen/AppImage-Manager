@@ -65,9 +65,13 @@ Kirigami.ApplicationWindow {
 
     function showTab(page) { currentPage = page; lastTab = page }
 
-    // From DashboardWindow::open(): `appimagemanager --settings` / `--select <path>` (the tray uses these).
+    // From DashboardWindow::open(): `appimagemanager --settings` / `--select <path>` (the tray uses
+    // these) / `--welcome` (the welcome page again; it leaves Browse as it is after the first run).
     function openRequest(page, path) {
-        if (page === "settings") {
+        if (page === "welcome") {
+            if (!onboardingDialog.visible)
+                onboardingDialog.open()
+        } else if (page === "settings") {
             showSubPage(pageSettings)
         } else if (path) {
             showTab(pageInstalled)
@@ -121,8 +125,8 @@ Kirigami.ApplicationWindow {
 
                 Controls.ToolButton {
                     visible: !root.onSubPage
-                    icon.name: "plasma-discover"
-                    text: i18n("Discover")
+                    icon.name: "globe"
+                    text: i18nc("tab: browse online app catalogs", "Browse")
                     checkable: true
                     checked: root.currentPage === root.pageDiscover
                     onClicked: root.showTab(root.pageDiscover)

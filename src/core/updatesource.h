@@ -30,6 +30,9 @@ APPIMAGEMANAGER_EXPORT UpdateSource loadUpdateSource(const QString &filePath);
 // source forgets installedTag, since it belonged to the old source.
 APPIMAGEMANAGER_EXPORT void saveUpdateSource(const QString &filePath, const UpdateSource &source);
 APPIMAGEMANAGER_EXPORT void saveInstalledTag(const QString &filePath, const QString &tag);
+// Pinned ("Don't Update"): never checked or offered updates. [Pinned][<file name>] in appimagemanagerrc.
+APPIMAGEMANAGER_EXPORT bool isPinned(const QString &filePath);
+APPIMAGEMANAGER_EXPORT void setPinned(const QString &filePath, bool pinned);
 
 // Turns what the user typed into a source. `forced` None auto-detects:
 //   "owner/repo" or a github.com URL        → GitHub

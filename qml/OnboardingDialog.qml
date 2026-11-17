@@ -113,21 +113,36 @@ Kirigami.Dialog {
 
             Controls.CheckBox {
                 Layout.fillWidth: true
-                text: i18n("Enable Discover to search online app catalogs")
+                text: i18n("Turn on Browse to search online app catalogs")
                 checked: AppSettings.discoverEnabled
                 onToggled: AppSettings.discoverEnabled = checked
             }
 
             Repeater {
                 model: amStoreModel.sources
-                Controls.CheckBox {
+                ColumnLayout {
                     required property var modelData
-                    text: modelData.name
-                    checked: modelData.enabled
-                    enabled: AppSettings.discoverEnabled
                     Layout.leftMargin: Kirigami.Units.gridUnit * 1.5
-                    onToggled: amStoreModel.updateSource(modelData.id, modelData.name,
-                                                         modelData.url, modelData.type, checked)
+                    Layout.fillWidth: true
+                    spacing: 0
+                    Controls.CheckBox {
+                        text: modelData.name
+                        checked: modelData.enabled
+                        enabled: AppSettings.discoverEnabled && (modelData.available ?? true)
+                        onToggled: amStoreModel.updateSource(modelData.id, modelData.name,
+                                                             modelData.url, modelData.type, checked)
+                    }
+                    // AppImage Hub's and AM's notes (and "not for this processor").
+                    Controls.Label {
+                        visible: text !== ""
+                        text: modelData.note ?? ""
+                        wrapMode: Text.WordWrap
+                        font: Kirigami.Theme.smallFont
+                        color: Kirigami.Theme.disabledTextColor
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 0
+                        Layout.leftMargin: Kirigami.Units.gridUnit * 1.5
+                    }
                 }
             }
         }

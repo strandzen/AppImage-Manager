@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## 2.3.0 - 2026-11-17
+
+### Added
+- Browse has a new built-in catalog, pkgforge (the catalog behind the Soar package manager): AppImages with categories, licenses and icons that download directly. It is the default catalog for new installs (and after Reset Catalogs); AppImage Hub (more apps) and AM (needs AM or AppMan) are there to switch on, each with a note saying what to expect. Existing catalog lists keep what they had and get pkgforge added once. Add Catalog also offers the pkgforge format.
+- On ARM (aarch64) computers, the pkgforge and AM catalogs load their aarch64 lists; on other processors they're marked as not available.
+- Apps that need AM show a disabled "Needs AM" button when AM isn't installed, and apps that are also on AppImage Hub download from there instead.
+- Apps installed from pkgforge that are copies of the project's own releases get that repository as their update source.
+- `appimagemanager --welcome` shows the welcome page again, also in a window that is already open.
+- App menu entries now carry the app's own details: the file types it opens (so it shows up in Open With), its right-click actions (such as New Window) in the menu and task manager, the window class the task manager uses to group its windows, search keywords, and its name and description in every language it ships. Entries written by earlier versions are updated once, automatically.
+- Every app's right-click menu in the launcher has "Manage in AppImage Manager", which opens its page here.
+- ⋯ → Don't Update pins an app: it is never checked or offered updates (also not by Update All or the tray). Pinned apps show "Pinned" and have their own line in the overview.
+- Sandbox: "Allow network access" can be turned off per app; it then has no network at all. Details say "On · no network".
+
+### Fixed
+- Installing from Browse with AppImage Hub (and AM apps when `am` isn't installed) saved the project's web page as the app instead of the AppImage: AppImage Hub almost always links to a GitHub releases page. Browse now finds the latest release's AppImage for your computer there (also on Codeberg, Forgejo and Gitea), refuses links that lead to a web page, and only installs files that really are AppImages.
+- Apps installed from Browse through a repository get it as their update source when the AppImage doesn't name one itself, so they are checked for updates.
+
+### Changed
+- The drop box moved from under the Installed list into the overview, where it grows with the window; the list uses the full height again. Settings → General → Drop zone now reads "Show in the overview".
+- The ⋯ menu's switches have icons too (Show in App Menu, Don't Update, Keep Settings in “Applications”), and the latter is now written with the folder name in quotes.
+- The Discover tab is now called Browse (with a globe icon), so it isn't confused with KDE's Discover. Its settings page and the welcome page say Browse too.
+- English only for now: the machine-made translation drafts were never shown (they're marked as unchecked) and are set aside in `po-drafts/` until someone reviews them.
+- Checking GitHub apps for updates mostly no longer counts toward GitHub's limit of 60 requests per hour: the public release feed is read first, and GitHub's API is only asked when there is a newer release, to find its download.
+- The update count on the tray icon is smaller and quieter: a small box in the panel's colours at the top right, instead of a large blue bubble.
+
 ## 2.2.1 - 2026-11-17
 
 ### Changed

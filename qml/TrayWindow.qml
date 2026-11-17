@@ -18,6 +18,7 @@ Window {
     readonly property int stateNoSource: 3
     readonly property int stateFailed: 4
     readonly property int stateUpdating: 5
+    readonly property int statePinned: 6
 
     readonly property bool busy: trayModel.checking || trayModel.updatingCount > 0
 
@@ -35,8 +36,9 @@ Window {
     property bool notTrackedExpanded: false
     readonly property var rows: {
         const items = daemonState.items ?? []
-        const untracked = items.filter(item => item.state === stateNoSource)
-        const rows = items.filter(item => item.state !== stateNoSource)
+        // Pinned apps ("Don't Update") fold away with them.
+        const untracked = items.filter(item => item.state === stateNoSource || item.state === statePinned)
+        const rows = items.filter(item => item.state !== stateNoSource && item.state !== statePinned)
         if (untracked.length > 0) {
             rows.push({ header: true, count: untracked.length })
             if (notTrackedExpanded)
@@ -176,6 +178,7 @@ Window {
                                 case root.stateUpdating:     return i18n("Updating to %1…", d.newVersion)
                                 case root.stateUpToDate:     return i18n("Up to date")
                                 case root.stateNoSource:     return i18n("No update source")
+                                case root.statePinned:       return i18nc("app is never updated", "Pinned")
                                 case root.stateFailed:
                                     return d.reason ? i18n("Check failed: %1", d.reason) : i18n("Check failed")
                                 default:                     return i18n("Not checked yet")

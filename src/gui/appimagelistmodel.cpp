@@ -202,7 +202,7 @@ AppImageListModel::AppImageListModel(AppImageIconProvider *iconProvider, QObject
 
 void AppImageListModel::recountUpdates()
 {
-    int updates = 0, upToDate = 0, failed = 0, notChecked = 0, noSource = 0;
+    int updates = 0, upToDate = 0, failed = 0, notChecked = 0, noSource = 0, pinned = 0;
     qint64 size = 0;
     for (const Item &item : std::as_const(m_items)) {
         size += item.info.fileSize;
@@ -211,15 +211,17 @@ void AppImageListModel::recountUpdates()
         case UpdateState::UpToDate:        ++upToDate; break;
         case UpdateState::Failed:          ++failed; break;
         case UpdateState::NoSource:        ++noSource; break;
+        case UpdateState::Pinned:          ++pinned; break;
         default:                           ++notChecked; break;
         }
     }
     if (upToDate != m_upToDateCount || failed != m_failedCount || notChecked != m_notCheckedCount
-        || noSource != m_noSourceCount || size != m_totalSize) {
+        || noSource != m_noSourceCount || pinned != m_pinnedCount || size != m_totalSize) {
         m_upToDateCount = upToDate;
         m_failedCount = failed;
         m_notCheckedCount = notChecked;
         m_noSourceCount = noSource;
+        m_pinnedCount = pinned;
         m_totalSize = size;
         Q_EMIT stateSummaryChanged();
     }
@@ -270,6 +272,7 @@ int AppImageListModel::statusRank(int row) const
     case UpdateState::Failed:     return 1;
     case UpdateState::UpToDate:   return 2;
     case UpdateState::NoSource:   return 4;
+    case UpdateState::Pinned:     return 5;
     default:                      return 3;
     }
 }
@@ -290,6 +293,10 @@ void AppImageListModel::applyStoredResult(Item &item) const
     if (!item.metadataLoaded || item.isUpdating)
         return;
     item.updateReason.clear();
+    if (isPinned(item.filePath)) {
+        item.updateState = int(UpdateState::Pinned);
+        return;
+    }
     if (!isSupportedUpdateInfo(effectiveUpdateInfo(item.info.updateInfo, loadUpdateSource(item.filePath)))) {
         item.updateState = int(UpdateState::NoSource);
         return;
@@ -512,6 +519,7 @@ QString AppImageListModel::listSection(const Item &item) const
         case UpdateState::Failed:   return i18nc("list section", "Check failed");
         case UpdateState::UpToDate: return i18nc("list section", "Up to date");
         case UpdateState::NoSource: return i18nc("list section", "No update source");
+        case UpdateState::Pinned:   return i18nc("list section", "Pinned");
         default:                    return i18nc("list section", "Not checked yet");
         }
     }
@@ -770,6 +778,9 @@ void AppImageListModel::applyMetadata(int row, const AppImageInfo &info)
     // Drop our own entry when the app (or its launcher) wrote one for the same AppImage.
     AppImageManager::removeDuplicateDesktopLinks(path, item.info);
     item.hasDesktopLink = AppImageManager::isDesktopLinkEnabled(path, item.info);
+    // Entries from before 2.3 lack the app's file types, actions and translations.
+    if (item.hasDesktopLink && AppImageManager::desktopLinkOutdated(item.info))
+        AppImageManager::createDesktopLink(path, item.info);
     item.metadataLoaded = true;
     item.cachedFormattedSize = formatBytes(info.fileSize);
     item.cachedDisplayName   = computeDisplayName(item);
@@ -972,18 +983,19 @@ QVariantMap AppImageListModel::sandbox(int row) const
     return {
         { QStringLiteral("enabled"), settings.enabled },
         { QStringLiteral("folders"), settings.folders },
+        { QStringLiteral("network"), settings.network },
         { QStringLiteral("available"), sandboxAvailable() },
         { QStringLiteral("settingsFolder"), folder },
     };
 }
 
-void AppImageListModel::setSandbox(int row, bool enabled, const QStringList &folders)
+void AppImageListModel::setSandbox(int row, bool enabled, const QStringList &folders, bool network)
 {
     if (row < 0 || row >= m_items.size()) return;
     const Item &item = m_items.at(row);
     if (enabled && configFolderName(item.filePath).isEmpty())
         setConfigFolderName(item.filePath, defaultConfigFolderName(item.filePath));
-    saveSandbox(item.filePath, { enabled, folders });
+    saveSandbox(item.filePath, { enabled, folders, network });
     // The app menu entry starts it through appimagemanager --run when sandboxed: rewrite it.
     if (item.hasDesktopLink)
         AppImageManager::createDesktopLink(item.filePath, item.info);
@@ -1102,6 +1114,24 @@ bool AppImageListModel::setUpdateSource(int row, const QString &input, const QSt
                        {UpdateStateRole, UpdateReasonRole, UpdateAvailableRole, UpdateVersionRole, ListSectionRole});
     notifyDaemon();
     return true;
+}
+
+void AppImageListModel::setPinned(int row, bool pinned)
+{
+    if (row < 0 || row >= m_items.size()) return;
+    Item &item = m_items[row];
+    if (item.isUpdating) return;
+    ::setPinned(item.filePath, pinned);
+    // A waiting update is forgotten when pinning; un-pinned, the app is "not checked yet".
+    item.updateVersion.clear();
+    item.updateUrl.clear();
+    m_results.remove(item.info.originalName);
+    saveCheckResult(item.info.originalName, {});
+    applyStoredResult(item);
+    Q_EMIT dataChanged(index(row, 0), index(row, 0),
+                       {UpdateStateRole, UpdateReasonRole, UpdateAvailableRole, UpdateVersionRole, ListSectionRole});
+    recountUpdates();
+    notifyDaemon();
 }
 
 void AppImageListModel::downloadUpdate(int row)
@@ -1225,6 +1255,8 @@ QVariantMap AppImageListModel::itemData(int row) const
         { QStringLiteral("configFolder"),    configFolderPath(item.filePath)               },
         { QStringLiteral("hasPrevious"),     hasPrevious(item.filePath)                    },
         { QStringLiteral("sandboxed"),       loadSandbox(item.filePath).enabled            },
+        { QStringLiteral("sandboxNetwork"),  loadSandbox(item.filePath).network            },
+        { QStringLiteral("pinned"),          item.updateState == int(UpdateState::Pinned) },
         { QStringLiteral("signatureState"),  item.signatureState                           },
         { QStringLiteral("signatureKey"),    item.signatureKey                             },
         { QStringLiteral("previousVersion"), previousVersion(item.filePath)                },

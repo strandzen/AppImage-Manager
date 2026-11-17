@@ -7,14 +7,16 @@
 
 // Running an AppImage in a bubblewrap sandbox. The system folders are read-only, the home
 // folder is empty except for the app's settings folder (Applications/.config/<app>, also its
-// data and cache) and the folders the user gave it; display, sound, network and the session
+// data and cache) and the folders the user gave it; display, sound, network (unless turned off) and the session
 // bus stay available. The AppImage is mounted outside (its own --appimage-mount) and its
 // AppRun started inside: `appimagemanager --run <file>` does both and waits.
-// Stored in appimagemanagerrc [Sandbox][<file name>]: Enabled (absent = follow sandboxAll), Folders.
+// Stored in appimagemanagerrc [Sandbox][<file name>]: Enabled (absent = follow sandboxAll), Folders,
+// Network (absent = allowed).
 
 struct SandboxSettings {
     bool enabled = false;
     QStringList folders;  // extra folders it may read and write
+    bool network = true;  // off: no network at all (its own empty network namespace)
 };
 
 APPIMAGEMANAGER_EXPORT SandboxSettings loadSandbox(const QString &filePath);
@@ -32,7 +34,7 @@ APPIMAGEMANAGER_EXPORT QStringList sharedSandboxFolders();
 APPIMAGEMANAGER_EXPORT QStringList sandboxArguments(const QString &appImage, const QString &mountPoint,
                                                     const QString &settingsFolder, const QStringList &folders,
                                                     const QString &home, const QString &runtimeDir,
-                                                    const QStringList &args = {});
+                                                    const QStringList &args = {}, bool network = true);
 
 // `appimagemanager --run <file> [args]`: starts the AppImage the way its settings say
 // (sandboxed or not, with its environment) and waits for it. Returns its exit code.

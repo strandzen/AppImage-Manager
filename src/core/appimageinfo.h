@@ -38,6 +38,9 @@ struct AppImageInfo {
     QByteArray iconData;
     QString iconExt;
     QString updateInfo;
+    // The app's own embedded .desktop file, as text: its keys (MimeType, Actions,
+    // translations, …) are copied into our app menu entry.
+    QString desktopEntry;
     bool isValid = false;
 };
 

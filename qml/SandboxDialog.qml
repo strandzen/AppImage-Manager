@@ -35,7 +35,7 @@ Kirigami.Dialog {
             icon.name: "document-save"
             enabled: dialog.proxyRow >= 0 && (dialog.available || !enabledSwitch.checked)
             onTriggered: {
-                proxyModel.setSandbox(dialog.proxyRow, enabledSwitch.checked, dialog.folders)
+                proxyModel.setSandbox(dialog.proxyRow, enabledSwitch.checked, dialog.folders, networkSwitch.checked)
                 dialog.saved(enabledSwitch.checked)
                 dialog.close()
             }
@@ -50,6 +50,7 @@ Kirigami.Dialog {
         settingsFolder = info.settingsFolder
         folders = info.folders
         enabledSwitch.checked = info.enabled
+        networkSwitch.checked = info.network ?? true
         open()
     }
 
@@ -95,8 +96,15 @@ Kirigami.Dialog {
             Layout.preferredWidth: 0
             wrapMode: Text.WordWrap
             color: Kirigami.Theme.disabledTextColor
-            text: i18n("%1 sees only its own folder (%2) and the folders below; the rest of your home folder and other drives are hidden. Display, sound and network keep working.",
+            text: i18n("%1 sees only its own folder (%2) and the folders below; the rest of your home folder and other drives are hidden. Display and sound keep working.",
                        dialog.appName, dialog.tilde(dialog.settingsFolder))
+        }
+
+        Controls.Switch {
+            id: networkSwitch
+            text: i18n("Allow network access")
+            enabled: enabledSwitch.checked
+            checked: true
         }
 
         Kirigami.ListSectionHeader {

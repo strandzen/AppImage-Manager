@@ -162,6 +162,7 @@ AppImageInfo AppImageReader::readInternal()
 
     // Read .desktop file into a temporary file for KDesktopFile parsing
     const QByteArray desktopData = readFileFromAppImage(desktopInner);
+    info.desktopEntry = QString::fromUtf8(desktopData);
     if (!desktopData.isEmpty()) {
         QTemporaryDir tmp;
         if (tmp.isValid()) {

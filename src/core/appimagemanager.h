@@ -27,6 +27,9 @@ namespace AppImageManager {
 
     bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info);
     bool removeDesktopLink(const QString &appImagePath, const AppImageInfo &info);
+    // Our own entry was written before it carried the app's own keys (file types, actions,
+    // translations): rewrite it once with createDesktopLink().
+    bool desktopLinkOutdated(const AppImageInfo &info);
     // True when any visible entry in ~/.local/share/applications starts the AppImage,
     // including ones the app or its vendor launcher wrote itself.
     bool isDesktopLinkEnabled(const QString &appImagePath, const AppImageInfo &info);

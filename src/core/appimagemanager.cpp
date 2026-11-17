@@ -17,6 +17,7 @@
 #include <QFileInfo>
 #include <QDateTime>
 #include <QIcon>
+#include <QMap>
 #include <QMultiHash>
 #include <QMutex>
 #include <QProcess>
@@ -104,6 +105,94 @@ void refreshMenuCaches()
     AppImageManager::rebuildSycoca();
     QProcess::startDetached(QStringLiteral("update-desktop-database"), { applicationsDir() });
 }
+
+// The app's own .desktop text, group by group: raw "key=value" lines (escapes untouched,
+// so they can be copied into our entry verbatim) in file order.
+using RawGroups = QMap<QString, QList<std::pair<QString, QString>>>;
+
+RawGroups parseDesktopText(const QString &text)
+{
+    RawGroups groups;
+    QString group;
+    for (const QString &rawLine : text.split(QLatin1Char('\n'))) {
+        const QString line = rawLine.trimmed();
+        if (line.isEmpty() || line.startsWith(QLatin1Char('#')))
+            continue;
+        if (line.startsWith(QLatin1Char('[')) && line.endsWith(QLatin1Char(']'))) {
+            group = line.mid(1, line.size() - 2);
+            continue;
+        }
+        const qsizetype eq = line.indexOf(QLatin1Char('='));
+        if (eq <= 0 || group.isEmpty())
+            continue;
+        groups[group].append({ line.left(eq).trimmed(), line.mid(eq + 1).trimmed() });
+    }
+    return groups;
+}
+
+// "Name[de]" → "Name"
+QString baseKey(const QString &key)
+{
+    const qsizetype bracket = key.indexOf(QLatin1Char('['));
+    return bracket < 0 ? key : key.left(bracket);
+}
+
+QString rawValue(const QList<std::pair<QString, QString>> &lines, const QString &key)
+{
+    for (const auto &[k, v] : lines) {
+        if (k == key)
+            return v;
+    }
+    return {};
+}
+
+// A desktop-entry string value with its escapes (\s \n \t \r \\) resolved.
+QString unescapeDesktopValue(const QString &value)
+{
+    QString out;
+    out.reserve(value.size());
+    for (qsizetype i = 0; i < value.size(); ++i) {
+        const QChar c = value.at(i);
+        if (c != QLatin1Char('\\') || i + 1 >= value.size()) {
+            out += c;
+            continue;
+        }
+        const QChar n = value.at(++i);
+        if (n == QLatin1Char('s')) out += QLatin1Char(' ');
+        else if (n == QLatin1Char('n')) out += QLatin1Char('\n');
+        else if (n == QLatin1Char('t')) out += QLatin1Char('\t');
+        else if (n == QLatin1Char('r')) out += QLatin1Char('\r');
+        else if (n == QLatin1Char('\\')) out += QLatin1Char('\\');
+        else { out += c; out += n; }
+    }
+    return out;
+}
+
+// The arguments of an Exec= line after the program: quoted again, field codes (%U, %f, …) kept.
+QString execArguments(const QString &exec)
+{
+    const QStringList parts = KShell::splitArgs(unescapeDesktopValue(exec));
+    QStringList args;
+    for (qsizetype i = 1; i < parts.size(); ++i)
+        args << (parts.at(i).startsWith(QLatin1Char('%')) ? parts.at(i) : KShell::quoteArg(parts.at(i)));
+    return args.join(QLatin1Char(' '));
+}
+
+// Keys of the app's [Desktop Entry] copied into our entry, with their translations.
+bool isCopiedEntryKey(const QString &base)
+{
+    static const QSet<QString> keys = {
+        QStringLiteral("Name"), QStringLiteral("GenericName"), QStringLiteral("Comment"),
+        QStringLiteral("Keywords"), QStringLiteral("MimeType"), QStringLiteral("StartupWMClass"),
+        QStringLiteral("StartupNotify"),
+    };
+    return keys.contains(base);
+}
+
+// Marks entries written with the app's own keys; older ones are rewritten once.
+constexpr int kEntryFormat = 2;
+const char kEntryFormatKey[] = "X-AppImageManager-Entry";
+const char kManageAction[] = "appimagemanager-manage";
 
 } // anonymous namespace
 
@@ -222,25 +311,105 @@ bool createDesktopLink(const QString &appImagePath, const AppImageInfo &info)
 
     const QString iconField = QIcon::hasThemeIcon(info.appId) ? info.appId : (QStringLiteral("appimage_") + fileKey(info));
 
-    // When the app already wrote this file (same desktop id), its other keys (MimeType,
-    // StartupWMClass, translations, Keywords) are kept.
+    // An entry we wrote (named appimage_*, or carrying our marker, or our old comment) is
+    // rewritten from scratch; one the app wrote itself under the same id keeps its own keys,
+    // only Exec and our action change.
+    bool ownEntry = !QFile::exists(desktopPath)
+                    || QFileInfo(desktopPath).fileName().startsWith(QLatin1String("appimage_"));
+    if (!ownEntry) {
+        const KDesktopFile existing(desktopPath);
+        const KConfigGroup grp = existing.desktopGroup();
+        const QString comment = grp.readEntryUntranslated("Comment", QString());
+        ownEntry = grp.hasKey(kEntryFormatKey) || comment == QLatin1String("Managed by AppImage Manager")
+                   || comment == i18n("Managed by AppImage Manager");
+    }
+    if (ownEntry)
+        QFile::remove(desktopPath);
+
+    const RawGroups app = parseDesktopText(info.desktopEntry);
+    const auto appEntry = app.value(QStringLiteral("Desktop Entry"));
+    // The app's actions (right-click items in the menu and task manager) with known groups.
+    QStringList appActions;
+    if (ownEntry) {
+        for (const QString &id : rawValue(appEntry, QStringLiteral("Actions")).split(QLatin1Char(';'), Qt::SkipEmptyParts)) {
+            if (app.contains(QStringLiteral("Desktop Action ") + id) && id != QLatin1String(kManageAction))
+                appActions << id;
+        }
+    }
+    // Exec without the app's own arguments, for the actions.
+    QString baseExec = execStr;
+    if (!info.execArgs.isEmpty())
+        baseExec.chop(info.execArgs.size() + 1);
+
     KDesktopFile df(desktopPath);
     KConfigGroup grp = df.desktopGroup();
     grp.writeEntry(QStringLiteral("Type"),       QStringLiteral("Application"));
-    grp.writeEntry(QStringLiteral("Name"),       info.appName);
+    if (!ownEntry || rawValue(appEntry, QStringLiteral("Name")).isEmpty())
+        grp.writeEntry(QStringLiteral("Name"),   info.appName);
     grp.writeEntry(QStringLiteral("Exec"),       execStr);
     grp.writeEntry(QStringLiteral("Icon"),       iconField);
     grp.writeEntry(QStringLiteral("Terminal"),   false);
     grp.writeEntry(QStringLiteral("Categories"),
                    info.categories.isEmpty() ? QStringLiteral("Utility;") : info.categories);
-    if (!grp.hasKey("Comment"))
+    if (!grp.hasKey("Comment") && rawValue(appEntry, QStringLiteral("Comment")).isEmpty())
         grp.writeEntry(QStringLiteral("Comment"), i18n("Managed by AppImage Manager"));
     if (grp.hasKey("TryExec"))
         grp.writeEntry(QStringLiteral("TryExec"), appImagePath);
+
+    QStringList actions = ownEntry ? appActions
+                                   : grp.readEntry("Actions", QString()).split(QLatin1Char(';'), Qt::SkipEmptyParts);
+    if (!actions.contains(QLatin1String(kManageAction)))
+        actions << QLatin1String(kManageAction);
+    grp.writeEntry(QStringLiteral("Actions"), QString(actions.join(QLatin1Char(';')) + QLatin1Char(';')));
+    for (const QString &id : std::as_const(appActions)) {
+        const auto lines = app.value(QStringLiteral("Desktop Action ") + id);
+        KConfigGroup action = df.group(QStringLiteral("Desktop Action ") + id);
+        const QString args = execArguments(rawValue(lines, QStringLiteral("Exec")));
+        action.writeEntry(QStringLiteral("Exec"), args.isEmpty() ? baseExec : QString(baseExec + QLatin1Char(' ') + args));
+        const QString icon = rawValue(lines, QStringLiteral("Icon"));
+        action.writeEntry(QStringLiteral("Icon"), !icon.isEmpty() && QIcon::hasThemeIcon(icon) ? icon : iconField);
+    }
+    KConfigGroup manage = df.group(QStringLiteral("Desktop Action ") + QLatin1String(kManageAction));
+    manage.writeEntry(QStringLiteral("Name"), i18n("Manage in AppImage Manager"));
+    manage.writeEntry(QStringLiteral("Icon"), QStringLiteral("appimagemanager"));
+    manage.writeEntry(QStringLiteral("Exec"), QString(QStringLiteral("appimagemanager --select ")
+                                              + KShell::quoteArg(appImagePath).replace(QLatin1Char('%'), QStringLiteral("%%"))));
+    if (ownEntry)
+        grp.writeEntry(kEntryFormatKey, kEntryFormat);
     df.sync();
     if (!QFile::exists(desktopPath)) {
         qCWarning(AIM_LOG) << "createDesktopLink: KDesktopFile::sync did not produce" << desktopPath;
         return false;
+    }
+
+    // The app's own lines, copied verbatim (translations included): KConfig can't write
+    // translated keys for other languages. Inserted under their group headers.
+    if (ownEntry) {
+        QHash<QString, QStringList> extra;
+        for (const auto &[key, value] : appEntry) {
+            if (isCopiedEntryKey(baseKey(key)))
+                extra[QStringLiteral("Desktop Entry")] << key + QLatin1Char('=') + value;
+        }
+        for (const QString &id : std::as_const(appActions)) {
+            const QString group = QStringLiteral("Desktop Action ") + id;
+            for (const auto &[key, value] : app.value(group)) {
+                if (baseKey(key) == QLatin1String("Name"))
+                    extra[group] << key + QLatin1Char('=') + value;
+            }
+        }
+        QFile file(desktopPath);
+        if (!extra.isEmpty() && file.open(QIODevice::ReadOnly)) {
+            const QStringList lines = QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'));
+            file.close();
+            QStringList out;
+            for (const QString &line : lines) {
+                out << line;
+                if (line.startsWith(QLatin1Char('[')) && line.endsWith(QLatin1Char(']')))
+                    out << extra.value(line.mid(1, line.size() - 2));
+            }
+            if (file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+                file.write(out.join(QLatin1Char('\n')).toUtf8());
+        }
     }
     invalidateEntryIndex();
     removeDuplicateDesktopLinks(appImagePath, info); // e.g. our pre-2.1.1 appimage_* file
@@ -296,6 +465,20 @@ bool removeDesktopLink(const QString &appImagePath, const AppImageInfo &info)
 void rebuildSycoca()
 {
     QProcess::startDetached(QStringLiteral("kbuildsycoca6"), {});
+}
+
+bool desktopLinkOutdated(const AppImageInfo &info)
+{
+    const QString path = desktopFilePath(info);
+    if (!QFile::exists(path))
+        return false;
+    const KDesktopFile df(path);
+    const KConfigGroup grp = df.desktopGroup();
+    if (grp.readEntry(kEntryFormatKey, 0) >= kEntryFormat)
+        return false;
+    const QString comment = grp.readEntryUntranslated("Comment", QString());
+    return QFileInfo(path).fileName().startsWith(QLatin1String("appimage_"))
+        || comment == QLatin1String("Managed by AppImage Manager") || comment == i18n("Managed by AppImage Manager");
 }
 
 bool isDesktopLinkEnabled(const QString &appImagePath, const AppImageInfo &info)

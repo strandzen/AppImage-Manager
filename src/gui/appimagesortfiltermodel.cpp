@@ -211,10 +211,16 @@ QVariantMap AppImageSortFilterModel::sandbox(int proxyRow) const
     return src ? src->sandbox(sourceRowFor(proxyRow)) : QVariantMap();
 }
 
-void AppImageSortFilterModel::setSandbox(int proxyRow, bool enabled, const QStringList &folders)
+void AppImageSortFilterModel::setSandbox(int proxyRow, bool enabled, const QStringList &folders, bool network)
 {
     if (auto *src = qobject_cast<AppImageListModel *>(sourceModel()))
-        src->setSandbox(sourceRowFor(proxyRow), enabled, folders);
+        src->setSandbox(sourceRowFor(proxyRow), enabled, folders, network);
+}
+
+void AppImageSortFilterModel::setPinned(int proxyRow, bool pinned)
+{
+    if (auto *src = qobject_cast<AppImageListModel *>(sourceModel()))
+        src->setPinned(sourceRowFor(proxyRow), pinned);
 }
 
 void AppImageSortFilterModel::checkSignature(int proxyRow)

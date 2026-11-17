@@ -50,7 +50,8 @@ public:
     Q_INVOKABLE void checkSignature(int proxyRow);
     Q_INVOKABLE void fetchReleaseNotes(int proxyRow);
     Q_INVOKABLE QVariantMap sandbox(int proxyRow) const;
-    Q_INVOKABLE void setSandbox(int proxyRow, bool enabled, const QStringList &folders);
+    Q_INVOKABLE void setSandbox(int proxyRow, bool enabled, const QStringList &folders, bool network = true);
+    Q_INVOKABLE void setPinned(int proxyRow, bool pinned);
 
 Q_SIGNALS:
     void filterTextChanged();

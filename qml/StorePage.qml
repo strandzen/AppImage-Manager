@@ -32,12 +32,12 @@ Kirigami.Page {
         anchors.centerIn: parent
         width: parent.width - Kirigami.Units.gridUnit * 4
         visible: !AppSettings.discoverEnabled
-        icon.name: "plasma-discover"
-        text: i18n("Discover is turned off")
-        explanation: i18n("Discover lets you search app catalogs such as AppImage Hub and install apps from them. It downloads the catalogs from the internet, so it stays off until you turn it on.")
+        icon.name: "globe"
+        text: i18n("Browse is turned off")
+        explanation: i18n("Browse lets you search app catalogs such as AppImage Hub and install apps from them. It downloads the catalogs from the internet, so it stays off until you turn it on.")
         helpfulAction: Kirigami.Action {
             icon.name: "checkmark"
-            text: i18n("Turn On Discover")
+            text: i18n("Turn On Browse")
             onTriggered: AppSettings.discoverEnabled = true
         }
     }
@@ -505,10 +505,13 @@ Kirigami.Page {
                 readonly property bool hasAm: item.hasAmScript ?? false
                 readonly property bool hasHub: (item.hasFeedData ?? false) && (item.downloadUrl ?? "") !== ""
                 readonly property bool hasBoth: hasAm && hasHub
-                readonly property bool primaryIsAm: hasBoth ? (item.preferAm ?? false) : hasAm
+                // Without AM installed, an app that is also downloadable is downloaded.
+                readonly property bool primaryIsAm: hasBoth ? (item.preferAm ?? false) && amStoreModel.amInstalled : hasAm
+                // An AM-only app while AM isn't installed: the button says so instead.
+                readonly property bool needsAm: primaryIsAm && !amStoreModel.amInstalled
                 // AM apps carry their install script's page as homepage unless a catalog gave a website.
                 readonly property string scriptUrl: hasAm && (item.packageName ?? "") !== ""
-                    ? "https://github.com/ivan-hc/AM/blob/main/programs/x86_64/" + item.packageName : ""
+                    ? amStoreModel.amScriptBase + item.packageName : ""
                 readonly property string website: {
                     const page = item.homepage ?? ""
                     return page.startsWith("https://github.com/ivan-hc/AM/") ? "" : page
@@ -568,9 +571,15 @@ Kirigami.Page {
 
                     Controls.Button {
                         visible: !amStoreModel.isInstalling && (detailInner.hasAm || detailInner.hasHub)
-                        text: detailInner.primaryIsAm ? i18n("Install") : i18n("Download")
+                        text: detailInner.needsAm ? i18n("Needs AM") : detailInner.primaryIsAm ? i18n("Install") : i18n("Download")
                         icon.name: detailInner.primaryIsAm ? "document-import" : "folder-download"
+                        enabled: !detailInner.needsAm
                         onClicked: pageRoot.install(!detailInner.primaryIsAm)
+                        // Disabled buttons get no hover: the reason is on the hover area around it.
+                        HoverHandler { id: needsAmHover; enabled: detailInner.needsAm }
+                        Controls.ToolTip.text: i18n("This app installs with AM or AppMan, which isn't installed. See github.com/ivan-hc/AM.")
+                        Controls.ToolTip.visible: detailInner.needsAm && needsAmHover.hovered
+                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                     }
 
                     Controls.ProgressBar {
@@ -607,7 +616,7 @@ Kirigami.Page {
                                 height: visible ? implicitHeight : 0
                                 text: detailInner.primaryIsAm ? i18n("Download from AppImage Hub") : i18n("Install with AM")
                                 icon.name: detailInner.primaryIsAm ? "folder-download" : "document-import"
-                                enabled: !amStoreModel.isInstalling
+                                enabled: !amStoreModel.isInstalling && (detailInner.primaryIsAm || amStoreModel.amInstalled)
                                 onTriggered: pageRoot.install(detailInner.primaryIsAm)
                             }
                             Controls.MenuItem {
@@ -778,7 +787,7 @@ Kirigami.Page {
     Shortcut {
         sequence: "Return"
         enabled: pageRoot.visible && listView.currentIndex >= 0 && !amStoreModel.isInstalling
-                 && (detailInner.hasAm || detailInner.hasHub)
+                 && (detailInner.hasAm || detailInner.hasHub) && !detailInner.needsAm
         onActivated: pageRoot.install(!detailInner.primaryIsAm)
     }
     Shortcut {

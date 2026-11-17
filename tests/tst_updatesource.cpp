@@ -386,6 +386,96 @@ private Q_SLOTS:
         QVERIFY(!QFile::exists(home + QStringLiteral("/escape")));                  // writes to home vanish
     }
 
+    // Network off: the app's own network namespace has only loopback; on: the host's interfaces.
+    void sandbox_network()
+    {
+        if (!sandboxAvailable())
+            QSKIP("bwrap not installed");
+        // Saved only when off; absent means allowed.
+        const QString file = QStringLiteral("/x/NetBox.AppImage");
+        saveSandbox(file, { true, {}, false });
+        QVERIFY(!loadSandbox(file).network);
+        saveSandbox(file, { true, {}, true });
+        QVERIFY(loadSandbox(file).network);
+
+        QTemporaryDir root;
+        const QString home = root.filePath(QStringLiteral("home"));
+        const QString settings = home + QStringLiteral("/Applications/.config/net");
+        const QString mount = root.filePath(QStringLiteral("mnt"));
+        QVERIFY(QDir().mkpath(settings) && QDir().mkpath(mount));
+        const QString appImage = home + QStringLiteral("/Applications/Net.AppImage");
+        QFile(appImage).open(QIODevice::WriteOnly);
+        QFile run(mount + QStringLiteral("/AppRun"));
+        QVERIFY(run.open(QIODevice::WriteOnly));
+        // Interface names from the sandbox's own /proc (not /sys, which is the host's).
+        run.write("#!/bin/sh\ntail -n +3 /proc/net/dev | cut -d: -f1 | tr -d ' ' > \"$1/$2\"\n");
+        run.close();
+        run.setPermissions(run.permissions() | QFileDevice::ExeOwner);
+
+        auto interfaces = [&](bool network, const QString &name) {
+            QProcess bwrap;
+            bwrap.setProgram(QStandardPaths::findExecutable(QStringLiteral("bwrap")));
+            bwrap.setArguments(sandboxArguments(appImage, mount, settings, {}, home,
+                                                qEnvironmentVariable("XDG_RUNTIME_DIR", QStringLiteral("/tmp")),
+                                                { settings, name }, network));
+            bwrap.start();
+            bwrap.waitForFinished(20000);
+            QFile out(settings + QLatin1Char('/') + name);
+            return out.open(QIODevice::ReadOnly) ? QString::fromUtf8(out.readAll()).split(QLatin1Char('\n'), Qt::SkipEmptyParts)
+                                                 : QStringList{ QStringLiteral("<no report>") };
+        };
+        const QStringList offline = interfaces(false, QStringLiteral("off"));
+        if (offline == QStringList{ QStringLiteral("<no report>") })
+            QSKIP("bwrap could not run here");
+        QCOMPARE(offline, QStringList{ QStringLiteral("lo") });
+        QVERIFY2(interfaces(true, QStringLiteral("on")).size() > 1, "the host's interfaces with network on");
+    }
+
+    // "Don't Update": keyed by file name, independent of the update source.
+    void pinned()
+    {
+        const QString path = QStringLiteral("/somewhere/Pinned-1.0-x86_64.AppImage");
+        QVERIFY(!isPinned(path));
+        setPinned(path, true);
+        QVERIFY(isPinned(path));
+        QVERIFY(isPinned(QStringLiteral("/elsewhere/Pinned-1.0-x86_64.AppImage")));
+        // Clearing the update source keeps the pin.
+        saveUpdateSource(path, {});
+        QVERIFY(isPinned(path));
+        setPinned(path, false);
+        QVERIFY(!isPinned(path));
+    }
+
+    // GitHub's releases.atom: the tag comes from the entry link (titles are release names).
+    void feedNewestTag()
+    {
+        const QByteArray head = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            "<feed xmlns=\"http://www.w3.org/2005/Atom\">\n"
+            "  <id>tag:github.com,2008:https://github.com/o/r/releases</id>\n"
+            "  <link type=\"text/html\" rel=\"alternate\" href=\"https://github.com/o/r/releases\"/>\n"
+            "  <title>Release notes from r</title>\n";
+        const QByteArray full = head +
+            "  <entry>\n"
+            "    <id>tag:github.com,2008:Repository/1/v1.18.2</id>\n"
+            "    <link rel=\"alternate\" type=\"text/html\" href=\"https://github.com/o/r/releases/tag/v1.18.2\"/>\n"
+            "    <title>LocalSend 1.18.2 &amp; fixes</title>\n"
+            "    <content type=\"html\">&lt;p&gt;notes&lt;/p&gt;</content>\n"
+            "  </entry>\n"
+            "  <entry><id>tag:github.com,2008:Repository/1/v1.18.1</id><title>v1.18.1</title></entry>\n"
+            "</feed>\n";
+        QCOMPARE(ReleaseChecker::feedNewestTag(full), QStringLiteral("v1.18.2"));
+        // Percent-encoded tag in the link.
+        QCOMPARE(ReleaseChecker::feedNewestTag(head + "<entry><link href=\"https://github.com/o/r/releases/tag/release%2F2.0\"/>"
+                                                      "</entry></feed>"),
+                 QStringLiteral("release/2.0"));
+        // No link: the id's last part, then the title.
+        QCOMPARE(ReleaseChecker::feedNewestTag(head + "<entry><id>tag:github.com,2008:Repository/1/2.0</id></entry></feed>"),
+                 QStringLiteral("2.0"));
+        QCOMPARE(ReleaseChecker::feedNewestTag(head + "<entry><title>3.0</title></entry></feed>"), QStringLiteral("3.0"));
+        QVERIFY(ReleaseChecker::feedNewestTag(head + "</feed>").isEmpty());
+        QVERIFY(ReleaseChecker::feedNewestTag("not xml").isEmpty());
+    }
+
     void contentType()
     {
         QVERIFY(ReleaseChecker::isNonBinaryContentType(QStringLiteral("text/html; charset=utf-8")));
