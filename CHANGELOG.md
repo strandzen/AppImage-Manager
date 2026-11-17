@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2.2.1 - 2026-11-17
+
+### Changed
+- Discover looks and works like Installed: the same list (resizable, the width is shared), rows with the name and a small author line, and details with About and a Details section (category, license, which catalogs offer the app, website and AM script links). Return installs, Escape clears the search or the selection.
+
 ### Fixed
 - Discover opens in a fraction of a second instead of half a minute or more with the default catalogs.
 

@@ -9,7 +9,7 @@ Drop an AppImage on the window, or right-click it in Dolphin, and it goes into o
 
 It doesn't care where your AppImages come from. Updates work from the information built into an AppImage, or from a GitHub, Codeberg, Forgejo or Gitea repository, a zsync file or a plain download link that you set yourself. The app catalogs are optional, and you can add your own.
 
-This is version 2.2.0 (see [CHANGELOG.md](CHANGELOG.md)). I mostly test it on my own machine on Arch, so other distributions may need some work.
+This is version 2.2.1 (see [CHANGELOG.md](CHANGELOG.md)). I mostly test it on my own machine on Arch, so other distributions may need some work.
 
 > [!NOTE]
 > This project built with heavy AI assistance. It is an independent project and is not affiliated with or endorsed by KDE or KDE e.V.

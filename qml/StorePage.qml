@@ -124,6 +124,39 @@ Kirigami.Page {
         }
     }
 
+    // Drag handle for the list's width, shared with Installed (AppSettings.libraryListWidth).
+    MouseArea {
+        id: resizeHandle
+        // Over the separator, not the list's scrollbar.
+        x: leftPane.width - 1
+        y: masterDetailRow.y
+        height: masterDetailRow.height
+        width: Kirigami.Units.smallSpacing + 2
+        z: 10
+        visible: masterDetailRow.visible && !leftPane.Layout.fillWidth
+        cursorShape: Qt.SplitHCursor
+        hoverEnabled: true
+        property real startX: 0
+        property real startWidth: 0
+        onPressed: (mouse) => {
+            startX = mapToItem(masterDetailRow, mouse.x, 0).x
+            startWidth = leftPane.width
+            leftPane.dragWidth = startWidth
+        }
+        onPositionChanged: (mouse) => {
+            if (pressed)
+                leftPane.dragWidth = startWidth + mapToItem(masterDetailRow, mouse.x, 0).x - startX
+        }
+        onReleased: {
+            AppSettings.libraryListWidth = Math.round(leftPane.listWidth)
+            leftPane.dragWidth = -1
+        }
+        onDoubleClicked: AppSettings.libraryListWidth = 0
+        Controls.ToolTip.text: i18n("Drag to resize; double-click for the default width")
+        Controls.ToolTip.visible: containsMouse && !pressed
+        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay * 3
+    }
+
     // ── Master-detail row ─────────────────────────────────────────────────
     RowLayout {
         id: masterDetailRow
@@ -137,10 +170,19 @@ Kirigami.Page {
             id: leftPane
             Layout.fillHeight: true
             Layout.fillWidth: listView.currentIndex < 0
-            Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+            Layout.preferredWidth: listWidth
             Kirigami.Theme.colorSet: Kirigami.Theme.View
             Kirigami.Theme.inherit: false
             color: Kirigami.Theme.backgroundColor
+
+            // Draggable width, the same as Installed's; 0 in the settings = the default.
+            readonly property real defaultWidth: Kirigami.Units.gridUnit * 16
+            readonly property real minWidth: Kirigami.Units.gridUnit * 11
+            readonly property real maxWidth: Math.max(minWidth, masterDetailRow.width - Kirigami.Units.gridUnit * 20)
+            property real dragWidth: -1
+            readonly property real listWidth: Math.min(maxWidth, Math.max(minWidth,
+                dragWidth >= 0 ? dragWidth
+                               : AppSettings.libraryListWidth > 0 ? AppSettings.libraryListWidth : defaultWidth))
 
             ColumnLayout {
                 anchors.fill: parent
@@ -155,14 +197,15 @@ Kirigami.Page {
                     Kirigami.SearchField {
                         id: searchField
                         Layout.fillWidth: true
-                        placeholderText: i18n("Search apps")
+                        placeholderText: i18n("Search")
                         onTextChanged: amStoreModel.filterText = text
                     }
 
                     Controls.ToolButton {
                         id: filterButton
-                        icon.name: "view-filter"
-                        text: i18n("Sort and Filter")
+                        // Looks like Installed's Sort button; the menu also holds the filters.
+                        icon.name: "view-sort"
+                        text: i18n("Sort")
                         display: Controls.AbstractButton.IconOnly
                         down: filterMenu.visible
                         onPressed: filterMenu.visible ? filterMenu.close() : filterMenu.popup(filterButton, 0, filterButton.height)
@@ -268,17 +311,18 @@ Kirigami.Page {
                     }
                 }
 
+                Controls.ProgressBar {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 2
+                    indeterminate: true
+                    visible: amStoreModel.loading
+                    padding: 0
+                }
+
                 // App list
                 Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-
-                    Controls.BusyIndicator {
-                        anchors.centerIn: parent
-                        running: amStoreModel.loading
-                        visible: running
-                        z: 1
-                    }
 
                     // The desktop ScrollView reserves room for the scrollbar beside the rows (no overlap)
                     // and adds Kirigami.WheelHandler for desktop-speed wheel scrolling.
@@ -315,6 +359,8 @@ Kirigami.Page {
                                 required property string section
                                 width: ListView.view.width
                                 text: section
+                                visible: section !== ""
+                                height: visible ? implicitHeight : 0
                             }
 
                             TapHandler {
@@ -371,12 +417,26 @@ Kirigami.Page {
                                         }
                                     }
 
-                                    Kirigami.TitleSubtitle {
+                                    // Name and author, drawn like Installed's name and status line.
+                                    ColumnLayout {
                                         Layout.fillWidth: true
-                                        title: model.displayName
-                                        subtitle: model.author ?? ""
-                                        selected: delegateRoot.highlighted
-                                        reserveSpaceForSubtitle: true
+                                        spacing: 0
+
+                                        Controls.Label {
+                                            Layout.fillWidth: true
+                                            text: model.displayName
+                                            elide: Text.ElideRight
+                                            color: delegateRoot.highlighted ? Kirigami.Theme.highlightedTextColor
+                                                                            : Kirigami.Theme.textColor
+                                        }
+                                        Controls.Label {
+                                            Layout.fillWidth: true
+                                            text: model.author ?? ""
+                                            elide: Text.ElideRight
+                                            font: Kirigami.Theme.smallFont
+                                            color: delegateRoot.highlighted ? Kirigami.Theme.highlightedTextColor
+                                                                            : Kirigami.Theme.disabledTextColor
+                                        }
                                     }
                                 }
                             }
@@ -435,8 +495,10 @@ Kirigami.Page {
 
             ColumnLayout {
                 id: detailInner
-                x: Kirigami.Units.gridUnit
-                width: rightPane.availableWidth - Kirigami.Units.gridUnit * 2
+                // Centered in the pane; the margin stays when the pane is narrow (as on Installed).
+                x: Math.max(Kirigami.Units.gridUnit * 1.5, (rightPane.availableWidth - width) / 2)
+                // Capped so description lines stay readable on wide windows.
+                width: Math.min(rightPane.availableWidth - Kirigami.Units.gridUnit * 3, Kirigami.Units.gridUnit * 38)
                 spacing: Kirigami.Units.largeSpacing
 
                 readonly property var item: pageRoot.displayedItem
@@ -444,10 +506,17 @@ Kirigami.Page {
                 readonly property bool hasHub: (item.hasFeedData ?? false) && (item.downloadUrl ?? "") !== ""
                 readonly property bool hasBoth: hasAm && hasHub
                 readonly property bool primaryIsAm: hasBoth ? (item.preferAm ?? false) : hasAm
+                // AM apps carry their install script's page as homepage unless a catalog gave a website.
+                readonly property string scriptUrl: hasAm && (item.packageName ?? "") !== ""
+                    ? "https://github.com/ivan-hc/AM/blob/main/programs/x86_64/" + item.packageName : ""
+                readonly property string website: {
+                    const page = item.homepage ?? ""
+                    return page.startsWith("https://github.com/ivan-hc/AM/") ? "" : page
+                }
 
                 Item { implicitHeight: Kirigami.Units.largeSpacing }
 
-                // Icon, name, author · link, one line of metadata
+                // Icon, name, author · website
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Kirigami.Units.largeSpacing
@@ -457,29 +526,30 @@ Kirigami.Page {
                         fallback: "application-x-executable"
                         implicitWidth: Kirigami.Units.iconSizes.huge
                         implicitHeight: Kirigami.Units.iconSizes.huge
-                        Layout.alignment: Qt.AlignTop
                     }
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 0
+                        spacing: Kirigami.Units.smallSpacing
 
                         Kirigami.Heading {
                             Layout.fillWidth: true
                             text: detailInner.item.displayName ?? ""
-                            level: 2
+                            level: 1
                             elide: Text.ElideRight
                         }
 
                         Controls.Label {
                             readonly property string author: detailInner.item.author ?? ""
-                            readonly property string homepage: detailInner.item.homepage ?? ""
+                            readonly property string homepage: detailInner.website
+                            readonly property string host: {
+                                const m = homepage.match(/^https?:\/\/([^/]+)/)
+                                return m ? m[1] : homepage
+                            }
                             Layout.fillWidth: true
-                            visible: author !== "" || homepage !== ""
+                            visible: author !== "" || host !== ""
                             text: {
-                                const link = homepage !== ""
-                                    ? "<a href=\"" + homepage + "\">" + (detailInner.hasAm ? i18n("Install script") : i18n("Website")) + "</a>"
-                                    : ""
+                                const link = host !== "" ? "<a href=\"" + homepage + "\">" + host + "</a>" : ""
                                 return [author, link].filter(s => s !== "").join(" · ")
                             }
                             textFormat: Text.StyledText
@@ -487,21 +557,6 @@ Kirigami.Page {
                             elide: Text.ElideRight
                             onLinkActivated: (link) => Qt.openUrlExternally(link)
                             HoverHandler { cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                        }
-
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: {
-                                const parts = (detailInner.item.categories ?? "").split(";").filter(s => s.length > 0).slice(0, 2)
-                                if (detailInner.item.license) parts.push(detailInner.item.license)
-                                const sources = []
-                                if (detailInner.item.hasFeedData) sources.push(i18n("AppImage Hub"))
-                                if (detailInner.hasAm) sources.push(i18n("AM"))
-                                if (sources.length > 0) parts.push(sources.join(", "))
-                                return parts.join(" · ")
-                            }
-                            color: Kirigami.Theme.disabledTextColor
-                            elide: Text.ElideRight
                         }
                     }
                 }
@@ -535,7 +590,7 @@ Kirigami.Page {
 
                     Controls.ToolButton {
                         id: moreButton
-                        visible: detailInner.hasBoth
+                        visible: detailInner.hasBoth || detailInner.website !== "" || detailInner.scriptUrl !== ""
                         icon.name: "overflow-menu"
                         text: i18n("More")
                         display: Controls.AbstractButton.IconOnly
@@ -548,10 +603,26 @@ Kirigami.Page {
                         Controls.Menu {
                             id: moreMenu
                             Controls.MenuItem {
+                                visible: detailInner.hasBoth
+                                height: visible ? implicitHeight : 0
                                 text: detailInner.primaryIsAm ? i18n("Download from AppImage Hub") : i18n("Install with AM")
                                 icon.name: detailInner.primaryIsAm ? "folder-download" : "document-import"
                                 enabled: !amStoreModel.isInstalling
                                 onTriggered: pageRoot.install(detailInner.primaryIsAm)
+                            }
+                            Controls.MenuItem {
+                                visible: detailInner.website !== ""
+                                height: visible ? implicitHeight : 0
+                                icon.name: "internet-services"
+                                text: i18n("Open Website")
+                                onTriggered: Qt.openUrlExternally(detailInner.website)
+                            }
+                            Controls.MenuItem {
+                                visible: detailInner.scriptUrl !== ""
+                                height: visible ? implicitHeight : 0
+                                icon.name: "text-x-script"
+                                text: i18n("View Install Script")
+                                onTriggered: Qt.openUrlExternally(detailInner.scriptUrl)
                             }
                         }
                     }
@@ -605,16 +676,119 @@ Kirigami.Page {
                     }
                 }
 
+                // ── About ─────────────────────────────────────────────
+                Kirigami.ListSectionHeader {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.largeSpacing
+                    visible: description.visible
+                    text: i18n("About")
+                    leftPadding: 0
+                }
+
                 Controls.Label {
+                    id: description
                     Layout.fillWidth: true
                     visible: text !== ""
                     text: detailInner.item.description ?? ""
                     wrapMode: Text.WordWrap
                     textFormat: Text.StyledText
+                    lineHeight: 1.15
+                }
+
+                // ── Details ───────────────────────────────────────────
+                Kirigami.ListSectionHeader {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.largeSpacing
+                    text: i18n("Details")
+                    leftPadding: 0
+                }
+
+                GridLayout {
+                    id: detailsGrid
+                    Layout.fillWidth: true
+                    columns: 2
+                    columnSpacing: Kirigami.Units.largeSpacing
+                    rowSpacing: Kirigami.Units.smallSpacing
+
+                    readonly property var item: detailInner.item
+                    readonly property var rows: {
+                        const categories = (item.categories ?? "").split(";").filter(s => s.length > 0)
+                        // Each catalog that lists the app, and how it installs from there.
+                        const sources = amStoreModel.sources
+                        const from = (item.sourceIds ?? []).map(id => {
+                            const source = sources.find(s => s.id === id)
+                            if (!source)
+                                return ""
+                            return source.type === "am-database" ? i18n("%1 (install script)", source.name)
+                                                                 : i18n("%1 (download)", source.name)
+                        }).filter(s => s !== "")
+                        return [
+                            [i18n("Category"), categories.length > 0 ? categories.join(", ") : i18n("Unknown")],
+                            [i18n("License"), item.license || i18n("Unknown")],
+                            [i18n("Available from"), from.join("\n")],
+                        ]
+                    }
+
+                    Repeater {
+                        model: detailsGrid.rows.length * 2
+                        Controls.Label {
+                            required property int index
+                            readonly property var row: detailsGrid.rows[Math.floor(index / 2)]
+                            readonly property bool isKey: index % 2 === 0
+                            Layout.alignment: Qt.AlignTop | (isKey ? Qt.AlignRight : Qt.AlignLeft)
+                            Layout.fillWidth: !isKey
+                            text: isKey ? row[0] : row[1]
+                            color: isKey ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
+                            wrapMode: isKey ? Text.NoWrap : Text.Wrap
+                        }
+                    }
+
+                    Controls.Label {
+                        Layout.alignment: Qt.AlignTop | Qt.AlignRight
+                        visible: linksColumn.visible
+                        text: i18n("Links")
+                        color: Kirigami.Theme.disabledTextColor
+                    }
+                    ColumnLayout {
+                        id: linksColumn
+                        Layout.fillWidth: true
+                        visible: detailInner.website !== "" || detailInner.scriptUrl !== ""
+                        spacing: 0
+                        Kirigami.UrlButton {
+                            visible: detailInner.website !== ""
+                            url: detailInner.website
+                            text: i18n("Website")
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                        Kirigami.UrlButton {
+                            visible: detailInner.scriptUrl !== ""
+                            url: detailInner.scriptUrl
+                            text: i18n("AM install script")
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                    }
                 }
 
                 Item { implicitHeight: Kirigami.Units.gridUnit }
             }
         }
+    }
+
+    // ── Keyboard shortcuts (only while this page is shown), as on Installed ──
+    Shortcut {
+        sequence: "Return"
+        enabled: pageRoot.visible && listView.currentIndex >= 0 && !amStoreModel.isInstalling
+                 && (detailInner.hasAm || detailInner.hasHub)
+        onActivated: pageRoot.install(!detailInner.primaryIsAm)
+    }
+    Shortcut {
+        sequence: "Escape"
+        enabled: pageRoot.visible && searchField.text !== ""
+        onActivated: { searchField.text = ""; amStoreModel.filterText = "" }
+    }
+    Shortcut {
+        sequence: "Escape"
+        enabled: pageRoot.visible && searchField.text === "" && listView.currentIndex >= 0
+        onActivated: listView.currentIndex = -1
     }
 }

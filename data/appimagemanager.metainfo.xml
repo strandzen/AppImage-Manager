@@ -67,6 +67,15 @@
   </content_rating>
 
   <releases>
+    <release version="2.2.1" date="2026-11-17">
+      <description>
+        <p>A faster, tidier Discover page.</p>
+        <ul>
+          <li>Discover opens in a fraction of a second instead of half a minute or more.</li>
+          <li>Discover looks and works like Installed: the same resizable list, and details with About and a Details section listing the category, license, catalogs and links.</li>
+        </ul>
+      </description>
+    </release>
     <release version="2.2.0" date="2026-11-17">
       <description>
         <p>Safer apps, smaller updates and a tray that fits Plasma.</p>

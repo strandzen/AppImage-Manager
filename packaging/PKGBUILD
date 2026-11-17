@@ -4,7 +4,7 @@
 # in the repo root because makepkg uses <PKGBUILD dir>/src as its work dir, which would
 # collide with the project's src/. pkgver follows VERSION in the top-level CMakeLists.txt.
 pkgname=appimage-manager-plasma
-pkgver=2.2.0
+pkgver=2.2.1
 pkgrel=1
 pkgdesc="A lightweight KDE Plasma utility for installing, managing, and removing AppImage files (local build)"
 arch=('x86_64' 'aarch64')
