@@ -366,6 +366,7 @@ Kirigami.Page {
                                             anchors.fill: parent
                                             visible: !remoteIconImage.visible
                                             source: storeRow.remoteIcon ? "application-x-executable" : pageRoot.iconFor(storeRow.iconSource)
+                                            fallback: "application-x-executable"
                                             selected: delegateRoot.highlighted
                                         }
                                     }

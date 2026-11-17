@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- Discover opens in a fraction of a second instead of half a minute or more with the default catalogs.
+
 ## 2.2.0 - 2026-11-17
 
 ### Added

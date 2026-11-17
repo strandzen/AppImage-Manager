@@ -3,7 +3,6 @@
 #include "amstoremodel.h"
 #include "logging.h"
 #include <QDateTime>
-#include <QIcon>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -601,25 +600,27 @@ void AMStoreModel::checkAllLoaded()
             }
         }
 
+        // Per source: normalized name → whether the app it lists first has an AM script
+        // (one lookup per app instead of a scan of the whole source).
+        QHash<QString, QHash<QString, bool>> hasAmBySource;
+        for (const auto &pair : sourcesData) {
+            if (pair.first.type == QStringLiteral("am-database"))
+                continue;
+            auto &byName = hasAmBySource[pair.first.id];
+            for (const auto &sa : pair.second) {
+                const QString norm = normalizeForMatch(sa.displayName);
+                if (!byName.contains(norm))
+                    byName.insert(norm, sa.hasAmScript);
+            }
+        }
+
         for (auto &app : mergedList) {
+            const QString norm = normalizeForMatch(app.displayName);
             for (const auto &pair : sourcesData) {
                 const auto &source = pair.first;
                 if (app.sourceIds.contains(source.id)) {
-                    bool sourceHasAm = false;
-                    if (source.type == QStringLiteral("am-database")) {
-                        sourceHasAm = true;
-                    } else {
-                        // Check if the original parsed app from this source had hasAmScript
-                        for (const auto &sa : pair.second) {
-                            if (normalizeForMatch(sa.displayName) == normalizeForMatch(app.displayName)) {
-                                if (sa.hasAmScript) {
-                                    sourceHasAm = true;
-                                }
-                                break;
-                            }
-                        }
-                    }
-                    app.preferAm = sourceHasAm;
+                    app.preferAm = source.type == QStringLiteral("am-database")
+                                || hasAmBySource.value(source.id).value(norm, false);
                     break;
                 }
             }
@@ -635,16 +636,9 @@ void AMStoreModel::checkAllLoaded()
         QStringList catList(cats.cbegin(), cats.cend());
         std::sort(catList.begin(), catList.end());
 
-        // Qt 6: QIconLoader is guarded by an internal mutex — safe from worker threads.
-        // Clearing non-URL, non-theme iconSources here avoids blocking the main thread
-        // over ~3000 hasThemeIcon() calls when the finished signal fires.
-        for (auto &app : mergedList) {
-            if (!app.iconSource.startsWith(QStringLiteral("http")) &&
-                !QIcon::hasThemeIcon(app.iconSource)) {
-                app.iconSource.clear();
-            }
-        }
-
+        // Theme icon names are not checked here: 10,000 hasThemeIcon() calls took half a
+        // minute. The page's Kirigami.Icon falls back to a generic icon for names the
+        // theme lacks, and only looks up the rows on screen.
         return {std::move(mergedList), std::move(catList)};
     }));
 }
@@ -726,8 +720,6 @@ QVector<StoreApp> AMStoreModel::parseFeedJsonSync(const QByteArray &data)
         }
 
         // Only use raster icon URLs — SVGs with CSS mesh gradients crash Qt's renderer.
-        // QIcon::hasThemeIcon() is NOT called here (not main-thread-safe in all configs);
-        // theme check happens in mergeDatabases() on the main thread.
         const QJsonArray icons = item.value(QStringLiteral("icons")).toArray();
         for (const auto &iconVal : icons) {
             const QString iconPath = iconVal.toString();
